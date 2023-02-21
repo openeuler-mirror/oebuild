@@ -1,0 +1,2 @@
+include src/oebuild/app/conf/*
+include src/oebuild/app/plugins/*/*.py

@@ -1,0 +1,16 @@
+plugins:
+- name: init
+  class: Init
+  path: plugins/init/init.py
+- name: update
+  class: Update
+  path: plugins/update/update.py
+- name: generate
+  class: Generate
+  path: plugins/generate/generate.py
+- name: bitbake
+  class: Bitbake
+  path: plugins/bitbake/bitbake.py
+- name: upgrade
+  class: Upgrade
+  path: plugins/upgrade/upgrade.py

@@ -1,0 +1,7 @@
+test
+project
+__pycache__
+oebuild.egg-info
+.vscode
+build
+dist
