@@ -166,7 +166,8 @@ class ParseTemplate:
                           nativesdk_dir = None,
                           toolchain_dir = None,
                           build_in: str = BUILD_IN_DOCKER,
-                          sstate_cache = None):
+                          sstate_cache = None,
+                          tmp_dir = None):
         '''
         first param common yaml
         '''
@@ -236,6 +237,8 @@ class ParseTemplate:
             compile_conf['toolchain_dir'] = toolchain_dir
         if sstate_cache is not None:
             compile_conf['sstate_cache'] = sstate_cache
+        if tmp_dir is not None:
+            compile_conf['tmp_dir'] = tmp_dir
 
         compile_conf['repos'] = repos
         compile_conf['local_conf'] = local_conf
