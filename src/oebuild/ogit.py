@@ -37,7 +37,10 @@ class OGit:
         self._remote_url = remote_url
         self._branch = branch
         self._last_code = 0
-        _, self._screen_width = os.popen('stty size', 'r').read().split()
+        try:
+            _, self._screen_width = os.popen('stty size', 'r').read().split()
+        except ValueError as v_e:
+            log.warning(str(v_e))
 
     @property
     def repo_dir(self):
@@ -118,7 +121,8 @@ class OGit:
             return
 
         pmsg = "\r" + pmsg
-        pmsg = pmsg.ljust(int(self._screen_width), ' ')
+        if hasattr(self, '_screen_width'):
+            pmsg = pmsg.ljust(int(self._screen_width), ' ')
         print(pmsg, end='', flush=True)
 
     @staticmethod
