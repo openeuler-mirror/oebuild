@@ -31,6 +31,7 @@ class Generate(OebuildCommand):
         self.nativesdk_dir = None
         self.toolchain_dir = None
         self.sstate_cache = None
+        self.tmp_dir = None
         super().__init__(
             'generate',
             'help to mkdir build directory and generate compile.yaml',
@@ -61,7 +62,13 @@ class Generate(OebuildCommand):
 
         parser.add_argument('-s', dest='sstate_cache',
             help='''
-            this param is for arch, for example aarch4-std, aarch64-pro and so on
+            this param is for sstate_cache directory
+            '''
+        )
+
+        parser.add_argument('-m', dest='tmp_dir',
+            help='''
+            this param is for tmp directory, the build result will be stored in
             '''
         )
 
@@ -120,6 +127,9 @@ class Generate(OebuildCommand):
         if args.sstate_cache is not None:
             self.sstate_cache = args.sstate_cache
 
+        if args.tmp_dir is not None:
+            self.tmp_dir = args.tmp_dir
+
         yocto_dir = self.configure.source_yocto_dir()
         if not self.check_support_oebuild(yocto_dir):
             log.err('Currently, yocto-meta-openeuler does not support oebuild, \
@@ -173,7 +183,8 @@ class Generate(OebuildCommand):
             nativesdk_dir= self.nativesdk_dir,
             toolchain_dir= self.toolchain_dir,
             build_in=build_in,
-            sstate_cache= self.sstate_cache
+            sstate_cache= self.sstate_cache,
+            tmp_dir = self.tmp_dir
             ))
 
         log.info("=============================================")

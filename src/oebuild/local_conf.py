@@ -34,6 +34,7 @@ NATIVESDK_SYSROOT = "sysroots/x86_64-pokysdk-linux"
 OPENEULER_SP_DIR = "OPENEULER_SP_DIR"
 NATIVESDK_ENVIRONMENT = "environment-setup-x86_64-pokysdk-linux"
 SSTATE_MIRRORS = "SSTATE_MIRRORS"
+TMP_DIR = "TMPDIR"
 
 NATIVE_GCC_DIR = '/usr1/openeuler/native_gcc'
 SSTATE_CACHE = '/usr1/openeuler/sstate-cache'
@@ -145,6 +146,14 @@ class LocalConf:
             content = match_and_replace(
                     pre=SSTATE_MIRRORS,
                     new_str= SSTATE_MIRRORS + ' = "' + new_str + '"',
+                    content=content
+                )
+
+        # replace tmpdir
+        if parse_compile.tmp_dir is not None:
+            content = match_and_replace(
+                    pre=TMP_DIR,
+                    new_str= TMP_DIR + ' = "' + parse_compile.tmp_dir + '"',
                     content=content
                 )
 

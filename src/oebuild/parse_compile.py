@@ -33,6 +33,8 @@ class Compile(PlatformTemplate):
 
     sstate_cache: str
 
+    tmp_dir: str
+
 class BaseParseCompileError(ValueError):
     '''
     parse compile basic error
@@ -76,6 +78,7 @@ class ParseCompile:
             toolchain_dir=None if 'toolchain_dir' not in data else data['toolchain_dir'],
             nativesdk_dir=None if 'nativesdk_dir' not in data else data['nativesdk_dir'],
             sstate_cache=None if 'sstate_cache' not in data else data['sstate_cache'],
+            tmp_dir=None if 'tmp_dir' not in data else data['tmp_dir'],
             not_use_repos=False if 'not_use_repos' not in data else data['not_use_repos'],
             repos=None if "repos" not in data else ParseTemplate.parse_oebuild_repo(data['repos']),
             local_conf=None if "local_conf" not in data else data['local_conf'],
@@ -151,6 +154,13 @@ class ParseCompile:
         return attr of sstate_cache
         '''
         return self.compile.sstate_cache
+
+    @property
+    def tmp_dir(self):
+        '''
+        return attr of tmp_dir
+        '''
+        return self.compile.tmp_dir
 
     def pull_repos(self, base_dir):
         '''
