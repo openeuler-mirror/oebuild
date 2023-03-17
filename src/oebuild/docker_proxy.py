@@ -255,7 +255,7 @@ class DockerProxy:
 
         return container, res.output
 
-    def container_run_simple(self, image:str, volumes: list):
+    def container_run_simple(self, image:str, volumes: list, network="host"):
         '''
         it's just create a tty docker container to do some thing next
         '''
@@ -263,6 +263,7 @@ class DockerProxy:
             image=image,
             command="bash",
             volumes=volumes,
+            network_mode=network,
             detach=True,
             tty=True
         )

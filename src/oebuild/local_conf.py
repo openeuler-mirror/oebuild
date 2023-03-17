@@ -106,12 +106,10 @@ class LocalConf:
 
         # replace toolchain
         if parse_compile.toolchain_dir is not None:
-            replace_toolchain_str = parse_compile.toolchain_type + ' = "'
             if parse_compile.build_in == BUILD_IN_DOCKER:
-                replace_toolchain_str += NATIVE_GCC_DIR + '"'
+                replace_toolchain_str = f'{parse_compile.toolchain_type} = "{NATIVE_GCC_DIR}"'
             else:
-                replace_toolchain_str += parse_compile.toolchain_dir
-            replace_toolchain_str += '"'
+                replace_toolchain_str = f'{parse_compile.toolchain_type} = "{parse_compile.toolchain_dir}"'
             content = match_and_replace(
                 pre=parse_compile.toolchain_type,
                 new_str=replace_toolchain_str,
@@ -124,7 +122,7 @@ class LocalConf:
             nativesdk_sys_dir = os.path.join(parse_compile.nativesdk_dir, NATIVESDK_SYSROOT)
             content = match_and_replace(
                 pre=NATIVESDK_DIR_NAME,
-                new_str=NATIVESDK_DIR_NAME + ' = "' + nativesdk_sys_dir + '"',
+                new_str=f'{NATIVESDK_DIR_NAME} = "{nativesdk_sys_dir}"',
                 content=content
             )
 
@@ -145,7 +143,7 @@ class LocalConf:
                     new_str= f"file://.* file://{parse_compile.sstate_cache}/PATH"
             content = match_and_replace(
                     pre=SSTATE_MIRRORS,
-                    new_str= SSTATE_MIRRORS + ' = "' + new_str + '"',
+                    new_str = f'{SSTATE_MIRRORS} = "{new_str}"',
                     content=content
                 )
 
@@ -153,7 +151,7 @@ class LocalConf:
         if parse_compile.tmp_dir is not None:
             content = match_and_replace(
                     pre=TMP_DIR,
-                    new_str= TMP_DIR + ' = "' + parse_compile.tmp_dir + '"',
+                    new_str = f'{TMP_DIR} = "{parse_compile.tmp_dir}"',
                     content=content
                 )
 
@@ -206,7 +204,7 @@ class LocalConf:
             if ret is not None:
                 content = match_and_add(line, content)
                 continue
-            ret = re.match(r'^([A-Z0-9_]+)([a-z_/]+)(\s)', line)
+            ret = re.match(r'^([A-Z0-9_]+)([a-z_/]{0,})(\s)', line)
             if ret is not None:
                 content = match_and_replace(ret.group(), line, content)
                 continue
