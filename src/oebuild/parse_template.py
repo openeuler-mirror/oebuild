@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Dict
 import pathlib
 import os
+import time
 
 from ruamel.yaml.scalarstring import LiteralScalarString
 
@@ -167,7 +168,8 @@ class ParseTemplate:
                           toolchain_dir = None,
                           build_in: str = BUILD_IN_DOCKER,
                           sstate_cache = None,
-                          tmp_dir = None):
+                          tmp_dir = None,
+                          is_datetime = False):
         '''
         first param common yaml
         '''
@@ -224,6 +226,12 @@ class ParseTemplate:
 
             if feature.local_conf is not None:
                 local_conf = LiteralScalarString(feature.local_conf + local_conf)
+
+        if is_datetime:
+            now_time = time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
+            datetime_str = LiteralScalarString(f'DATETIME = "{now_time}"')
+            print(datetime_str)
+            local_conf = LiteralScalarString(local_conf + datetime_str)
 
         compile_conf = {
             'build_in': build_in,

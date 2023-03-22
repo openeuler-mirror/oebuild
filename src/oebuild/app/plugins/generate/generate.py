@@ -102,6 +102,11 @@ class Generate(OebuildCommand):
             '''
         )
 
+        parser.add_argument('-dt', '--datetime', dest = "is_datetime", action = "store_true",
+            help='''
+            this param is add DATETIME to local.conf, the value is getting current time
+            ''')
+
         parser.add_argument('-b_in', dest='build_in', choices=[BUILD_IN_DOCKER, BUILD_IN_HOST],
                             default = BUILD_IN_DOCKER, help='''
             This parameter marks the mode at build time, and is built in the container by docker
@@ -190,7 +195,8 @@ class Generate(OebuildCommand):
             toolchain_dir= self.toolchain_dir,
             build_in=build_in,
             sstate_cache= self.sstate_cache,
-            tmp_dir = self.tmp_dir
+            tmp_dir = self.tmp_dir,
+            is_datetime=args.is_datetime
             ))
 
         log.info("=============================================")
