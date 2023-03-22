@@ -11,6 +11,3 @@ plugins:
 - name: bitbake
   class: Bitbake
   path: plugins/bitbake/bitbake.py
-- name: upgrade
-  class: Upgrade
-  path: plugins/upgrade/upgrade.py

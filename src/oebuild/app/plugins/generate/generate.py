@@ -62,7 +62,13 @@ class Generate(OebuildCommand):
 
         parser.add_argument('-s', dest='sstate_cache',
             help='''
-            this param is for sstate_cache directory
+            this param is for SSTATE_MIRRORS
+            '''
+        )
+
+        parser.add_argument('-s_dir', dest='sstate_dir',
+            help='''
+            this param is for SSTATE_DIR
             '''
         )
 

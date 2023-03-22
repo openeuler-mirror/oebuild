@@ -34,6 +34,7 @@ NATIVESDK_SYSROOT = "sysroots/x86_64-pokysdk-linux"
 OPENEULER_SP_DIR = "OPENEULER_SP_DIR"
 NATIVESDK_ENVIRONMENT = "environment-setup-x86_64-pokysdk-linux"
 SSTATE_MIRRORS = "SSTATE_MIRRORS"
+SSTATE_DIR = "SSTATE_DIR"
 TMP_DIR = "TMPDIR"
 
 NATIVE_GCC_DIR = '/usr1/openeuler/native_gcc'
@@ -147,6 +148,14 @@ class LocalConf:
                     content=content
                 )
 
+        # replace sstate_dir
+        if parse_compile.sstate_dir is not None:
+            content = match_and_replace(
+                    pre=SSTATE_DIR,
+                    new_str = f'{SSTATE_DIR} = "{parse_compile.sstate_dir}"',
+                    content=content
+                )
+
         # replace tmpdir
         if parse_compile.tmp_dir is not None:
             content = match_and_replace(
@@ -157,8 +166,6 @@ class LocalConf:
 
         content = self.match_lib_param(content=content)
 
-        content = self._match_lib(parse_compile=parse_compile, content=content)
-
         content = self.replace_param(parse_compile=parse_compile, content=content)
 
         with open(local_dir, 'w', encoding="utf-8") as r_f:
@@ -168,31 +175,16 @@ class LocalConf:
         '''
         add params LIBC, TCMODE-LIBC, crypt
         '''
-        new_content = ''
-        for line in content.split('\n'):
-            ret = re.match('^(LIBC)', line.strip())
-            if ret is not None:
-                continue
-            ret = re.match('^(TCMODE-LIBC)', line.strip())
-            if ret is not None:
-                continue
-            ret = re.match('^(crypt)', line.strip())
-            if ret is not None:
-                continue
-            new_content = new_content + line + '\n'
-        return new_content
+        lib_param_list = {
+            "LIBC": "glibc",
+            "TCMODE-LIBC": "glibc-external",
+            "crypt": "libxcrypt-external"}
 
-    def _match_lib(self, parse_compile: ParseCompile, content: str):
-        if parse_compile.toolchain_dir is not None and 'musl' in parse_compile.toolchain_dir:
-            content = content + 'LIBC = "musl"\n'
-            content = content + 'TCMODE-LIBC = "musl"\n'
-            content = content + 'crypt = "musl"\n'
-            content.replace('aarch64-openeuler-linux-gnu', 'aarch64-openeuler-linux-musl')
-        else:
-            content = content + 'LIBC = "glibc"\n'
-            content = content + 'TCMODE-LIBC = "glibc-external"\n'
-            content = content + 'crypt = "libxcrypt-external"\n'
-            content.replace('aarch64-openeuler-linux-musl', 'aarch64-openeuler-linux-gnu')
+        for key, value in lib_param_list.items():
+            content = match_and_replace(
+                pre = key,
+                new_str = f'{key} = "{value}"',
+                content = content)
         return content
 
     def replace_param(self, parse_compile: ParseCompile, content:str):
@@ -204,7 +196,7 @@ class LocalConf:
             if ret is not None:
                 content = match_and_add(line, content)
                 continue
-            ret = re.match(r'^([A-Z0-9_]+)([a-z_/]{0,})(\s)', line)
+            ret = re.match(r'^([A-Z0-9a-z_-]+)(\s)', line)
             if ret is not None:
                 content = match_and_replace(ret.group(), line, content)
                 continue

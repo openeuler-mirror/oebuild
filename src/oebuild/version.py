@@ -10,4 +10,4 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 '''
 
-__version__ = '0.0.3'
+__version__ = '0.0.5'
