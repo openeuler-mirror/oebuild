@@ -107,6 +107,11 @@ class Generate(OebuildCommand):
             this param is add DATETIME to local.conf, the value is getting current time
             ''')
 
+        parser.add_argument('-df', '--disable_fetch', dest = "is_disable_fetch", action = "store_true",
+            help='''
+            this param is set openeuler_fetch in local.conf, the default value is enable, if set -df, the OPENEULER_FETCH will set to 'disable'
+            ''')
+
         parser.add_argument('-b_in', dest='build_in', choices=[BUILD_IN_DOCKER, BUILD_IN_HOST],
                             default = BUILD_IN_DOCKER, help='''
             This parameter marks the mode at build time, and is built in the container by docker
@@ -169,8 +174,6 @@ class Generate(OebuildCommand):
         except ValueError as v_e:
             log.err(str(v_e))
             return
-        else:
-            pass
 
         try:
             self._add_features_template(args=args,
@@ -183,8 +186,6 @@ class Generate(OebuildCommand):
         except ValueError as v_e:
             log.err(str(v_e))
             return
-        else:
-            pass
 
         if os.path.exists(os.path.join(build_dir,'compile.yaml')):
             os.remove(os.path.join(build_dir,'compile.yaml'))
@@ -196,7 +197,8 @@ class Generate(OebuildCommand):
             build_in=build_in,
             sstate_cache= self.sstate_cache,
             tmp_dir = self.tmp_dir,
-            is_datetime=args.is_datetime
+            is_datetime = args.is_datetime,
+            is_disable_fetch = args.is_disable_fetch
             ))
 
         log.info("=============================================")

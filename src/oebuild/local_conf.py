@@ -196,7 +196,7 @@ class LocalConf:
             if ret is not None:
                 content = match_and_add(line, content)
                 continue
-            ret = re.match(r'^([A-Z0-9a-z_-]+)(\s)', line)
+            ret = re.match(r'^(([A-Z0-9a-z_-]|[/])+)(\s)', line)
             if ret is not None:
                 content = match_and_replace(ret.group(), line, content)
                 continue

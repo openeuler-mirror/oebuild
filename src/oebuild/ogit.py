@@ -71,6 +71,8 @@ class OGit:
             try:
                 repo = git.Repo(self._repo_dir)
                 remote = repo.remote()
+                if repo.head.is_detached:
+                    repo.git.checkout(self._branch)
                 if repo.active_branch.name != self._branch:
                     log.info(f"Fetching into '{self._repo_dir}'...")
                     remote.fetch(progress=self.clone_process)
@@ -135,5 +137,9 @@ class OGit:
             remote_url = repo.remote().url
             branch = repo.active_branch.name
             return remote_url, branch
+        except TypeError:
+            return remote_url, ''
         except git.GitError:
+            return "",""
+        except ValueError:
             return "",""

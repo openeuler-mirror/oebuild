@@ -11,3 +11,6 @@ plugins:
 - name: bitbake
   class: Bitbake
   path: plugins/bitbake/bitbake.py
+- name: manifest
+  class: Manifest
+  path: plugins/manifest/manifest.py

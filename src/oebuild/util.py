@@ -17,9 +17,9 @@ import random
 import getpass
 
 from ruamel.yaml import YAML
-from oebuild.docker_proxy import DockerProxy
 from docker.errors import DockerException
 
+from oebuild.docker_proxy import DockerProxy
 from oebuild.version import __version__
 
 CONFIG_YAML = 'config.yaml'
@@ -46,6 +46,8 @@ def write_yaml(yaml_dir : pathlib.Path, data):
     write data to yaml file
     '''
     if not os.path.exists(yaml_dir.absolute()):
+        if not os.path.exists(os.path.dirname(yaml_dir.absolute())):
+            os.makedirs(os.path.dirname(yaml_dir.absolute()))
         os.mknod(yaml_dir)
 
     with open(yaml_dir, 'w', encoding='utf-8') as w_f:
