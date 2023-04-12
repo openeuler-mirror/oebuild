@@ -282,9 +282,9 @@ cd {build_dir}
         log.info("the platform list is:")
         for platform in list_platform:
             if platform.endswith('.yml'):
-                log.info(platform.rstrip('.yml'))
+                log.info(platform.replace('.yml'))
             if platform.endswith('.yaml'):
-                log.info(platform.rstrip('.yaml'))
+                log.info(platform.replace('.yaml'))
 
     def _list_feature(self,):
         log.info("=============================================")
@@ -294,9 +294,9 @@ cd {build_dir}
         log.info("the feature list is:")
         for feature in list_feature:
             if feature.endswith('.yml'):
-                log.info(feature.rstrip('.yaml'))
+                log.info(feature.replace('.yml',''))
             if feature.endswith('.yaml'):
-                log.info(feature.rstrip('.yaml'))
+                log.info(feature.replace('.yaml',''))
             feat = oebuild_util.read_yaml(pathlib.Path(os.path.join(yocto_oebuild_dir,
                                                                     'features',
                                                                     feature)))

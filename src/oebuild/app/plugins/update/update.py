@@ -16,12 +16,13 @@ import textwrap
 import sys
 import shutil
 
+from docker.errors import DockerException
+
 import oebuild.util as oebuild_util
 from oebuild.command import OebuildCommand
 from oebuild.configure import Configure, ConfigBasicRepo, YOCTO_META_OPENEULER
 from oebuild.docker_proxy import DockerProxy
 from oebuild.ogit import OGit
-from docker.errors import DockerException
 
 from oebuild.my_log import MyLog as log, INFO_COLOR
 
@@ -139,7 +140,7 @@ class Update(OebuildCommand):
             if remote_url != yocto_config.remote_url:
                 if not os.path.exists(self.configure.yocto_bak_dir()):
                     os.makedirs(self.configure.yocto_bak_dir())
-                bak_dir = os.path.join(self.configure.yocto_bak_dir(), 
+                bak_dir = os.path.join(self.configure.yocto_bak_dir(),
                                        yocto_config.path + "_" + oebuild_util.get_time_stamp())
                 log.warning(f"yocto-meta-openeuler remote is changed, \
                             bak yocto-meta-openeuler to {bak_dir}")
