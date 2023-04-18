@@ -20,7 +20,6 @@ from queue import Queue
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor,wait,ALL_COMPLETED
 
-
 import git
 from git.exc import GitCommandError
 
@@ -118,7 +117,7 @@ class Manifest(OebuildCommand):
             print(f"Expose progress: {progress}%: ", "▋" * (progress // 2), end="")
             sys.stdout.flush()
         print()
-
+        manifest_list = dict(sorted(manifest_list.items(),key=lambda s:s[0]))
         oebuild_util.write_yaml(
             yaml_dir=pathlib.Path(manifest_dir),
             data={'manifest_list': manifest_list})
