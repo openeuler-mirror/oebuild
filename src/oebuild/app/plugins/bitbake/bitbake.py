@@ -81,7 +81,11 @@ class Bitbake(OebuildCommand):
         except CheckCompileError as c_e:
             log.err(str(c_e))
             return
-        parse_compile.pull_repos(self.configure.source_dir())
+
+        # if has manifest.yaml, init layer repo with it
+        yocto_dir = os.path.join(self.configure.source_dir(), "yocto-meta-openeuler")
+        manifest_path = os.path.join(yocto_dir, ".oebuild/manifest.yaml")
+        parse_compile.pull_repos(self.configure.source_dir(), manifest_path=manifest_path)
         parse_env = ParseEnv(env_dir='.env')
 
         if parse_compile.build_in == BUILD_IN_HOST:

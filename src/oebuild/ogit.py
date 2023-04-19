@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details.
 import os
 
 import git
+from git import GitCommandError
 
 from oebuild.my_log import MyLog as log
 
@@ -143,3 +144,24 @@ class OGit:
             return "",""
         except ValueError:
             return "",""
+
+    def clone_or_pull_with_version(self, version, depth):
+        '''
+        clone or pull with version and depth
+        '''
+        repo = git.Repo.init(self._repo_dir)
+        remote = None
+        for item in repo.remotes:
+            if self._remote_url == item.url:
+                remote = item
+            else:
+                continue
+        if remote is None:
+            remote_name = "manifest"
+            remote = git.Remote.add(repo = repo, name = remote_name, url = self._remote_url)
+        log.info(f"Pulling into '{self._repo_dir}'...")
+        try:
+            repo.git.checkout(version)
+        except GitCommandError:
+            remote.fetch(version, depth = depth, progress=self.clone_process)
+            repo.git.checkout(version)

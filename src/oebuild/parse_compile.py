@@ -172,17 +172,24 @@ class ParseCompile:
         '''
         return self.compile.tmp_dir
 
-    def pull_repos(self, base_dir):
+    def pull_repos(self, base_dir, manifest_path):
         '''
         Download the repos set in compile.yaml based on the given base path
         '''
+        manifest = None
+        if os.path.exists(manifest_path):
+            manifest = oebuild_util.read_yaml(pathlib.Path(manifest_path))['manifest_list']
         if not self.compile.not_use_repos:
             repos = self.compile.repos
-            for _, repo in repos.items():
+            for repo_local, repo in repos.items():
                 repo_dir = os.path.join(base_dir, repo.path)
                 try:
                     repo_git = OGit(repo_dir=repo_dir, remote_url=repo.url, branch=repo.refspec)
-                    repo_git.clone_or_pull_repo()
+                    if manifest is not None and repo_local in manifest:
+                        repo_item = manifest[repo_local]
+                        repo_git.clone_or_pull_with_version(version=repo_item['version'], depth=1)
+                    else:
+                        repo_git.clone_or_pull_repo()
                 except Exception as e_p:
                     raise e_p
 
