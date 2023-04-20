@@ -282,9 +282,9 @@ cd {build_dir}
         log.info("the platform list is:")
         for platform in list_platform:
             if platform.endswith('.yml'):
-                log.info(platform.replace('.yml'))
+                log.info(platform.replace('.yml', ''))
             if platform.endswith('.yaml'):
-                log.info(platform.replace('.yaml'))
+                log.info(platform.replace('.yaml', ''))
 
     def _list_feature(self,):
         log.info("=============================================")
