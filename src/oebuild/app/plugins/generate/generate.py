@@ -20,7 +20,7 @@ from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
 from oebuild.configure import Configure
 from oebuild.parse_template import BaseParseTemplate, ParseTemplate, BUILD_IN_DOCKER, BUILD_IN_HOST
-from oebuild.my_log import MyLog as log
+from oebuild.m_log import logger, INFO_COLOR
 
 class Generate(OebuildCommand):
     '''
@@ -107,7 +107,10 @@ class Generate(OebuildCommand):
             this param is add DATETIME to local.conf, the value is getting current time
             ''')
 
-        parser.add_argument('-df', '--disable_fetch', dest = "is_disable_fetch", action = "store_true",
+        parser.add_argument('-df',
+                            '--disable_fetch',
+                            dest = "is_disable_fetch",
+                            action = "store_true",
             help='''
             this param is set openeuler_fetch in local.conf, the default value is enable, if set -df, the OPENEULER_FETCH will set to 'disable'
             ''')
@@ -124,7 +127,7 @@ class Generate(OebuildCommand):
         args = args.parse_args(unknown)
 
         if not self.configure.is_oebuild_dir():
-            log.err('your current directory had not finishd init')
+            logger.error('your current directory had not finishd init')
             sys.exit(-1)
 
         build_in = BUILD_IN_DOCKER
@@ -132,7 +135,7 @@ class Generate(OebuildCommand):
             try:
                 self._check_param_in_host(args=args)
             except ValueError as v_e:
-                log.err(str(v_e))
+                logger.error(str(v_e))
                 return
             self.nativesdk_dir = args.nativesdk_dir
             build_in = BUILD_IN_HOST
@@ -148,7 +151,7 @@ class Generate(OebuildCommand):
 
         yocto_dir = self.configure.source_yocto_dir()
         if not self.check_support_oebuild(yocto_dir):
-            log.err('Currently, yocto-meta-openeuler does not support oebuild, \
+            logger.error('Currently, yocto-meta-openeuler does not support oebuild, \
                     please modify .oebuild/config and re-execute `oebuild update`')
             return
 
@@ -169,10 +172,10 @@ class Generate(OebuildCommand):
             yocto_oebuild_dir=yocto_oebuild_dir,
             parser_template=parser_template)
         except BaseParseTemplate as b_t:
-            log.err(str(b_t))
+            logger.error(str(b_t))
             return
         except ValueError as v_e:
-            log.err(str(v_e))
+            logger.error(str(v_e))
             return
 
         try:
@@ -180,11 +183,11 @@ class Generate(OebuildCommand):
             yocto_oebuild_dir=yocto_oebuild_dir,
             parser_template=parser_template)
         except BaseParseTemplate as b_t:
-            log.err(str(b_t))
+            logger.error(str(b_t))
             self._list_feature()
             return
         except ValueError as v_e:
-            log.err(str(v_e))
+            logger.error(str(v_e))
             return
 
         if os.path.exists(os.path.join(build_dir,'compile.yaml')):
@@ -201,16 +204,18 @@ class Generate(OebuildCommand):
             is_disable_fetch = args.is_disable_fetch
             ))
 
-        log.info("=============================================")
-        log.successful("generate compile.yaml successful")
-        log.info("please run `oebuild bitbake` in directory next")
         format_dir = f'''
+generate compile.yaml successful
+
+please run follow command:
+=============================================
 
 cd {build_dir}
+oebuild bitbake
 
+=============================================
 '''
-        log.info(format_dir)
-        log.info("=============================================")
+        logger.info(format_dir)
 
     def _check_param_in_host(self, args):
         if args.toolchain_dir == '':
@@ -256,7 +261,7 @@ cd {build_dir}
             build_dir = os.path.join(self.configure.build_dir(), args.directory)
 
         if not os.path.abspath(build_dir).startswith(self.configure.build_dir()):
-            log.err("build path must in oebuild workspace")
+            logger.error("build path must in oebuild workspace")
             return None
 
         if not os.path.exists(build_dir):
@@ -275,35 +280,35 @@ cd {build_dir}
             return
 
     def _list_platform(self):
-        log.info("=============================================")
+        logger.info("=============================================")
         yocto_dir = self.configure.source_yocto_dir()
         yocto_oebuild_dir = os.path.join(yocto_dir, ".oebuild")
         list_platform = os.listdir(os.path.join(yocto_oebuild_dir, 'platform'))
-        log.info("the platform list is:")
+        logger.info("the platform list is:")
         for platform in list_platform:
             if platform.endswith('.yml'):
-                log.info(platform.replace('.yml', ''))
+                print(platform.replace('.yml', ''), INFO_COLOR)
             if platform.endswith('.yaml'):
-                log.info(platform.replace('.yaml', ''))
+                print(platform.replace('.yaml', ''), INFO_COLOR)
 
     def _list_feature(self,):
-        log.info("=============================================")
+        logger.info("=============================================")
         yocto_dir = self.configure.source_yocto_dir()
         yocto_oebuild_dir = os.path.join(yocto_dir, ".oebuild")
         list_feature = os.listdir(os.path.join(yocto_oebuild_dir, 'features'))
-        log.info("the feature list is:")
+        logger.info("the feature list is:")
         for feature in list_feature:
             if feature.endswith('.yml'):
-                log.info(feature.replace('.yml',''))
+                print(feature.replace('.yml',''), INFO_COLOR)
             if feature.endswith('.yaml'):
-                log.info(feature.replace('.yaml',''))
+                print(feature.replace('.yaml',''), INFO_COLOR)
             feat = oebuild_util.read_yaml(pathlib.Path(os.path.join(yocto_oebuild_dir,
                                                                     'features',
                                                                     feature)))
             if "support" in feat:
-                log.info(f"    support arch: {feat.get('support')}")
+                logger.info("    support arch: %s", feat.get('support'))
             else:
-                log.info("    support arch: all")
+                logger.info("    support arch: all")
 
     def check_support_oebuild(self, yocto_dir):
         '''

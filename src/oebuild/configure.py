@@ -58,7 +58,7 @@ class Config:
     '''
     docker: ConfigContainer
 
-    basic_repo: Dict
+    basic_repo: dict
 
 class Configure:
     '''
@@ -126,7 +126,7 @@ class Configure:
         '''
         config = Configure.parse_oebuild_config()
         basic_config = config.basic_repo
-        yocto_config:ConfigBasicRepo = basic_config.get(YOCTO_META_OPENEULER)
+        yocto_config:ConfigBasicRepo = basic_config[YOCTO_META_OPENEULER]
         yocto_dir = yocto_config.path
         return os.path.join(Configure.source_dir(), yocto_dir)
 

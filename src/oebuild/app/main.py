@@ -24,7 +24,7 @@ import colorama
 import oebuild.util as oebuild_util
 from oebuild.version import __version__
 from oebuild.command import ExtCommand, extension_commands
-from oebuild.my_log import MyLog as log
+from oebuild.m_log import logger
 
 APP = "app"
 

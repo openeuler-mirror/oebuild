@@ -11,7 +11,7 @@ See the Mulan PSL v2 for more details.
 '''
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Optional
 import pathlib
 import os
 import time
@@ -48,11 +48,11 @@ class Template:
     '''
     basic template for paltform and feature
     '''
-    repos: Dict[str, 'OebuildRepo']
+    repos: Optional[Dict[str, 'OebuildRepo']]
 
-    layers: list
+    layers: Optional[list]
 
-    local_conf: LiteralScalarString
+    local_conf: Optional[LiteralScalarString]
 
 @dataclass
 class PlatformTemplate(Template):
@@ -133,7 +133,7 @@ class ParseTemplate:
             config_name = os.path.basename(config_dir)
             if config_type == PLATFORM:
                 self.platform_template = PlatformTemplate(
-                    platform=os.path.splitext(config_name)[0],
+                    platform=LiteralScalarString(os.path.splitext(config_name)[0]),
                     machine=data['machine'],
                     toolchain_type=data['toolchain_type'],
                     repos=repo_dict,
@@ -153,10 +153,10 @@ class ParseTemplate:
                                             application support archs')
 
             self.feature_template.append(FeatureTemplate(
-                feature_name=os.path.splitext(config_name)[0],
+                feature_name=LiteralScalarString(os.path.splitext(config_name)[0]),
                 repos=repo_dict,
                 support=support_arch,
-                local_conf=local_conf,
+                local_conf=LiteralScalarString(local_conf),
                 layers=layers
             ))
 

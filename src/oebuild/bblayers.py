@@ -53,15 +53,14 @@ class BBLayers:
         except Exception as e_p:
             raise e_p
 
+        bblayers = []
         if isinstance(layers, str):
-            layers = [os.path.join(pre_dir, layers)]
-        else:
-            tmp_layers = []
+            bblayers = [os.path.join(pre_dir, layers)]
+        if isinstance(layers, list):
             for layer in layers:
-                tmp_layers.append(os.path.join(pre_dir, layer))
-            layers = tmp_layers
+                bblayers.append(os.path.join(pre_dir, layer))
 
-        bb_utils.edit_bblayers_conf(self.bblayers_dir, add=layers, remove=None)
+        bb_utils.edit_bblayers_conf(self.bblayers_dir, add=bblayers, remove=None)
 
     def check_layer_exist(self, layers:str or list):
         '''
@@ -70,10 +69,13 @@ class BBLayers:
         args:
             layers (str or list): needed to add to bblayers.conf
         '''
+        bblayers = []
         if isinstance(layers, str):
-            layers = [layers]
+            bblayers.append(layers)
+        else:
+            bblayers.extend(bblayers)
 
-        for layer in layers:
+        for layer in bblayers:
             layer_dir = os.path.join(self.base_dir, layer)
             if not os.path.exists(layer_dir):
                 raise ValueError("layer does not exists")

@@ -24,7 +24,7 @@ class EnvContainer:
 
     branch: str
 
-    short_id: str
+    short_id: str or None
 
     volumns: list
 
@@ -33,7 +33,7 @@ class Env:
     '''
     the env object
     '''
-    container: EnvContainer
+    container: EnvContainer or None
 
 class ParseEnv:
     '''
@@ -42,8 +42,8 @@ class ParseEnv:
     '''
     def __init__(self, env_dir):
         self.env_dir = pathlib.Path(env_dir) if isinstance(env_dir, str) else env_dir
-        self.env = Env(container=None)
-        self.parse_env()
+        self.env = Env
+        self._parse_env()
 
     @property
     def container(self):
@@ -52,7 +52,7 @@ class ParseEnv:
         '''
         return self.env.container
 
-    def parse_env(self):
+    def _parse_env(self):
         '''
         parse env.yaml to env object
         '''
@@ -126,7 +126,7 @@ class ParseEnv:
         oebuild_util.write_yaml(pathlib.Path(self.env_dir), data=data)
 
     @staticmethod
-    def check_env_container(env_container: EnvContainer):
+    def check_env_container(env_container):
         '''
         Check that the env.yaml content is compliant
         '''

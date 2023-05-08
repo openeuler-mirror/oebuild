@@ -21,13 +21,13 @@ from threading import Thread
 from concurrent.futures import ThreadPoolExecutor,wait,ALL_COMPLETED
 
 import git
+from git.repo import Repo
 from git.exc import GitCommandError
 
 from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
 import oebuild.util as oebuild_util
-
-from oebuild.my_log import MyLog as log
+from oebuild.m_log import logger
 
 class Manifest(OebuildCommand):
     '''
@@ -86,7 +86,7 @@ class Manifest(OebuildCommand):
         args = args.parse_args(unknown)
 
         if not self.configure.is_oebuild_dir():
-            log.err('your current directory had not finishd init')
+            logger.error('your current directory had not finishd init')
             sys.exit(-1)
 
         if args.is_create:
@@ -100,7 +100,7 @@ class Manifest(OebuildCommand):
         for index, repo_dir in enumerate(src_list):
             local_dir = os.path.join(self.configure.source_dir(), repo_dir)
             try:
-                repo = git.Repo(local_dir)
+                repo = Repo(local_dir)
                 remote_url = repo.remote().url
                 version = repo.head.commit.hexsha
             except git.GitError:
@@ -171,7 +171,7 @@ class Manifest(OebuildCommand):
 
     def _download_repo(self, out_q: Queue ,src_dir, key, value):
         repo_dir = os.path.join(src_dir, key)
-        repo = git.Repo.init(repo_dir)
+        repo = Repo.init(repo_dir)
         remote = None
         for item in repo.remotes:
             if value['remote_url'] == item.url:

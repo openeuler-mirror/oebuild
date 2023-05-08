@@ -19,10 +19,10 @@ from oebuild.configure import Configure
 from oebuild.parse_compile import ParseCompile, CheckCompileError
 from oebuild.parse_env import ParseEnv
 import oebuild.util as oebuild_util
-from oebuild.my_log import MyLog as log
 from oebuild.app.plugins.bitbake.in_container import InContainer
 from oebuild.app.plugins.bitbake.in_host import InHost
 from oebuild.parse_template import BUILD_IN_HOST
+from oebuild.m_log import logger
 from docker.errors import DockerException
 
 class Bitbake(OebuildCommand):
@@ -70,7 +70,7 @@ class Bitbake(OebuildCommand):
         command = self._get_command(unknow=unknown)
 
         if not self.check_support_bitbake():
-            log.warning("please do it in compile workspace which contain compile.yaml")
+            logger.error("please do it in compile workspace which contain compile.yaml")
             return
 
         if not os.path.exists('.env'):
@@ -79,13 +79,13 @@ class Bitbake(OebuildCommand):
         try:
             parse_compile = ParseCompile(self.compile_conf_dir)
         except CheckCompileError as c_e:
-            log.err(str(c_e))
+            logger.error(str(c_e))
             return
 
         # if has manifest.yaml, init layer repo with it
         yocto_dir = os.path.join(self.configure.source_dir(), "yocto-meta-openeuler")
         manifest_path = os.path.join(yocto_dir, ".oebuild/manifest.yaml")
-        parse_compile.pull_repos(self.configure.source_dir(), manifest_path=manifest_path)
+        parse_compile.check_with_version(self.configure.source_dir(), manifest_path=manifest_path)
         parse_env = ParseEnv(env_dir='.env')
 
         if parse_compile.build_in == BUILD_IN_HOST:
@@ -95,7 +95,7 @@ class Bitbake(OebuildCommand):
         try:
             oebuild_util.check_docker()
         except DockerException as d_e:
-            log.err(str(d_e))
+            logger.error(str(d_e))
             return
         in_container = InContainer(self.configure)
         in_container.exec(parse_env=parse_env,

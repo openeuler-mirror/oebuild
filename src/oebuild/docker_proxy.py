@@ -246,14 +246,15 @@ class DockerProxy:
             detach=True,
             tty=True
         )
-
-        res = self.container_exec_command(
+        if isinstance(container, Container):
+            res = self.container_exec_command(
             container=container,
             command=command,
             user=user,
             work_space=work_space)
-
-        return container, res.output
+            return container, res.output
+        else:
+            raise ValueError("docker start faild")
 
     def container_run_simple(self, image:str, volumes: list, network="host"):
         '''

@@ -120,6 +120,8 @@ class LocalConf:
         # replace nativesdk OPENEULER_SP_DIR
         if parse_compile.build_in == BUILD_IN_HOST:
             self.check_nativesdk_valid(parse_compile.nativesdk_dir)
+            if parse_compile.nativesdk_dir is None:
+                raise ValueError("please set nativesdk dir")
             nativesdk_sys_dir = os.path.join(parse_compile.nativesdk_dir, NATIVESDK_SYSROOT)
             content = match_and_replace(
                 pre=NATIVESDK_DIR_NAME,
@@ -129,7 +131,7 @@ class LocalConf:
 
             content = match_and_replace(
                 pre=OPENEULER_SP_DIR,
-                new_str=OPENEULER_SP_DIR + ' = "' + src_dir + '"',
+                new_str= f"{OPENEULER_SP_DIR} = '{src_dir}'",
                 content=content
             )
 
@@ -168,6 +170,8 @@ class LocalConf:
 
         content = self.replace_param(parse_compile=parse_compile, content=content)
 
+        if content is None:
+            return
         with open(local_dir, 'w', encoding="utf-8") as r_f:
             r_f.write(content)
 
@@ -191,6 +195,8 @@ class LocalConf:
         '''
         match and replace param by ParseCompile.local_conf
         '''
+        if parse_compile.local_conf is None:
+            return
         for line in parse_compile.local_conf.split('\n'):
             ret = re.match(r'^([A-Z0-9_]+)(append)(\s)', line)
             if ret is not None:

@@ -10,6 +10,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 '''
 
+import logging
 import colorama
 
 #: Color used (when applicable) for printing with successful()
@@ -24,35 +25,25 @@ WRN_COLOR = colorama.Fore.LIGHTYELLOW_EX
 #: Color used (when applicable) for printing with err() and die()
 ERR_COLOR = colorama.Fore.LIGHTRED_EX
 
-class MyLog:
-    '''
-    Simple log output is implemented, including info, successful, warning, err four output types
-    '''
+# 创建logger对象
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
-    @staticmethod
-    def info(msg):
-        '''
-        normal message print
-        '''
-        print(INFO_COLOR + msg)
+# 创建文件处理器
+fh = logging.FileHandler('oebuild.log')
+fh.setLevel(logging.INFO)
 
-    @staticmethod
-    def successful(msg):
-        '''
-        successful message print
-        '''
-        print(SUCCESS_COLOR + msg)
+# 创建控制台处理器
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
 
-    @staticmethod
-    def warning(msg):
-        '''
-        warning messaage print
-        '''
-        print(WRN_COLOR + msg)
+# 创建格式化器
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-    @staticmethod
-    def err(msg):
-        '''
-        err message print
-        '''
-        print(ERR_COLOR + msg)
+# 将格式化器添加到文件处理器和控制台处理器
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+
+# 将处理器添加到logger对象
+logger.addHandler(fh)
+logger.addHandler(ch)

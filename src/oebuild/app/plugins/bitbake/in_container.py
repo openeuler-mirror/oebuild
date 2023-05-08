@@ -20,7 +20,7 @@ from oebuild.docker_proxy import DockerProxy
 from oebuild.configure import Configure
 from oebuild.ogit import OGit
 from oebuild.parse_compile import ParseCompile
-from oebuild.my_log import MyLog as log
+from oebuild.m_log import logger
 import oebuild.app.plugins.bitbake.const as bitbake_const
 from oebuild.app.plugins.bitbake.base_build import BaseBuild
 
@@ -47,6 +47,7 @@ class InContainer(BaseBuild):
         '''
         execute bitbake command
         '''
+        logger.info("bitbake starting ...")
         yocto_dir = os.path.join(
             self.configure.source_dir(), "yocto-meta-openeuler")
         remote, branch = OGit.get_repo_info(yocto_dir)
@@ -87,7 +88,7 @@ class InContainer(BaseBuild):
                 remote=remote,
                 branch=branch,
                 volumns=volumns,
-                short_id=None
+                short_id=""
             )
             check_container = env.is_same_container(data=env_container)
         except Exception as e_p:
@@ -100,26 +101,25 @@ class InContainer(BaseBuild):
             config = self.configure.parse_oebuild_config()
             container_config = config.docker
             # here use default mater branch bind container and fix next
-            image_name = container_config.repo_url + ":" + \
-                container_config.tag_map.get('master')
-            container = self.client.container_run_simple(
+            image_name = f"{container_config.repo_url}:{container_config.tag_map.get('master')}"
+            container:Container = self.client.container_run_simple(
                 image=image_name,
-                volumes=volumns)
+                volumes=volumns) # type: ignore
 
             env_container.short_id = container.short_id
             env.set_env_container(env_container)
             env.export_env()
 
         self.container_id = env.container.short_id
-        container = self.client.get_container(self.container_id)
+        container:Container = self.client.get_container(self.container_id) # type: ignore
         if not self.client.is_container_running(container):
             self.client.start_container(container)
 
-    def exec_compile(self, parse_compile: ParseCompile = None, command: str = "" or None):
+    def exec_compile(self, parse_compile: ParseCompile, command: str = ""):
         '''
         execute compile task
         '''
-        container = self.client.get_container(self.container_id)
+        container:Container = self.client.get_container(self.container_id) # type: ignore
 
         self.init_bash(container=container,
                        build_dir=os.path.basename(os.getcwd()))
@@ -127,7 +127,7 @@ class InContainer(BaseBuild):
         try:
             self.init_bitbake(container=container)
         except ValueError as v_e:
-            log.err(str(v_e))
+            logger.error(str(v_e))
             return
 
         # add bblayers, this action must before replace local_conf
@@ -155,7 +155,7 @@ class InContainer(BaseBuild):
                 work_space=f"/home/{bitbake_const.CONTAINER_USER}")
 
             for line in res.output:
-                log.info(line.decode().strip('\n'))
+                logger.info(line.decode().strip('\n'))
         else:
             content = self._get_bashrc_content(container=container)
             for b_s in bitbake_const.BASH_BANNER.split('\n'):
@@ -248,7 +248,7 @@ class InContainer(BaseBuild):
             stream=False
         )
         if resp.exit_code != 0:
-            log.info(
+            logger.info(
                 "=========================install sudo===============================")
             self._install_software(container=container, software="sudo")
 
@@ -270,7 +270,7 @@ class InContainer(BaseBuild):
             stream=True
         )
         for line in resp.output:
-            log.info(line.decode().strip('\n'))
+            logger.info(line.decode().strip('\n'))
 
     def init_bash(self, container: Container, build_dir):
         '''

@@ -38,7 +38,7 @@ class BaseBuild:
         local_conf = LocalConf(local_conf_dir=local_dir)
         local_conf.update(parse_compile=parse_compile, src_dir=src_dir)
 
-    def add_bblayers(self, bblayers_dir: str, pre_dir: str, base_dir: str, layers: list):
+    def add_bblayers(self, bblayers_dir: str, pre_dir: str, base_dir: str, layers):
         '''
         add_layers has two main functions, one is to initialize
         the compilation directory, and the other is to add the

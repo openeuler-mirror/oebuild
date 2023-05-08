@@ -13,29 +13,30 @@ See the Mulan PSL v2 for more details.
 import os
 from dataclasses import dataclass
 import pathlib
+from typing import Optional
 
 import oebuild.util as oebuild_util
 from oebuild.ogit import OGit
-from oebuild.parse_template import PlatformTemplate,ParseTemplate,BUILD_IN_DOCKER
+from oebuild.parse_template import PlatformTemplate, ParseTemplate, BUILD_IN_DOCKER
 
 @dataclass
 class Compile(PlatformTemplate):
     '''
     Compile is the parsed object of compile.yaml and is used to manipulate the build file
     '''
-    toolchain_dir: str
+    toolchain_dir: Optional[str]
 
-    nativesdk_dir: str
+    nativesdk_dir: Optional[str]
 
     not_use_repos: bool
 
     build_in: str
 
-    sstate_cache: str
+    sstate_cache: Optional[str]
 
-    sstate_dir: str
+    sstate_dir: Optional[str]
 
-    tmp_dir: str
+    tmp_dir: Optional[str]
 
 class BaseParseCompileError(ValueError):
     '''
@@ -53,10 +54,6 @@ class ParseCompile:
     download the relevant code repository
     '''
     def __init__(self, compile_conf_dir):
-        self.compile = None
-        self.init_parse(compile_conf_dir)
-
-    def init_parse(self, compile_conf_dir):
         '''
         The initialization operation is used to parse the compile.yaml
         file and perform a series of checks before parsing
@@ -86,7 +83,7 @@ class ParseCompile:
             repos=None if "repos" not in data else ParseTemplate.parse_oebuild_repo(data['repos']),
             local_conf=None if "local_conf" not in data else data['local_conf'],
             layers=None if "layers" not in data else data['layers']
-        )
+        ) 
 
     @property
     def build_in(self):
@@ -172,7 +169,14 @@ class ParseCompile:
         '''
         return self.compile.tmp_dir
 
-    def pull_repos(self, base_dir, manifest_path):
+    @property
+    def repos(self):
+        '''
+        return attr of repos
+        '''
+        return self.compile.repos
+
+    def check_with_version(self, base_dir, manifest_path):
         '''
         Download the repos set in compile.yaml based on the given base path
         '''
@@ -181,17 +185,19 @@ class ParseCompile:
             manifest = oebuild_util.read_yaml(pathlib.Path(manifest_path))['manifest_list']
         if not self.compile.not_use_repos:
             repos = self.compile.repos
+            if repos is None:
+                return
             for repo_local, repo in repos.items():
                 repo_dir = os.path.join(base_dir, repo.path)
-                try:
+                if not os.path.exists(repo_dir):
                     repo_git = OGit(repo_dir=repo_dir, remote_url=repo.url, branch=repo.refspec)
-                    if manifest is not None and repo_local in manifest:
-                        repo_item = manifest[repo_local]
-                        repo_git.clone_or_pull_with_version(version=repo_item['version'], depth=1)
-                    else:
-                        repo_git.clone_or_pull_repo()
-                except Exception as e_p:
-                    raise e_p
+                    repo_git.clone_or_pull_repo()
+                if manifest is None:
+                    continue
+                if repo_local in manifest:
+                    repo_git = OGit(repo_dir=repo_dir, remote_url=repo.url, branch=repo.refspec)
+                    repo_item = manifest[repo_local]
+                    repo_git.check_out_version(version=repo_item['version'])
 
     @staticmethod
     def check_compile_conf(data):

@@ -13,21 +13,10 @@ See the Mulan PSL v2 for more details.
 import os
 
 import git
-from git import GitCommandError
+from git.repo import Repo
+from git import GitCommandError, RemoteProgress
 
-from oebuild.my_log import MyLog as log
-
-(
-    BEGIN,
-    END,
-    COUNTING,
-    COMPRESSING,
-    WRITING,
-    RECEIVING,
-    RESOLVING,
-    FINDING_SOURCES,
-    CHECKING_OUT,
-) = [1 << x for x in range(9)]
+from oebuild.m_log import logger
 
 class OGit:
     '''
@@ -41,7 +30,7 @@ class OGit:
         try:
             _, self._screen_width = os.popen('stty size', 'r').read().split()
         except ValueError as v_e:
-            log.warning(str(v_e))
+            logger.warning(str(v_e))
 
     @property
     def repo_dir(self):
@@ -64,92 +53,21 @@ class OGit:
         '''
         return self.branch
 
-    def clone_or_pull_repo(self, ):
+    def check_out_version(self, version):
+        '''
+        check out version
+        '''
+        repo = Repo.init(self._repo_dir)
+        try:
+            repo.git.checkout(version)
+        except GitCommandError:
+            logger.error("checkout faild")
+
+    def clone_or_pull_repo(self,):
         '''
         clone or pull git repo
         '''
-        if os.path.exists(self._repo_dir):
-            try:
-                repo = git.Repo(self._repo_dir)
-                remote = repo.remote()
-                if repo.head.is_detached:
-                    repo.git.checkout(self._branch)
-                if repo.active_branch.name != self._branch:
-                    log.info(f"Fetching into '{self._repo_dir}'...")
-                    remote.fetch(progress=self.clone_process)
-                    repo.git.checkout(self._branch)
-                log.info(f"Pulling into '{self._repo_dir}'...")
-                remote.pull(progress=self.clone_process)
-            except Exception as e_p:
-                raise e_p
-        else:
-            try:
-                log.info(f"Cloning into '{self._repo_dir}'...")
-                git.Repo.clone_from(
-                    url=self._remote_url,
-                    to_path=self._repo_dir,
-                    branch=self._branch,
-                    progress=self.clone_process)
-            except Exception as e_p:
-                raise e_p
-
-    def clone_process(self, op_code, cur_count, max_count, message):
-        '''
-        print clone or pull progress
-        '''
-        if op_code % 2 == BEGIN:
-            print("")
-            return
-        op_title = ''
-        pmsg = ''
-        if op_code == COUNTING:
-            op_title = "remote: Counting objects"
-            pmsg = f"{op_title}: {int(cur_count/max_count*100)}% \
-                ({cur_count}/{max_count}), {message}"
-
-        elif op_code == COMPRESSING:
-            op_title = "remote: Compressing objects"
-            pmsg = f"{op_title}: {int(cur_count/max_count*100)}% \
-                ({cur_count}/{max_count}), {message}"
-
-        elif op_code == RECEIVING:
-            op_title = "Receiving objects"
-            pmsg = f"{op_title}: {int(cur_count/max_count*100)}% \
-                ({cur_count}/{max_count}), {message}"
-
-        elif op_code == RESOLVING:
-            op_title = "Resolving deltas"
-            pmsg = f"{op_title}: {int(cur_count/max_count*100)}% ({cur_count}/{max_count})"
-        else:
-            return
-
-        pmsg = "\r" + pmsg
-        if hasattr(self, '_screen_width'):
-            pmsg = pmsg.ljust(int(self._screen_width), ' ')
-        print(pmsg, end='', flush=True)
-
-    @staticmethod
-    def get_repo_info(repo_dir: str):
-        '''
-        return git repo info: remote_url, branch
-        '''
-        try:
-            repo = git.Repo(repo_dir)
-            remote_url = repo.remote().url
-            branch = repo.active_branch.name
-            return remote_url, branch
-        except TypeError:
-            return remote_url, ''
-        except git.GitError:
-            return "",""
-        except ValueError:
-            return "",""
-
-    def clone_or_pull_with_version(self, version, depth):
-        '''
-        clone or pull with version and depth
-        '''
-        repo = git.Repo.init(self._repo_dir)
+        repo = Repo.init(self._repo_dir)
         remote = None
         for item in repo.remotes:
             if self._remote_url == item.url:
@@ -157,11 +75,62 @@ class OGit:
             else:
                 continue
         if remote is None:
-            remote_name = "manifest"
-            remote = git.Remote.add(repo = repo, name = remote_name, url = self._remote_url)
-        log.info(f"Pulling into '{self._repo_dir}'...")
+            remote_name = "upstream"
+            remote = git.Remote.add(repo=repo, name=remote_name, url=self._remote_url)
+        logger.info("Fetching into %s ...", self._repo_dir)
+        remote.fetch(progress=CustomRemote())
         try:
-            repo.git.checkout(version)
+            repo.git.checkout(self._branch)
         except GitCommandError:
-            remote.fetch(version, depth = depth, progress=self.clone_process)
-            repo.git.checkout(version)
+            logger.error("update faild")
+
+    @staticmethod
+    def get_repo_info(repo_dir: str):
+        '''
+        return git repo info: remote_url, branch
+        '''
+        try:
+            repo = Repo(repo_dir)
+            remote_url = repo.remote().url
+            branch = repo.active_branch.name
+            return remote_url, branch
+        except TypeError:
+            return "", ''
+        except git.GitError:
+            return "",""
+        except ValueError:
+            return "",""
+
+class CustomRemote(git.RemoteProgress):
+    '''
+    Rewrote RemoteProgress to show the process of code updates
+    '''
+    def update(self, op_code, cur_count, max_count=None, message=''):
+        '''
+        rewrote update function
+        '''
+        def print_progress(op_title, cur_count, max_count, message):
+            percent_done = int(cur_count / max_count * 100)
+            if percent_done == 100:
+                message = "done"
+            pmsg = f"{op_title}: {percent_done}% ({cur_count}/{max_count}), {message}"
+            print(pmsg, end="\r")
+
+        if op_code % 2 == RemoteProgress.BEGIN:
+            print("")
+        elif op_code == RemoteProgress.COUNTING:
+            op_title = "remote: Counting objects"
+            print_progress(op_title, cur_count, max_count, message)
+        elif op_code == RemoteProgress.COMPRESSING:
+            op_title = "remote: Compressing objects"
+            print_progress(op_title, cur_count, max_count, message)
+        elif op_code == RemoteProgress.RECEIVING:
+            op_title = "Receiving objects"
+            print_progress(op_title, cur_count, max_count, message)
+        elif op_code == RemoteProgress.RESOLVING:
+            op_title = "Resolving deltas"
+            print_progress(op_title, cur_count, max_count, message)
+        elif op_code and RemoteProgress.END == 2:
+            print("")
+        else:
+            return

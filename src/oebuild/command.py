@@ -211,9 +211,8 @@ def _commands_module_from_file(file, mod_name):
     these modules in an (otherwise unpopulated) oebuild.commands.ext
     package.
     '''
-
-    spec = importlib.util.spec_from_file_location(mod_name, file)
-    mod = importlib.util.module_from_spec(spec)
+    spec = importlib.util.spec_from_file_location(mod_name, file) # type: ignore
+    mod = importlib.util.module_from_spec(spec) # type: ignore
     spec.loader.exec_module(mod)
 
     return mod

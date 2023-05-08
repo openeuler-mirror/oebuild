@@ -17,7 +17,7 @@ import shutil
 from oebuild.local_conf import NativesdkNotExist, NativesdkNotValid
 from oebuild.configure import Configure
 from oebuild.parse_compile import ParseCompile
-from oebuild.my_log import MyLog as log
+from oebuild.m_log import logger
 import oebuild.app.plugins.bitbake.const as bitbake_const
 from oebuild.app.plugins.bitbake.base_build import BaseBuild
 
@@ -53,12 +53,12 @@ class InHost(BaseBuild):
                 local_dir=local_dir,
                 src_dir=self.configure.source_dir())
         except NativesdkNotExist as n_e:
-            log.err(str(n_e))
-            log.err("please set valid nativesdk directory")
+            logger.error(str(n_e))
+            logger.error("please set valid nativesdk directory")
             return
         except NativesdkNotValid as n_e:
-            log.err(str(n_e))
-            log.err('''
+            logger.error(str(n_e))
+            logger.error('''
 The nativesdk path must be valid, it is recommended 
 that you download the nativesdk script and then perform 
 initialization operations''')
@@ -73,12 +73,14 @@ initialization operations''')
                         encoding="utf-8") as s_p:
                 if s_p.returncode is not None and s_p.returncode != 0:
                     err_msg = ''
-                    for line in s_p.stderr:
-                        err_msg.join(line)
-                    raise ValueError(err_msg)
+                    if s_p.stderr is not None:
+                        for line in s_p.stderr:
+                            err_msg.join(line)
+                        raise ValueError(err_msg)
 
-                for line in s_p.stdout:
-                    log.info(line.strip('\n'))
+                if s_p.stdout is not None:
+                    for line in s_p.stdout:
+                        logger.info(line.strip('\n'))
         else:
             # run in Interactive mode
             banner_list = []
