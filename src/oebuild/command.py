@@ -12,7 +12,7 @@ See the Mulan PSL v2 for more details.
 
 from abc import ABC, abstractmethod
 import argparse
-import importlib
+import importlib.util
 from collections import OrderedDict
 import os
 from dataclasses import dataclass
@@ -211,8 +211,10 @@ def _commands_module_from_file(file, mod_name):
     these modules in an (otherwise unpopulated) oebuild.commands.ext
     package.
     '''
-    spec = importlib.util.spec_from_file_location(mod_name, file) # type: ignore
-    mod = importlib.util.module_from_spec(spec) # type: ignore
+    spec = importlib.util.spec_from_file_location(mod_name, file)
+    if spec is None:
+        return None
+    mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
 
     return mod

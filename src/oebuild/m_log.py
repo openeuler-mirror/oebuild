@@ -25,25 +25,19 @@ WRN_COLOR = colorama.Fore.LIGHTYELLOW_EX
 #: Color used (when applicable) for printing with err() and die()
 ERR_COLOR = colorama.Fore.LIGHTRED_EX
 
-# 创建logger对象
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# 创建文件处理器
 fh = logging.FileHandler('oebuild.log')
 fh.setLevel(logging.INFO)
 
-# 创建控制台处理器
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 
-# 创建格式化器
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-# 将格式化器添加到文件处理器和控制台处理器
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 
-# 将处理器添加到logger对象
 logger.addHandler(fh)
 logger.addHandler(ch)

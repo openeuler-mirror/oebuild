@@ -83,7 +83,7 @@ class ParseCompile:
             repos=None if "repos" not in data else ParseTemplate.parse_oebuild_repo(data['repos']),
             local_conf=None if "local_conf" not in data else data['local_conf'],
             layers=None if "layers" not in data else data['layers']
-        ) 
+        )
 
     @property
     def build_in(self):
@@ -205,14 +205,15 @@ class ParseCompile:
         Check whether the compile.yaml content is compliant
         '''
 
-        if "platform" not in data:
-            raise CheckCompileError("the key platform is None")
+        keys = {
+            "platform": "the key platform is None",
+            "machine": "the key machine is None",
+            "toolchain_type": "the key toolchain_type is None"
+            }
 
-        if "machine" not in data:
-            raise CheckCompileError("the key machine is None")
-
-        if "toolchain_type" not in data:
-            raise CheckCompileError("the key toolchain_type is None")
+        for key, value in keys.items():
+            if key not in data:
+                raise CheckCompileError(value)
 
         if "toolchain_dir" in data and data['toolchain_dir'] is not None:
             if not os.path.exists(data['toolchain_dir']):
@@ -220,10 +221,11 @@ class ParseCompile:
 
         if "repos" in data:
             for _, repo in data['repos'].items():
-                if "url" not in repo:
-                    raise CheckCompileError("the key url is None")
-                if "path" not in repo:
-                    raise CheckCompileError("the key path is None")
-                if "refspec" not in repo:
-                    raise CheckCompileError("the key refspec is None")
+                required_keys = {
+                    "url": "the key url is None", 
+                    "path": "the key path is None", 
+                    "refspec": "the key refspec is None"}
+                for key, value in required_keys.items():
+                    if key not in repo:
+                        raise CheckCompileError(value)
                     

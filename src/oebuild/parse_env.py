@@ -10,6 +10,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 '''
 
+from typing import Optional
 from dataclasses import dataclass
 import pathlib
 
@@ -24,7 +25,7 @@ class EnvContainer:
 
     branch: str
 
-    short_id: str or None
+    short_id: Optional[str]
 
     volumns: list
 
@@ -33,7 +34,7 @@ class Env:
     '''
     the env object
     '''
-    container: EnvContainer or None
+    container: Optional[EnvContainer]
 
 class ParseEnv:
     '''
@@ -42,7 +43,7 @@ class ParseEnv:
     '''
     def __init__(self, env_dir):
         self.env_dir = pathlib.Path(env_dir) if isinstance(env_dir, str) else env_dir
-        self.env = Env
+        self.env:Env = Env(container=None)
         self._parse_env()
 
     @property
@@ -81,6 +82,9 @@ class ParseEnv:
 
         if data.volumns is None:
             raise ValueError("the key volumns is lack")
+
+        if self.env is None:
+            return False
 
         if self.env.container is None:
             return False
