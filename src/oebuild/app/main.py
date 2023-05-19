@@ -37,6 +37,7 @@ class OebuildApp:
         self.base_oebuild_dir = oebuild_util.get_base_oebuild()
         self.oebuild_parser = None
         self.subparser_gen = None
+        self.subparsers = {}
         self.cmd = None
         try:
             plugins_dir = pathlib.Path(self.base_oebuild_dir,'app/conf','plugins.yaml')
@@ -70,7 +71,8 @@ class OebuildApp:
 
         # Add sub-parsers for the command_ext commands.
         for command_name in self.command_ext:
-            subparser_gen.add_parser(command_name, add_help=False)
+            subparser = subparser_gen.add_parser(command_name, add_help=False)
+            self.subparsers[command_name] = subparser
 
         # Save the instance state.
         self.oebuild_parser = oebuild_parser
@@ -132,7 +134,8 @@ class OebuildApp:
         # Check a program invariant.
         self.cmd =self.command_spec[name].factory()
 
-        args = self.cmd.add_parser(self.subparser_gen)
+        parser = self.subparsers[name]
+        args = self.cmd.add_parser(parser)
 
         self.cmd.run(args, unknown)
 

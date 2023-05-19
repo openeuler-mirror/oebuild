@@ -78,13 +78,16 @@ class OebuildCommand(ABC):
         '''
         args = args.parse_args(['-h'])
 
-    def _parser(self, parser_adder, **kwargs):
-        # Create and return a "standard" parser.
+    def _parser(self, parser, **kwargs):
+        # return a "standard" parser.
 
         kwargs['help'] = self.help_msg
         kwargs['description'] = self.description
         kwargs['formatter_class'] = argparse.RawDescriptionHelpFormatter
-        return parser_adder.add_parser(self.name, **kwargs)
+
+        parser.__dict__.update(kwargs)
+
+        return parser
 
 
 class CommandError(RuntimeError):
