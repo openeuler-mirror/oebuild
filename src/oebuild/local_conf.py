@@ -168,7 +168,10 @@ class LocalConf:
 
         content = self.match_lib_param(content=content)
 
-        content = self.replace_param(parse_compile=parse_compile, content=content)
+        user_content_flag = "#===========the content is user added=================="
+        if user_content_flag not in content:
+            content += f"\n{user_content_flag}\n"
+            content += parse_compile.local_conf
 
         if content is None:
             return
