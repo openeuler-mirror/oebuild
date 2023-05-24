@@ -137,8 +137,8 @@ class ParseTemplate:
                     machine=data['machine'],
                     toolchain_type=data['toolchain_type'],
                     repos=repo_dict,
-                    local_conf=local_conf,
-                    layers=layers)
+                    local_conf=None if local_conf is None else LiteralScalarString(local_conf),
+                    layers=None if layers is None else layers)
                 return
 
             if self.platform_template is None:
@@ -156,8 +156,8 @@ class ParseTemplate:
                 feature_name=LiteralScalarString(os.path.splitext(config_name)[0]),
                 repos=repo_dict,
                 support=support_arch,
-                local_conf=LiteralScalarString(local_conf),
-                layers=layers
+                local_conf=None if local_conf is None else LiteralScalarString(local_conf),
+                layers=None if layers is None else layers
             ))
 
         except Exception as e_p:
@@ -255,6 +255,7 @@ class ParseTemplate:
         compile_conf['repos'] = repos
         compile_conf['local_conf'] = local_conf
         compile_conf['layers'] = layers
+
         return compile_conf
 
     @staticmethod
