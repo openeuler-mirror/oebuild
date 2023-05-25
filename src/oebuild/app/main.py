@@ -330,7 +330,7 @@ def check_user():
     check execute user must in normal user
     '''
     if getpass.getuser() == "root":
-        log.err("can not use oebuild in root")
+        logger.err("can not use oebuild in root")
         return False
     return True
 
