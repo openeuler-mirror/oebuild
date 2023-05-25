@@ -125,6 +125,15 @@ class DockerProxy:
         '''
         return self._docker.containers.get(container_id=container_id)
 
+
+    def get_all_container(self):
+        '''
+        get all container like command 'docker ps -a'
+        args: 
+            None
+        '''
+        return self._docker.containers.list(all=True)
+
     @staticmethod
     def stop_container(container: Container):
         '''
@@ -268,6 +277,8 @@ class DockerProxy:
             detach=True,
             tty=True
         )
+        container_name = str(container.attrs.get('Name')).lstrip("/")
+        container.rename(f"oebuild_{container_name}")
         return container
 
     def container_exec_with_tty(self,

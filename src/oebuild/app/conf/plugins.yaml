@@ -14,3 +14,6 @@ plugins:
 - name: manifest
   class: Manifest
   path: plugins/manifest/manifest.py
+- name: clear
+  class: Clear
+  path: plugins/clear/clear.py
