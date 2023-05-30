@@ -30,7 +30,9 @@ class Clear(OebuildCommand):
             'clear',
             'clear someone which oebuild generate',
             textwrap.dedent('''\
-            this is your description message
+            During the construction process using oebuild, a lot of temporary products
+            will be generated, such as containers,so this command can remove unimportant
+            products, such as containers
 '''
         ))
 

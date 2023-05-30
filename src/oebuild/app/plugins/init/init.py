@@ -43,26 +43,26 @@ class Init(OebuildCommand):
         ))
 
     def do_add_parser(self, parser_adder):
-        parser = self._parser(
+        self._parser(
             parser_adder,
             usage='''
             
   %(prog)s [directory] [-u yocto_remote_url] [-b branch]
 ''')
 
-        parser.add_argument('-u', dest = 'yocto_remote_url',
+        parser_adder.add_argument('-u', dest = 'yocto_remote_url',
             help='''Specifies the remote of yocto-meta-openeuler''')
 
-        parser.add_argument('-b', dest = 'branch',
+        parser_adder.add_argument('-b', dest = 'branch',
             help='''Specifies the branch of yocto-meta-openeuler''')
 
-        parser.add_argument(
+        parser_adder.add_argument(
             'directory', nargs='?', default=None,
             help='''The name of the directory that will be initialized''')
 
-        return parser
+        return parser_adder
 
-    def do_run(self, args: argparse.Namespace, unknown = None):
+    def do_run(self, args: argparse.ArgumentParser, unknown = None):
         '''
         detach target dicrectory if finished init, if inited, just put out err msg and exit
         '''

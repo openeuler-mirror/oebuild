@@ -125,3 +125,9 @@ please install docker first, and run follow commands in root:
 3, systemctl daemon-reload && systemctl restart docker
 4, chmod o+rw /var/run/docker.sock
 ''') from exc
+
+def get_instance(factory):
+    '''
+    Instantiate a class
+    '''
+    return factory()
