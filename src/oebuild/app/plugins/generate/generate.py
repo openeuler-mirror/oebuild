@@ -21,6 +21,7 @@ import oebuild.util as oebuild_util
 from oebuild.configure import Configure
 from oebuild.parse_template import BaseParseTemplate, ParseTemplate, BUILD_IN_DOCKER, BUILD_IN_HOST
 from oebuild.m_log import logger, INFO_COLOR
+from oebuild.check_docker_tag import CheckDockerTag
 
 class Generate(OebuildCommand):
     '''
@@ -99,6 +100,12 @@ class Generate(OebuildCommand):
         parser.add_argument('-n', dest='nativesdk_dir', default = '',
             help='''
             this param is for external nativesdk dir, the param will be useful when you want to build in host
+            '''
+        )
+        
+        parser.add_argument('-tag', dest='docker_tag', default = '',
+            help='''
+            when build in docker, the param can be point docker image
             '''
         )
 
@@ -193,6 +200,33 @@ class Generate(OebuildCommand):
         if os.path.exists(os.path.join(build_dir,'compile.yaml')):
             os.remove(os.path.join(build_dir,'compile.yaml'))
 
+        check_docker_tag = CheckDockerTag(args.docker_tag, self.configure)
+        oebuild_config = self.configure.parse_oebuild_config()
+        if check_docker_tag.get_tag() is not None:
+            docker_tag = check_docker_tag.get_tag()
+        else:
+            # select docker image
+            while True:
+                print('''
+If the system does not recognize which container image to use, select the
+following container, enter it numerically, and enter q to exit:''')
+                image_list = check_docker_tag.get_tags()
+                
+                for key,value in enumerate(image_list):
+                    print(f"{key}, {oebuild_config.docker.repo_url}:{value}")
+                k = input("please entry number:")
+                if k == "q":
+                    return
+                try:
+                    index = int(k)
+                    docker_tag = image_list[index]
+                    break
+                except:
+                    print("please entry true number")
+        docker_tag = docker_tag.strip()
+        docker_tag = docker_tag.strip('\n')
+        docker_image = f"{oebuild_config.docker.repo_url}:{docker_tag}"
+
         out_dir = pathlib.Path(os.path.join(build_dir,'compile.yaml'))
         oebuild_util.write_yaml(out_dir, parser_template.generate_template(
             nativesdk_dir= self.nativesdk_dir,
@@ -201,7 +235,8 @@ class Generate(OebuildCommand):
             sstate_cache= self.sstate_cache,
             tmp_dir = self.tmp_dir,
             is_datetime = args.is_datetime,
-            is_disable_fetch = args.is_disable_fetch
+            is_disable_fetch = args.is_disable_fetch,
+            docker_image=docker_image
             ))
 
         format_dir = f'''

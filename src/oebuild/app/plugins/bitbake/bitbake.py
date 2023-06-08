@@ -52,9 +52,13 @@ class Bitbake(OebuildCommand):
   %(prog)s [command]
 ''')
 
+        parser_adder.add_argument(
+            'command', nargs='?', default=None,
+            help='''The name of the directory that will be initialized''')
+
         return parser
 
-    def do_run(self, args: argparse.Namespace, unknown = None):
+    def do_run(self, args: argparse.ArgumentParser, unknown = None):
         '''
         The BitBake execution logic is:
         the first step is to prepare the code that initializes

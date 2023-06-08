@@ -18,6 +18,7 @@ from typing import Optional
 import oebuild.util as oebuild_util
 from oebuild.ogit import OGit
 from oebuild.parse_template import PlatformTemplate, ParseTemplate, BUILD_IN_DOCKER
+from oebuild.check_docker_tag import CheckDockerTag
 
 @dataclass
 class Compile(PlatformTemplate):
@@ -37,6 +38,8 @@ class Compile(PlatformTemplate):
     sstate_dir: Optional[str]
 
     tmp_dir: Optional[str]
+
+    docker_image: Optional[str]
 
 class BaseParseCompileError(ValueError):
     '''
@@ -69,6 +72,7 @@ class ParseCompile:
         except Exception as e_p:
             raise e_p
 
+        default_image = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-container:latest"
         self.compile = Compile(
             build_in=BUILD_IN_DOCKER if 'build_in' not in data else data['build_in'],
             platform=data['platform'],
@@ -82,7 +86,8 @@ class ParseCompile:
             not_use_repos=False if 'not_use_repos' not in data else data['not_use_repos'],
             repos=None if "repos" not in data else ParseTemplate.parse_oebuild_repo(data['repos']),
             local_conf=None if "local_conf" not in data else data['local_conf'],
-            layers=None if "layers" not in data else data['layers']
+            layers=None if "layers" not in data else data['layers'],
+            docker_image=default_image if "docker_image" not in data else data['docker_image']
         )
 
     @property
@@ -175,6 +180,13 @@ class ParseCompile:
         return attr of repos
         '''
         return self.compile.repos
+    
+    @property
+    def docker_image(self):
+        '''
+        return attr of docker_tag
+        '''
+        return self.compile.docker_image
 
     def check_with_version(self, base_dir, manifest_path):
         '''

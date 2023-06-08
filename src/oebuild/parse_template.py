@@ -170,7 +170,8 @@ class ParseTemplate:
                           sstate_cache = None,
                           tmp_dir = None,
                           is_datetime = False,
-                          is_disable_fetch = False):
+                          is_disable_fetch = False,
+                          docker_image = ""):
         '''
         first param common yaml
         '''
@@ -183,6 +184,7 @@ class ParseTemplate:
 
         common_yaml_dir = pathlib.Path(common_yaml_dir)
         data = oebuild_util.read_yaml(common_yaml_dir)
+        data['docker_image'] = docker_image
 
         repos = {}
         if 'repos' in data :
@@ -239,6 +241,7 @@ class ParseTemplate:
 
         compile_conf = {
             'build_in': build_in,
+            'docker_image': docker_image,
             'platform': self.platform_template.platform,
             'machine': self.platform_template.machine,
             'toolchain_type': self.platform_template.toolchain_type}

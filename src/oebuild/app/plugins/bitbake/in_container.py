@@ -48,6 +48,13 @@ class InContainer(BaseBuild):
         execute bitbake command
         '''
         logger.info("bitbake starting ...")
+        # check docker image if exists
+        docker_proxy = DockerProxy()
+        if not docker_proxy.is_image_exists(parse_compile.docker_image):
+            logger.error(f'''the docker image does not exists, please run fellow command:
+    `oebuild update docker`''')
+            return
+
         yocto_dir = os.path.join(
             self.configure.source_dir(), "yocto-meta-openeuler")
         remote, branch = OGit.get_repo_info(yocto_dir)
@@ -56,7 +63,8 @@ class InContainer(BaseBuild):
             remote=remote,
             branch=branch,
             toolchain_dir=parse_compile.toolchain_dir,
-            sstate_cache=parse_compile.sstate_cache)
+            sstate_cache=parse_compile.sstate_cache,
+            docker_image=parse_compile.docker_image)
 
         self.exec_compile(parse_compile=parse_compile, command=command)
 
@@ -65,7 +73,8 @@ class InContainer(BaseBuild):
                            remote: str,
                            branch: str,
                            toolchain_dir=None,
-                           sstate_cache = None):
+                           sstate_cache = None,
+                           docker_image = ""):
         '''
         This operation realizes the processing of the container,
         controls how the container is processed by parsing the env
@@ -100,10 +109,8 @@ class InContainer(BaseBuild):
             # judge which container
             config = self.configure.parse_oebuild_config()
             container_config = config.docker
-            # here use default mater branch bind container and fix next
-            image_name = f"{container_config.repo_url}:{container_config.tag_map.get('master')}"
             container:Container = self.client.container_run_simple(
-                image=image_name,
+                image=docker_image,
                 volumes=volumns) # type: ignore
 
             env_container.short_id = container.short_id

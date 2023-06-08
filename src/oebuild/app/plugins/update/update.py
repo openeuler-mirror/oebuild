@@ -25,6 +25,7 @@ from oebuild.parse_compile import ParseCompile
 from oebuild.configure import Configure, ConfigBasicRepo, YOCTO_META_OPENEULER
 from oebuild.docker_proxy import DockerProxy
 from oebuild.ogit import OGit
+from oebuild.check_docker_tag import CheckDockerTag
 
 from oebuild.m_log import logger
 
@@ -51,7 +52,7 @@ class Update(OebuildCommand):
             usage='''
   %(prog)s [yocto docker layer] [-tag]
 ''')
-        parser.add_argument('-tag', dest='docker_tag', default="latest",
+        parser.add_argument('-tag', dest='docker_tag',
             help='''
             with platform will list support archs, with feature will list support features
             '''
@@ -98,6 +99,7 @@ class Update(OebuildCommand):
         if update_docker:
             try:
                 oebuild_util.check_docker()
+                # check yocto/oebuild/env.yaml，get container_tag and update docker image
                 self.docker_image_update(args.docker_tag)
             except DockerException as d_e:
                 logger.error(str(d_e))
@@ -105,21 +107,6 @@ class Update(OebuildCommand):
 
         if update_layer:
             self.get_layer_repo()
-
-    def list_image_tag(self,):
-        '''
-        print compile docker image tag list
-        '''
-        oebuild_config = self.configure.parse_oebuild_config()
-        docker_config = oebuild_config.docker
-        log = f'''
-        the openeuler embedded docker image repo url:
-        {docker_config.repo_url}
-        the openeuler embedded docker tag list:
-        '''
-        for tag in docker_config.tag_map.values():
-            log += f"    {tag}\n"
-        print(log)
 
     def get_layer_repo(self,):
         '''
@@ -185,38 +172,12 @@ class Update(OebuildCommand):
         oebuild_config = self.configure.parse_oebuild_config()
         docker_config = oebuild_config.docker
 
-        if docker_tag is not None and docker_tag not in docker_config.tag_map.values():
-            warn_msg = "please select valid docker_tag follow list"
-            print(warn_msg)
-            for tag in docker_config.tag_map.keys():
-                print(docker_config.tag_map.get(tag))
+        check_docker_tag = CheckDockerTag(docker_tag=docker_tag,configure=self.configure)
+        if check_docker_tag.get_tag() is None or check_docker_tag.get_tag() == "":
+            check_docker_tag.list_image_tag()
             return
-        if docker_tag is None:
-            basic_config = oebuild_config.basic_repo
-            yocto_config: ConfigBasicRepo = basic_config[YOCTO_META_OPENEULER]
-            if yocto_config.branch in docker_config.tag_map:
-                docker_tag = docker_config.tag_map[yocto_config.branch]
-            else:
-                input_msg = "please select follow docker_tag:\n"
-                key_list = []
-                for index, key in enumerate(docker_config.tag_map):
-                    input_msg += f"{index+1}, {docker_config.repo_url}:\
-                        {docker_config.tag_map[key]}\n"
-                    key_list.append(key)
-                input_msg += "please enter index number(enter q will exit):"
-                while True:
-                    i = input(input_msg)
-                    if i == 'q':
-                        sys.exit()
 
-                    i = int(i)
-                    if i <= 0 or i > len(key_list):
-                        logger.warning("enter wrong")
-                        continue
-                    docker_tag = docker_config.tag_map[key_list[i-1]]
-                    break
-
-        docker_image = docker_config.repo_url + ":" + docker_tag
+        docker_image = docker_config.repo_url + ":" + check_docker_tag.get_tag()
         client = DockerProxy()
         logger.info("pull %s ...", docker_image)
         client.pull_image_with_progress(docker_image)
