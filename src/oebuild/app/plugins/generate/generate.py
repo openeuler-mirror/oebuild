@@ -319,7 +319,7 @@ oebuild bitbake
         yocto_dir = self.configure.source_yocto_dir()
         yocto_oebuild_dir = os.path.join(yocto_dir, ".oebuild")
         list_platform = os.listdir(os.path.join(yocto_oebuild_dir, 'platform'))
-        logger.info("the platform list is:")
+        print("the platform list is:")
         for platform in list_platform:
             if platform.endswith('.yml'):
                 print(platform.replace('.yml', ''), INFO_COLOR)
@@ -331,7 +331,7 @@ oebuild bitbake
         yocto_dir = self.configure.source_yocto_dir()
         yocto_oebuild_dir = os.path.join(yocto_dir, ".oebuild")
         list_feature = os.listdir(os.path.join(yocto_oebuild_dir, 'features'))
-        logger.info("the feature list is:")
+        print("the feature list is:")
         for feature in list_feature:
             if feature.endswith('.yml'):
                 print(feature.replace('.yml',''), INFO_COLOR)
@@ -341,9 +341,9 @@ oebuild bitbake
                                                                     'features',
                                                                     feature)))
             if "support" in feat:
-                logger.info("    support arch: %s", feat.get('support'))
+                print("    support arch: %s", feat.get('support'))
             else:
-                logger.info("    support arch: all")
+                print("    support arch: all")
 
     def check_support_oebuild(self, yocto_dir):
         '''
