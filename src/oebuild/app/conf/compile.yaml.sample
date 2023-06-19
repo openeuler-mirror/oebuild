@@ -1,0 +1,155 @@
+# compile.yaml is the build configuration file of the build tool oebuild under 
+# openEuler Embedded, which will parse the file when executing the oebuild bitbake, 
+# and by parsing the file, the built image will be set in various ways, and the 
+# most critical is still the modification of local.conf and bblayers.conf. Not all 
+# parameters need to be set here, mainly around whether the build environment is in 
+# the container, that is, some parameters are valid in the container and some are 
+# valid in the host environment. The build configuration file is a demo file, you can 
+# remove the file name suffix .sample, and then customize or configure it according to 
+# your needs, and then execute `oebuild bitbake -f <compile_dir> [target]` to build 
+# according to the specified build configuration file
+
+
+# build_in can specify the environment used to build,
+# and currently we have two environments, one is built in a
+# container and the other is built on the host. The list of
+# parameters for both environments is as follows:
+# 1, docker
+# 2, host
+# but, default param is docker
+build_in: docker
+
+
+# docker_image specifies the container image when building in the container
+#
+docker_image: swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-container:latest
+
+
+# platform specifies the board at build time, if it is not 
+# clear what the value of the board is, it can be determined by 
+# executing `oebuild generate -l platform`, this command will list 
+# all supported boards for openEuler Embedded
+#
+platform: aarch64-std
+
+
+# mechine replaces the mechine parameter in local.conf, 
+# in general, platform lists a list in the 
+# `yocto-meta-openeuler/.oebuild/platform` directory, and the 
+# mechine value is specified in the specific platform
+#
+mechine: qemu-aarch64
+
+
+# toolchain_type specifies the identity of the external toolchain, 
+# if the build environment is in a container, you need to locate 
+# the cross-compilation chain address through this identity, and 
+# the list of cross-compilation chain address mappings in the 
+# container is as follows:
+# 1，EXTERNAL_TOOLCHAIN_arm = "/usr1/openeuler/gcc/openeuler_gcc_arm32le"
+# 2，EXTERNAL_TOOLCHAIN_aarch64 = "/usr1/openeuler/gcc/openeuler_gcc_arm64le"
+# 3，EXTERNAL_TOOLCHAIN_x86-64 = "/usr1/openeuler/gcc/openeuler_gcc_x86_64"
+# 4，EXTERNAL_TOOLCHAIN_riscv64 = "/usr1/openeuler/gcc/openeuler_gcc_riscv64"
+#
+toolchain_type: EXTERNAL_TOOLCHAIN_aarch64
+
+# toolchain_dir specify the cross-compilation chain directory 
+# used at build time, if the build environment is in a container, 
+# that is, build_in parameter is docker, this parameter does not 
+# need to be specified, because the cross-compilation chain is 
+# already built in the container, if the build environment is in 
+# the host, that is, the build_in parameter is host, this parameter 
+# needs to be specified. There are currently 4 cross-compilation chains, 
+# and the list of paths in the container build environment is as follows:
+# 1, /usr1/openeuler/gcc/openeuler_gcc_arm64le
+# 2, /usr1/openeuler/gcc/openeuler_gcc_arm32le
+# 3, /usr1/openeuler/gcc/openeuler_gcc_x86_64
+# 4, /usr1/openeuler/gcc/openeuler_gcc_riscv64
+#
+# toolchain_dir: /usr1/openeuler/gcc/openeuler_gcc_arm64le
+
+
+# nativesdk_dir represents the compiled SDK directory, nativesdk hosts 
+# some external tools and dynamic link libraries needed at build time, 
+# etc., these things will not be packaged into the image, the same as 
+# the toolchain_dir parameters, if the build environment is in the 
+# container, do not need to be specified, the container has been built-in, 
+# if the build environment is in the host, you need to specify the directory.
+#
+# nativesdk_dir: /opt/buildtools/nativesdk
+
+
+# not_use_repos specifies whether to update the layer layer when starting
+# the build environment, it needs to be updated by default, if you debug or 
+# modify the layer layer, you can set this parameter to true.
+#
+# not_use_repos: false
+
+
+# sstate_cache specifies whether the sstate-cache mechanism is used when 
+# yocto is built, and if so, the SSTATE_MIRRORS value in local.conf will be 
+# modified, and there are two SSTATE_MIRRORS values, one is a remote link, 
+# and the other is a local directory, both pointing to the directory of specific 
+# sstate-cache. There are two types of values for SSTATE_MIRRORS:
+# 1，file://.* http://someserver.tld/share/sstate/PATH;downloadfilename=PATH
+# 2，file://.* file:///some/local/dir/sstate/PATH
+# If you set this parameter to http://xxxx/share, eventually in local.conf, 
+# the SSTATE_MIRRORS will be set to 
+# file://.* http://xxxx/share/PATH;downloadfilename=PATH, and if the cost path 
+# is set, the SSTATE_MIRRORS will be set to file:// .* file://xxx/PATH. 
+# Another thing to note is that if the build environment is in a container, 
+# specifying the sstate-cache path will be mounted to the 
+# /usr1/openeuler/sstate-cache directory in the container when the container 
+# is created, so the value of the SSTATE_MIRRORS in local.conf will become 
+# file://.* file:///usr1/openeuler/sstate-cache/PATH
+#
+# sstate_cache: xxx
+
+
+# sstate_dir specifies the path where yocto stores sstate at build time, 
+# this variable corresponds to the SSTATE_DIR in local.conf, and this variable 
+# is only useful if the build environment is the host environment
+#
+# sstate_dir: xxx
+
+
+# tmp_dir specifies the path to the tmp directory in Yocto, which is used 
+# to store Yocto's build output, corresponding to the TMP_DIR parameter in 
+# local.conf. Also, this parameter is only valid if the build environment 
+# is a host environment
+#
+# tmp_dir: xxx
+
+# repos is used to set the code repository required to initialize the build 
+# environment when openEuler Embedded is built, usually the following parameter 
+# should list the information of the layers layer required by bitbake during 
+# initialization, which can be set according to your own needs. The following 
+# values of this parameter have format requirements, which are illustrated here:
+# repos:
+#    abc:
+#      url: xxxxxxxxxxx
+#      path: xxxxxxxxxx
+#      refspec: xxxxxxxxxxxx
+# the key abc represents a repository, url is remote url, path is local path, it means
+# when download repository，it will be stored in local, in general, the key abc is same 
+# to path, refspec is point branch or tag
+#
+# repos:
+#   abc:
+#     url: xxxx
+#     path: xxxx
+#     refspec: xxx
+
+# local_conf is to supplement the setting of various parameters in local.conf, and all 
+# values filled in under this variable will be appended to local.conf unchanged
+#
+# local_conf:
+#   xxx
+
+# The layers parameter specifies the layer of bitbake at initialization, the value of 
+# this parameter is a relative value, that is, the path under the src directory, for example, 
+# set a layer of layers to yocto-meta-openembedded/meta-python, it will eventually be replaced 
+# with /<build_dir>src/yocto-meta-openembedded/meta-python in layers
+# 
+# layers:
+#   xxxx

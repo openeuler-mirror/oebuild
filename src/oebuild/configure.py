@@ -21,6 +21,7 @@ PathType = Union[str, os.PathLike]
 
 YOCTO_META_OPENEULER = "yocto_meta_openeuler"
 CONFIG = "config"
+COMPILE_YAML = "compile.yaml.sample"
 
 class OebuildNotFound(RuntimeError):
     '''Neither the current directory nor any parent has a oebuild workspace.'''

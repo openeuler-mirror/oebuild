@@ -24,6 +24,7 @@ from oebuild.version import __version__
 
 CONFIG_YAML = 'config.yaml'
 UPGRADE_YAML = 'upgrade.yaml'
+COMPILE_YAML = 'compile.yaml.sample'
 
 def read_yaml(yaml_dir : pathlib.Path):
     '''
@@ -81,6 +82,12 @@ def get_config_yaml_dir():
     return config yaml dir
     '''
     return os.path.join(get_base_oebuild(), 'app/conf', CONFIG_YAML)
+
+def get_compile_yaml_dir():
+    '''
+    return compile.yaml.sample yaml dir
+    '''
+    return os.path.join(get_base_oebuild(), 'app/conf', COMPILE_YAML)
 
 def get_upgrade_yaml_dir():
     '''

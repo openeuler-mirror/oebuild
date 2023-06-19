@@ -18,7 +18,7 @@ import sys
 
 from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
-from oebuild.configure import Configure, YOCTO_META_OPENEULER, ConfigBasicRepo, CONFIG, Config
+from oebuild.configure import Configure, YOCTO_META_OPENEULER, ConfigBasicRepo, CONFIG, COMPILE_YAML, Config
 from oebuild.m_log import logger
 
 class Init(OebuildCommand):
@@ -99,6 +99,9 @@ class Init(OebuildCommand):
 
         logger.info("init %s successful",args.directory)
         format_msg = f'''
+There is a build configuration example file under {args.directory}/.oebuild/compile.yaml.sample, 
+if you want to block complex generate instructions, you can directly copy a configuration file, 
+and then modify it according to your own needs, and then execute `oebuild generate -c <compile_dir>`.
 please execute the follow commands next
 
     cd {os.path.abspath(os.getcwd())}
@@ -156,3 +159,14 @@ please execute the follow commands next
             shutil.copyfile(config, os.path.join(updir, CONFIG))
         except FileNotFoundError:
             logger.error("mkdir config faild")
+    
+    @staticmethod
+    def copy_compile_file(updir : str):
+        '''
+        copy oebuild compile.yaml.sample to some directory
+        '''
+        try:
+            compile = oebuild_util.get_compile_yaml_dir()
+            shutil.copyfile(compile, os.path.join(updir, COMPILE_YAML))
+        except FileNotFoundError:
+            logger.error("mkdir compile.yaml.sample faild")

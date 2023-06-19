@@ -15,9 +15,11 @@ import textwrap
 import os
 import sys
 import pathlib
+from shutil import copyfile
 
 from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
+from oebuild.parse_compile import ParseCompile,CheckCompileError
 from oebuild.configure import Configure
 from oebuild.parse_template import BaseParseTemplate, ParseTemplate, BUILD_IN_DOCKER, BUILD_IN_HOST
 from oebuild.m_log import logger, INFO_COLOR
@@ -85,6 +87,12 @@ class Generate(OebuildCommand):
             '''
         )
 
+        parser.add_argument('-c', '--compile_dir', dest='compile_dir',
+            help='''
+            this param is for compile.yaml directory
+            '''
+        )
+
         parser.add_argument('-d', dest='directory',
             help='''
             this param is build directory, the default is same to platform
@@ -137,6 +145,31 @@ class Generate(OebuildCommand):
             logger.error('your current directory had not finishd init')
             sys.exit(-1)
 
+        yocto_dir = self.configure.source_yocto_dir()
+        if not self.check_support_oebuild(yocto_dir):
+            logger.error('Currently, yocto-meta-openeuler does not support oebuild, \
+                    please modify .oebuild/config and re-execute `oebuild update`')
+            return
+
+        if args.compile_dir is not None:
+            try:
+                platform = self._check_compile(args.compile_dir)
+                args.platform = platform
+                build_dir = self._init_build_dir(args=args)
+                if build_dir is None:
+                    logger.error("build directory can not mkdir")
+                    return
+                # copy compile.yaml to build directory
+                copyfile(args.compile_dir, os.path.join(build_dir, "compile.yaml"))
+                self._print_generate(build_dir=build_dir)
+            except CheckCompileError as c_e:
+                logger.error(str(c_e))
+            except ValueError as v_e:
+                logger.error(str(v_e))
+            except IOError as e:
+                logger.error(str(e))
+            return
+
         build_in = BUILD_IN_DOCKER
         if args.build_in == BUILD_IN_HOST:
             try:
@@ -155,12 +188,6 @@ class Generate(OebuildCommand):
 
         if args.tmp_dir is not None:
             self.tmp_dir = args.tmp_dir
-
-        yocto_dir = self.configure.source_yocto_dir()
-        if not self.check_support_oebuild(yocto_dir):
-            logger.error('Currently, yocto-meta-openeuler does not support oebuild, \
-                    please modify .oebuild/config and re-execute `oebuild update`')
-            return
 
         if args.list is not None:
             self.list_info(args=args)
@@ -239,6 +266,9 @@ following container, enter it numerically, and enter q to exit:''')
             docker_image=docker_image
             ))
 
+        self._print_generate(build_dir=build_dir)
+
+    def _print_generate(self, build_dir):
         format_dir = f'''
 generate compile.yaml successful
 
@@ -251,6 +281,13 @@ oebuild bitbake
 =============================================
 '''
         logger.info(format_dir)
+
+    def _check_compile(self, compile_dir: str):
+        if not os.path.exists(compile_dir):
+            raise ValueError(f"the compile_dir:{compile_dir} is not exists, please check again")
+
+        parse_compile = ParseCompile(compile_dir)
+        return parse_compile.platform
 
     def _check_param_in_host(self, args):
         if args.toolchain_dir == '':
