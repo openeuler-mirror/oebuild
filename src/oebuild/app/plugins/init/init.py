@@ -66,7 +66,11 @@ class Init(OebuildCommand):
         '''
         detach target dicrectory if finished init, if inited, just put out err msg and exit
         '''
-        iargs = args
+
+        # perpare parse help command
+        if self.pre_parse_help(args, unknown):
+            return
+
         args = args.parse_args(unknown)
 
         if self.configure.is_oebuild_dir():
@@ -78,7 +82,7 @@ class Init(OebuildCommand):
         if args.directory is None:
             logger.error("'oebuild init' need param directory")
             logger.info("\noebuild init help:")
-            self.print_help(iargs)
+            self.print_help_msg()
             return
 
         if not self.init_workspace(args.directory):

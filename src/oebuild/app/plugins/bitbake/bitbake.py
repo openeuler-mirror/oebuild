@@ -68,7 +68,7 @@ class Bitbake(OebuildCommand):
         and the fourth step to enter the build environment
         '''
         if '-h' in unknown or '--help' in unknown:
-            args.parse_args(unknown)
+            self.print_help_msg()
             return
 
         command = self._get_command(unknow=unknown)

@@ -35,11 +35,21 @@ class OebuildCommand(ABC):
         The executing body, each inherited class will
         register the executor with the executor body for execution
         '''
+        self.do_run(args=args, unknown=unknown)
+
+    def pre_parse_help(self, args: argparse.ArgumentParser, unknown: List[str]):
+        '''
+        Whether to parse the help command in advance, designed to adapt to some extended 
+        scenarios that do not require command resolution, generally the function is placed 
+        in the front of the do_run to execute, if it returns true, it means that it is a 
+        help command, then there is no need to continue to execute, otherwise the specific 
+        function content is executed
+        '''
         pars = args.parse_args(unknown)
         if pars.help:
             self.print_help_msg()
-            return
-        self.do_run(args=args, unknown=unknown)
+            return True
+        return False
 
     def add_parser(self, parser_adder: argparse.ArgumentParser):
         '''

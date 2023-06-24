@@ -68,6 +68,10 @@ class Update(OebuildCommand):
         '''
         update action rely on directory which has initd, so check it first
         '''
+        # perpare parse help command
+        if self.pre_parse_help(args, unknown):
+            return
+
         args = args.parse_args(unknown)
 
         if not self.configure.is_oebuild_dir():
