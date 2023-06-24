@@ -72,7 +72,7 @@ class Clear(OebuildCommand):
             build_dir = os.path.join(self.configure.build_dir(), build_dir)
             if os.path.exists(os.path.join(build_dir,".env")):
                 env_list.append(os.path.join(build_dir,".env"))
-        
+
         # traversal every env file and get container_id, and then try to stop it and rm it
         for env in env_list:
             env_conf = oebuild_util.read_yaml(pathlib.Path(env))
@@ -81,10 +81,10 @@ class Clear(OebuildCommand):
                 container = self.client.get_container(container_id=container_id)
                 DockerProxy().stop_container(container=container)
                 DockerProxy().delete_container(container=container)
-                logger.info(f"delete container: {container.short_id} successful")
+                logger.info("delete container: %s successful",container.short_id)
             except:
                 continue
-        
+
         # get all container which name start with oebuild and delete it,
         # in case when user rm build directory then legacy container
         # containers = self.client.get_all_container()
