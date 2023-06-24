@@ -124,6 +124,7 @@ please execute the follow commands next
 
         self.oebuild_dir = self.create_oebuild_directory(directory)
         self.copy_config_file(self.oebuild_dir)
+        self.copy_compile_file(self.oebuild_dir)
         self.src_dir = self.create_src_directory(directory)
         return True
 
@@ -163,14 +164,14 @@ please execute the follow commands next
             shutil.copyfile(config, os.path.join(updir, CONFIG))
         except FileNotFoundError:
             logger.error("mkdir config faild")
-    
+
     @staticmethod
     def copy_compile_file(updir : str):
         '''
         copy oebuild compile.yaml.sample to some directory
         '''
         try:
-            compile = oebuild_util.get_compile_yaml_dir()
-            shutil.copyfile(compile, os.path.join(updir, COMPILE_YAML))
+            compil = oebuild_util.get_compile_yaml_dir()
+            shutil.copyfile(compil, os.path.join(updir, COMPILE_YAML))
         except FileNotFoundError:
             logger.error("mkdir compile.yaml.sample faild")
