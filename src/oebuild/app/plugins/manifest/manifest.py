@@ -105,7 +105,7 @@ class Manifest(OebuildCommand):
             local_dir = os.path.join(self.configure.source_dir(), repo_dir)
             try:
                 repo = Repo(local_dir)
-                remote_url = repo.remote().url
+                remote_url = repo.remote("upstream").url
                 version = repo.head.commit.hexsha
             except git.GitError:
                 continue
@@ -183,7 +183,7 @@ class Manifest(OebuildCommand):
             else:
                 continue
         if remote is None:
-            remote_name = "manifest"
+            remote_name = "upstream"
             remote = git.Remote.add(repo = repo, name = remote_name, url = value['remote_url'])
         try:
             repo.git.checkout(value['version'])
