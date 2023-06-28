@@ -11,11 +11,7 @@ See the Mulan PSL v2 for more details.
 '''
 
 import sys
-import argparse
 import pathlib
-import shutil
-import textwrap
-from io import StringIO
 from collections import OrderedDict
 import getpass
 

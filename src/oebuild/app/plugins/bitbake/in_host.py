@@ -35,7 +35,7 @@ class InHost(BaseBuild):
         execute bitbake commands
         '''
         self._init_build_sh(build_dir=os.getcwd())
-        self.mk_build_sh(nativesdk_dir=parse_compile.nativesdk_dir, build_dir=os.getcwd())
+        self._mk_build_sh(nativesdk_dir=parse_compile.nativesdk_dir, build_dir=os.getcwd())
         self.init_bitbake()
 
         # add bblayers, this action must before replace local_conf
@@ -99,15 +99,13 @@ initialization operations''')
             self.update_bashrc(new_content)
             pty.spawn("bash")
 
-    def mk_build_sh(self, nativesdk_dir, build_dir):
-        '''
-        xxx
-        '''
+    def _mk_build_sh(self, nativesdk_dir, build_dir):
         init_sdk_command = f'. {nativesdk_dir}/environment-setup-x86_64-pokysdk-linux'
         set_template = f'export TEMPLATECONF="{self.configure.source_dir()}/yocto-meta-openeuler/.oebuild"'
         init_oe_command = f'. {self.configure.source_dir()}/yocto-poky/oe-init-build-env {build_dir}'
+        ps1_command = 'PS1="\\u\\h:\\W> "'
 
-        self._append_build_sh(str_list= [init_sdk_command, set_template, init_oe_command],
+        self._append_build_sh(str_list= [init_sdk_command, set_template, init_oe_command, ps1_command],
                               build_dir=build_dir)
 
     def _init_build_sh(self, build_dir):

@@ -51,7 +51,7 @@ class InContainer(BaseBuild):
         # check docker image if exists
         docker_proxy = DockerProxy()
         if not docker_proxy.is_image_exists(parse_compile.docker_image):
-            logger.error(f'''the docker image does not exists, please run fellow command:
+            logger.error('''the docker image does not exists, please run fellow command:
     `oebuild update docker`''')
             return
 
@@ -107,8 +107,6 @@ class InContainer(BaseBuild):
                 or env.container.short_id is None \
                 or not self.client.is_container_exists(env.container.short_id):
             # judge which container
-            config = self.configure.parse_oebuild_config()
-            container_config = config.docker
             container:Container = self.client.container_run_simple(
                 image=docker_image,
                 volumes=volumns) # type: ignore
