@@ -37,8 +37,17 @@ class Init(OebuildCommand):
             'init',
             'Initialize an OEBUILD working directory',
             textwrap.dedent('''\
-            Initialize an OEBUILD working directory, and execute 
-            all other OEbuild instructions in the initialized directory
+            Initialize the OEbuild working directory, and after executing this command,
+            a new directory will be created as the OEBUILD working directory based on the
+            current path. After initialization, the working directory will create an .oebuild
+            directory, which stores configuration-related files, currently the directory has
+            config and compile.yaml.sample two files, config files record environment-related
+            parameters, mainly the main build warehouse yocto-meta-openeuler related information
+            and build container related information, compile.yaml.sample is an example file of
+            the build configuration file, users can copy the file to other places and then make
+            certain changes according to their own needs。 This file is to meet the user's global
+            consideration of the build configuration of OEbuild, and can be easily called by third
+            parties
 '''
         ))
 

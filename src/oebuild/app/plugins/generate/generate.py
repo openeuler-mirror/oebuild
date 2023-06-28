@@ -39,7 +39,12 @@ class Generate(OebuildCommand):
             'generate',
             'help to mkdir build directory and generate compile.yaml',
             textwrap.dedent('''\
-            compile.yaml is generated according to different command parameters by generate
+            The generate command is the core command in the entire build process, which 
+            is mainly used to customize the build configuration parameters and generate 
+            a compile.yaml by customizing each parameter. In addition, for a large number 
+            of configuration parameter input is not very convenient, generate provides a 
+            way to specify compile.yaml, users can directly specify the file after 
+            customizing the build configuration file
 '''
         ))
 
@@ -242,7 +247,7 @@ class Generate(OebuildCommand):
 If the system does not recognize which container image to use, select the
 following container, enter it numerically, and enter q to exit:''')
                 image_list = check_docker_tag.get_tags()
-                
+
                 for key,value in enumerate(image_list):
                     print(f"{key}, {oebuild_config.docker.repo_url}:{value}")
                 k = input("please entry number:")

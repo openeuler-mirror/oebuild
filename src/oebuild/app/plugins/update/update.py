@@ -41,8 +41,22 @@ class Update(OebuildCommand):
             'update',
             'Update the basic environment required for the build',
             textwrap.dedent('''
-            Update the base environment required at build time, such as 
-            updating the necessary docker images and yocto-meta-openeuler repositories
+            The update command will involve three areas, namely the build container, 
+            yocto-meta-openeuler and the corresponding layers, if there are no parameters 
+            after the update, it will be updated in order yocto-meta-openeuler, build 
+            container and layers, the update of these three places is related, the update 
+            of the build container will be affected by three factors, first, execute the 
+            tag parameter, The container image related to the tag is updated, the second 
+            identifies the build container image bound to the main build repository, in 
+            yocto-meta-openeuler/.oebuild/env.yaml, the third identifies the branch 
+            information of the main build repository, and identifies the type of build image 
+            through the branch information of the main build repository. The layer update must 
+            rely on yocto-meta-openeuler, if the main build repository does not exist will first 
+            download the main build repository (the relevant git information is in .oebuild/config), 
+            the layers update execution logic is different in different directories, if not in 
+            the build directory will be parsed yocto-meta-openeuler/.oebuild/ common.yaml to get 
+            the information that needs to be updated, and if it is in the build directory, it will 
+            parse compile.yaml to get the updated information
             ''')
         )
 

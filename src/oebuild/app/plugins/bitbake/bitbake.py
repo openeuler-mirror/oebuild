@@ -39,8 +39,10 @@ class Bitbake(OebuildCommand):
             'bitbake',
             'execute bitbake command',
             textwrap.dedent('''
-            Bitbake instructions can enter the build interactive environment and then directly run bitbake-related instructions,
-            or run bitbake command directly, for example: `oebuild bitbake busybox`
+            The bitbake command performs the build operation, and for the build environment, 
+            there are two types, one is to build in docker and the other is to build in the 
+            host. There are also two construction methods, one is to build directly, and the 
+            other is to call up the build environment to be operated freely by the user
             ''')
         )
 
