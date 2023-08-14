@@ -1,81 +1,50 @@
 #### 总体介绍
 
-oebuild是openEuler Embedded孵化的一个开源项目，是为了辅助开发openEuler Embedded项目而衍生的辅助开发工具，是openEuler Embedded项目健康运行的一个催化剂，目前oebuild主要实现了主体框架，业务只涵盖了构建，将来会涉及到CICD，本地测试，云构建等等，oebuild的使用将不仅仅限于命令行窗口，还会搭载上层IDE来使用。yocto实现了构建的灵活性，但是做应用的定制与实现需要有较高的学习成本与环境成本，oebuild将完全摒弃这些开发羁绊，解放你的双手，只需要几个指令，即可获得你要的应用镜像，你不需要去下载代码，不需要去准备编译环境，如果你要的应用不是特有定制的，甚至不要求你去学习如何修改bb文件，一切都可以交给oebuild来做，而oebuild需要的，仅仅是一个网络而已。对，就这么简单！！！
+[oebuild](https://gitee.com/openeuler/oebuild) 是一个用于构建和配置 openEuler Embedded 的工具， 能够为用户简化 openEuler Embedded 的构建流程，自动化生成定制化的 openEuler Embedded 发行版
+
+oebuild 的主要功能包括：
+
+- 自动化下载不同版本的构建依赖，包括 [yocto-meta-openeuler](https://gitee.com/openeuler/yocto-meta-openeuler) , [yocto-poky](https://gitee.com/openeuler/yocto-poky) , [yocto-meta-openembedded](https://gitee.com/openeuler/yocto-meta-openembedded) 等。
+- 根据用户的构建选项（机器类型，功能特性等等），创建出定制化的构建环境配置文件。
+- 使用容器创建一个隔离的构建环境，降低主机污染风险，简化构建系统的配置和依赖管理。
+- 启动 openEuler Embedded 镜像构建。
+- 对不同特性环境的sdk进行编译环境的管理。
+- 对qemu镜像进行在线仿真。
+- 对当下软件包进行在线部署以及卸载。
+
+#### 安装步骤
+
+oebuild基于python语言实现，最低支持python3.8版本，通过pip来进行安装，参考如下命令：
+
+```
+pip3 install oebuild
+```
+
+如果想要安装指定版本的oebuild，参考如下命令：
+
+```
+pip3 install oebuild==<version>
+```
+
+如果想要升级oebuild版本为最新版，参考如下命令：
+
+```
+pip3 install oebuild --upgrade
+```
+
+安装完成后执行帮助命令查看oebuild是否被默认添加到path路径中，参考如下命令：
+
+```
+oebuild -h
+```
+
+如果提示无法找到oebuild命令，则需要添加oebuild执行路径到path中，参考如下方法：
+
+1. 用编辑器打开根目录下的.bashrc文件
+2. 在最后面添加`export PATH=~/.local/bin:$PATH`
+3. 关闭当前终端重新开启一个终端，然后再执行`oebuild -h`命令
 
 #### 如何编译一个标准镜像
-
-这里将介绍如何使用oebuild来进行基于openEuler Embedded项目编译标准的aarch64的qemu应用
-
-##### 安装python3和pip
-
-oebuild由python语言编写而成，通过pip命令来完成安装，python3与pip的安装会根据运行系统的不同而不同，如果时ubuntu类系统，则通过如下命令安装：
-
-```
-apt-get install python3 python3-pip
-```
-
-如果是centos，则通过如下命令安装：
-
-```
-yum install python3 python3-pip
-```
-
-如果时suse，则通过如下命令安装：
-
-```
-zepper install python3 python3-pip
-```
-
-注1：由于版本或名称可能会有所不同，因此在各系统安装python3或pip时，请根据实际环境来安装，例如：有些系统会默认python即python3，有些系统则需要使用python-is-python3包来安装。
-
-注2：如果该系统没有pip包，则可以通过离线方式来安装，预先下载pip包，然后再通过python安装，通过如下命令来完成pip的安装：
-
-```
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py   # 下载安装脚本
-python get-pip.py	# python is python3
-```
-
-##### 下载oebuild.wheel
-
-安装完pip后则可以通过以下命令来完成oebuild的安装
-
-```
-pip install oebuild
-```
-
-或者点击[该地址](https://gitee.com/alichinese/oebuild-bin)进入oebuild二进制仓，在该仓下有最新的二进制包，运行以下命令来完成oebuild的安装
-
-```
-pip install <oebuild.wheel>
-```
-
-oebuild会依赖一些第三方库辅助运行，因此相关的第三方库也会直接被安装，如果在安装过程中显示错误，或报第三方库安装请求失败等，请再次重新运行安装oebuild的命令即可。
-
-注： 如果安装在安装oebuild时是以root用户执行，则在安装后可以直接运行，如果是以普通用户安装的，则需要注意将普通用户执行路径添加到环境变量中，可以参考以下方式来完成添加：
-
-1，以普通用户身份打开.bashrc
-
-```
-cd ~ && vim .bashrc
-```
-
-2, 在文件末尾查看是否将命令执行路径添加到环境变量中，该路径一般为`/home/<user>/.local/bin`,如果没有，则将以下语句添加到文件末尾
-
-```
-export PATH=/home/<user>/.local/bin:$PATH
-```
-
-在以上命令行中，`<user>`表示是你此时的用户名，如果不确定，则可以通过执行`whoami`来确定
-
-3，在添加完成后保存退出，vim编辑板的保存退出按键为：先按`esc`，再按`shift + :`, 最后输入`wq`然后按回车键即可
-
-4，退出后还需要刷新以下环境变量，执行以下命令完成环境变量的刷新
-
-```
-source ~/.bashrc
-```
-
-这样你就可以使用oebuild这个工具了，试着执行一下`oebuild -h`，看看能否显示oebuild的帮助信息
 
 ##### 初始化oebuild目录
 
@@ -87,39 +56,7 @@ oebuild init <directory>
 
 该操作会初始化oebuild的目录，`<directory>`表示要初始化目录的名称
 
-注：由于oebuild的运行整体依赖docker环境的运行，因此，如果你本地没有安装docker应用，则请按照oebuild给出的提示进行操作，或者按以下给出的方式完成docker的安装
-
-1，确定你本机的系统类型，这里以ubuntu为例讲解，执行以下命令完成docker的安装
-
-```
-sudo apt install docker docker.io -y
-```
-
-2, 添加docker用户组
-
-```
-sudo groupadd docker
-```
-
-3, 将本用户添加到docker组内
-
-```
-sudo usermod -a -G docker $(whoami)
-```
-
-4, 重新启动docker
-
-```
-sudo systemctl-reload && systemctl restart docker 
-```
-
-5, 修改docker.sock读写权限
-
-```
-sudo chmod o+rw /var/run/docker.sock
-```
-
-其他操作系统请参考ubuntu方式进行
+注：由于oebuild的运行整体依赖docker环境的运行，因此，如果你本地没有安装docker应用，则请按照oebuild给出的提示进行操作
 
 ##### 更新oebuild运行环境
 
@@ -129,7 +66,13 @@ sudo chmod o+rw /var/run/docker.sock
 oebuild update
 ```
 
-更新工作主要有两点：一，pull相关的运行容器镜像；二，从gitee上下载yocto-meta-openeuler仓代码，如果本地没有openeuler相关容器，则在这一步执行会比较漫长，请耐心等待。
+更新工作主要有三点：
+
+​	pull相关的运行容器镜像
+
+​	从gitee上下载yocto-meta-openeuler仓代码
+
+​	从gitee上下载基础的layer层
 
 ##### 创建编译配置文件
 
@@ -139,11 +82,11 @@ oebuild update
 oebuild generate
 ```
 
-默认配置文件对应的镜像是aarch64标准镜像
+默认配置文件对应的镜像是aarch64的qemu标准镜像，此时会创建<oebuild_workspace>/build/qemu-aarch64构建工作目录，在该目录下会产生compile.yaml构建配置文件
 
 ##### 执行构建操作
 
-执行如下命令会进入镜像构建程序：
+进入<oebuild_workspace>/build/qemu-aarch64构建目录，执行如下命令会进入镜像构建程序：
 
 ```
 oebuild bitbake openeuler-image
@@ -155,7 +98,7 @@ oebuild bitbake openeuler-image
 
 ##### oebuild init
 
-目录初始化指令，主要用于初始化oebuild项目目录，运行该指令在后面需要跟要初始化的目录名，如下：
+工作空间初始化指令，主要用于初始化oebuild项目工作空间，运行该指令在后面需要跟要初始化的目录名，如下：
 
 ```
 oebuild init [directory] [-u yocto_remote_url] [-b branch]
@@ -163,11 +106,11 @@ oebuild init [directory] [-u yocto_remote_url] [-b branch]
 
 directory: 表示要初始化的目录名称（注意：我们无法在已经初始化的目录内再次执行初始化操作）
 
-yocto_remote_url：yocto-meta-openeuler的remote远程链接
+yocto_remote_url：yocto-meta-openeuler的remote远程链接，默认是https://gitee.com/openeuler/yocto-meta-openeuler.git
 
-branch：yocto-meta-openeuler的分支
+branch：yocto-meta-openeuler的分支，默认是master
 
-（注意：oebuild在执行构建任务时是依赖已经适配oebuild的yocto-meta-openeuler的仓的）
+（注意：oebuild在执行构建任务时是依赖已经适配oebuild的yocto-meta-openeuler的仓的，意思是如果yocto-meta-openeuler不支持oebuild，则无法使用oebuild对yocto-meta-openeuler进行构建）
 
 例如初始化demo目录只需要执行如下命令：
 
@@ -191,31 +134,33 @@ src：该目录用于存放跟编译相关的源码
 
 ##### oebuild update
 
-基础环境更新指令，在执行初始化目录指令后，在执行构建环节之前必须要先执行该命令。
+基础环境更新指令，在执行初始化目录指令后，一般来说在执行构建环节之前要先执行该命令。
 
 ```
-oebuild update [-t docker_tag] [-l list] [-i ignore] [-e enable]
+oebuild update [yocto docker layer] [-tag]
 ```
 
--t: 指更新哪个tag的容器
+update命令可以更新yocto，docker以及layer，对于docker的更新则有-tag的选项，该选项用来单独指定更新哪个容器镜像
 
--l: 表示列出可选资源列表，目前只有docker这一项
-
--i: 表示在更新时忽略哪一项，可选的有docker与meta，docker代表容器镜像，meta代表yocto-meta-openeuler仓
-
--e: 表示在更新时使能哪一项，可选范围与解释同上
-
-执行更新操作如下命令：
+单独的使用方式参考如下范例：
 
 ```
-oebuild update
+oebuild update yocto   // 更新yocto，如果没有根据.oebuild/config中配置的下载，如果有则更新，如果已经做了改动，备份后重新下载
+oebuild update docker [-tag]  // 更新构建容器镜像，-tag参数可选，如果以后想要主机模式构建，这个操作可以不执行
+oebuild update layer   // 更新layer，所谓的layer是openEuler构建时必须依赖的基础元数据层，因此需要提前准备
 ```
 
-oebuild执行构建有两个必要的前提，一是构建需要的容器，二是主构建仓（yocto-meta-openeuler）。所以更新命令主要以这两部分展开
-
-另外，如果我们有自己的oebuild适配仓，可以在`config`配置文件中修改（该文件在`<workspace>/.oebuild`目录下），如果已经先执行过更新操作，然后再次执行`oebuild update`会将原有的`yocto-meta-openeuler`做备份，将在工作空间根目录下创建yocto-bak备份目录，然后将备份后的`yocto-meta-openeuler`移动到该目录。更改基础仓在config中的如下字段修改：
+更新命令的执行依赖oebuild工作空间的配置文件，该配置文件位于<oebuild_workspace>/.oebuild/config，配置文件内容如下：
 
 ```
+docker:
+  repo_url: swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-container
+  tag_map:
+    openEuler-23.03: "23.03"
+    master: latest
+    openEuler-22.03-LTS-SP2: 22.03-lts-sp2
+    openEuler-23.09: "23.09"
+    openEuler-24.03: "24.03"
 basic_repo:
   yocto_meta_openeuler:
     path: yocto-meta-openeuler
@@ -223,29 +168,45 @@ basic_repo:
     branch: master
 ```
 
-basic_repo与yocto-meta-openeuler是两个key键，不可以更改，remote_url与branch可以更改成自己已经适配的`yocto-meta-openeuler`仓的参数
+从配置文件中可以看到，主要分为两个部分，分别是docker和basic_repo。docker下记录的是openEuler构建的容器信息，有远程镜像地址和openEuler Embedded每个版本与构建容器的映射关系。basic_repo下记录的是openEuler Embedded的源码仓，名称为yocto-meta-openeuler，里面有path，表示下载后的本地名称，remote_url表示远程仓地址，branch表示分支信息。
 
-注：如果我们不输入任何参数，即直接执行`oebuild update`，则默认更新容器镜像和基础仓
+因此，如果我们要指定某个源码仓，则直接修改yocto-meta-openeuler下的相关信息即可。如果我们要指定构建版本与构建容器的映射关系，则修改docker下的相关信息即可。
+
+> 注：docker，basic_repo与yocto-meta-openeuler是两个key键，不可以更改，remote_url与branch可以更改成自己已经适配的`yocto-meta-openeuler`仓的参数
 
 ##### oebuild generate
 
 创建配置文件指令，而该命令就是用来产生配置文件的。
 
 ```
-oebuild generate [-p platform] [-f features] [-t toolchain_dir] [-d build_directory] [-l list]
+oebuild generate [-p platform] [-f features] [-t toolchain_dir] [-d build_directory] [-l list] [-b_in build_in]
 ```
 
--p：cpu类型参数，全称`platform`，生成配置文件需要的一个参数，默认为aarch64-std
+-p：单板名称，全称`platform`，生成配置文件需要的一个参数，默认为qemu-aarch64
 
--f：特性参数，全称`feature`，生成配置文件需要的一个参数，没有默认值
+-f：特性参数，全称`feature`，生成配置文件可选的一个参数，没有默认值
 
--t：外部编译链参数，全称`toolchain_dir`，生成配置文件需要的一个参数，没有默认值，该值表示如果我们不需要系统提供的交叉编译链而选择自己的交叉编译链，则可以选择该参数。
+-t：外部编译链参数，全称`toolchain_dir`，生成配置文件可选的一个参数，没有默认值，该值表示如果我们不需要系统提供的交叉编译链而选择自己的交叉编译链，则可以选择该参数。
+
+-n：外部nativesdk参数，全称`nativesdk_dir`，生成配置文件可选的一个参数，没有默认值，该值表示如果我们不需要系统提供的nativesdk而选择自己指定的nativesdk，则可以选择该参数。
+
+-s：sstate_mirrors值，全称`sstate_cache`，生成配置文件可选的一个参数，没有默认值，该值表示如果我们想要将主机端的sstate-cache应用于构建，则可以使用该参数指定。
+
+-s_dir：生成的sstate-cache存放地址，全称`sstate_dir`，生成配置文件可选的一个参数，没有默认值，该值可以指定在构建时的sstate-cache存放在哪里
+
+-m：生成的tmp存放地址，全称`tmp_dir`，生成配置文件可选的一个参数，没有默认值，该值可以指定在构建时的tmp存放在哪里。
+
+-tag：基于容器构建时启用的容器tag，全称`--docker_tag`，生成配置文件可选的一个参数，没有默认值，通常启用构建容器会自动匹配构建容器镜像，但是用户也可以指定使用哪个容器tag
+
+-dt：时间戳，全称`--datetime`，没有默认值，通常在yocto构建时会使用DATETIME变量，该变量如果不设置则默认采用当前时间戳，也可以进行设置，该参数即为设置时间戳参数
+
+-df：是否禁用openeuler_fetch功能，全称`disable_fetch`，默认为enable，即和yocto中的默认值保持一致，该值的作用为禁止openeuler_fetch的执行，openeuler_fetch为openEuler自我实现的上游软件包下载功能，通过该参数可以禁止其执行
 
 -d：初始化的编译目录，如果不设置该参数，则初始化的编译目录和-p参数保持一致
 
--l: list参数，有两个可选范围，platform和feature，platform则会列出支持的platform列表，feature则会列出支持的feature列表
+-l: list参数，全称`--list`，会同时列出当下支持的单板列表以及特性列表，特性列表会标明其支持的单板
 
-oebuild在构建时依赖compile.yaml配置文件来完成构建操作，创建配置文件指令已经属于构建指令内容，该操作将会检查`yocto-meta-openeuler`是否适配了oebuild，检查是否适配的规则便是是否在`yocto-meta-openeuler`根目录创建了`.oebuild`隐藏目录，而`-p`则会解析`.oebuild/platform`下相应的平台配置文件，`-f`参数则会解析`.oebuild/feature`下相应的配置文件，该参数是可以多值传入的，例如如下范例：
+oebuild在构建时依赖compile.yaml构建配置文件来完成构建环境准备工作，创建配置文件指令已经属于构建指令内容，该操作将会检查`yocto-meta-openeuler`是否适配了oebuild，检查是否适配的规则便是是否在`yocto-meta-openeuler`根目录创建了`.oebuild`隐藏目录，而`-p`则会解析`.oebuild/platform`下相应的平台配置文件，`-f`参数则会解析`.oebuild/feature`下相应的配置文件，该参数是可以多值传入的，例如如下范例：
 
 ```
 oebuild generate -p aarch64-std -f systemd -f openeuler-qt
@@ -267,11 +228,11 @@ oebuild bitbake -h
 
 来获取帮助
 
-一般来说，启动后的容器挂在的目录映射关系如下：
+一般来说，启动后的容器挂载的目录映射关系如下：
 
 ```
 <workspace>/src:/usr1/openeuler/src
-<workspace>/build/:/usr1/openeuler/build
+<workspace>/build/xxx:/usr1/openeuler/build/xxx
 ```
 
 如果在`compile.yaml`中有`toolchain_dir`参数，即有用户自定义外部工具链，则会增加一个挂载目录，如下：
@@ -280,42 +241,127 @@ oebuild bitbake -h
 <toolchain_dir>：/usr1/openeuler/native_gcc
 ```
 
-##### oebuild upgrade
+如果直接执行`oebuild bitbake`则会进入openEuler构建的交互环境，此时可以自由执行bitbake任何相关的命令，例如`bitbake zlib -c do_fetch`等等，如果直接执行`oebuild bitbake zlib -c do_fetch`等则会直接在控制台输出构建日志
 
-在线升级指令，该指令会请求远程oebuild版本信息，通过和本地oebuild版本对比来判断是否进行升级
+##### oebuild manifest
 
-由于oebuild二进制包存放在gitee仓库中，因此oebuild在升级时会先克隆最新的二进制仓到用户根目录，并以一个随机文件名命名，然后执行`sudo pip install <oebuild*.whl>`来完成升级，在这之中会要求用户输入root密码，在完成升级后会自动删除oebuild二进制包
+基线文件管理命令，该指令的目的是为了对openEuler依赖的上游软件包进行下载或者对现有软件包进行版本管理。
+
+```
+oebuild manifest [create / download] [-f manifest_dir]
+```
+
+create：命令为创建基线文件，-f参数指定manifest.yaml基线文件的路径
+
+download：命令为根据基线文件下载上游软件包，-f参数指定manifest.yaml基线文件的路径
+
+##### oebuild clear
+
+清理缓存命令，该指令可以用来清理执行oebuild而产生的一些内容，包括容器镜像
+
+```
+oebuild clear [docker]
+```
+
+目前仅限于清理构建时残留的docker容器，该命令执行后，oebuild会遍历每个构建空间，读取.env文件中容器ID，然后执行stop操作，再执行rm操作
 
 ##### oebuild menv
-```
-oebuild menv [-d setup_file_directory] [-f sdk_file_path]
-```
-setup_file_directory: 表示已经解压完成的对应sdk产生的setup文件夹。此文件夹中有且只能有一个setup文件
 
-sdk_file_path： 对应sdk文件路径,需要指定到sdk文件名。会在当前工作目录下产生一个sdk_info_当前时间戳的文件夹，
-用于存放对应的setup_file等文件。
+sdk开发环境管理命令，该指令用来对各初始化的sdk环境进行管理，其作用是为了应对openEuler 上层应用开发者所面临的开发环境的需求
+
+```
+oebuild menv [create list remove active] [-d directory] [-f file] [-n env_name]
+```
+-d：sdk目录参数，全称`directory`，用于指定已经初始化好的sdk目录，在创建sdk环境时可以直接通过该参数指定
+
+-f：sdk脚本路径参数，全称`file`，用于指定未初始化的sdk-shell文件，在创建sdk环境时可以通过该参数指定，此时oebuild会启动执行初始化操作
+
+-n：sdk环境的命名，全称`env_name`，用户确定sdk环境的名称，通过该名称可以对sdk环境进行管理
+
+该功能有四个二级指令功能如下：
+
+create：创建功能，该命令可以创建一个sdk编译环境，使用方式为`oebuild menv [-d xxx / -f xxx] -n x`，-d与-f两个参数各选其一
+
+list：列出sdk环境，该命令可以将目前已经安装的sdk环境全部列出，使用方式为`oebuild menv list`
+
+remove：移除sdk环境，该命令可以将指定的sdk环境移除，使用方式为`oebuild menv remove -n xxx`
+
+active：激活sdk环境，该命令可以将指定的sdk环境激活，因此可以在编译时使用sdk相关的库，使用方式为`oebuild menv active -n xxx`
+
+> 注：这里的sdk指的是在openEuler镜像构建时都会伴随的基于该镜像的应用开发的sdk，通过该sdk可以开发各种各样能够运行在这个镜像中的二进制应用
 
 ##### oebuild runqemu
 
-qemu 仿真命令，通过该命令可以在本地实现qemu仿真，该功能运行依赖qemuboot.conf，如果用户不指定或创建，oebuild会根据相关参数自动创建，该文件中记录有qemu启动相关参数，用户可以手动进行修改，如果在当下目录中有多个qemuboot.conf，则会给出选择交互由用户进行选择
+qemu 仿真命令，通过该命令可以在本地实现qemu仿真，用户可以在执行完qemu镜像构建后直接运行该功能实现qemu仿真
 
 ```
-oebuild runqemu [-f conf] [-a arch] [-c create] [-k kernel] [-r rootfs] [-s smp] [-m mem]
+oebuild runqemu nographic
 ```
 
-conf: qemuboot.conf配置文件，qemu仿真依赖该文件进行启动，该文件中记录有qemu启动所有必要的参数，注意，该参数一旦使用则其他参数则不再生效
+通过以上命令即可调用qemu来运行qemu镜像，该命令是对poky的runqemu的封装，qemu工具的运行基于容器，因此需要添加nographic，即非图形化启动，否则会报错，该命令的参数和原始runqemu的参数一样，并无不同，具体参数如下：
 
-arch: 运行架构，目前可选的架构有aarch64，arm，x86_64和riscv64，可以缺省启动，此时会进入交互界面供用户选择
+```
+Usage: you can run this script with any valid combination
+of the following environment variables (in any order):
+  KERNEL - the kernel image file to use
+  BIOS - the bios image file to use
+  ROOTFS - the rootfs image file or nfsroot directory to use
+  DEVICE_TREE - the device tree blob to use
+  MACHINE - the machine name (optional, autodetected from KERNEL filename if unspecified)
+  Simplified QEMU command-line options can be passed with:
+    nographic - disable video console
+    novga - Disable VGA emulation completely
+    sdl - choose the SDL UI frontend
+    gtk - choose the Gtk UI frontend
+    gl - enable virgl-based GL acceleration (also needs gtk or sdl options)
+    gl-es - enable virgl-based GL acceleration, using OpenGL ES (also needs gtk or sdl options)
+    egl-headless - enable headless EGL output; use vnc (via publicvnc option) or spice to see it
+    (hint: if /dev/dri/renderD* is absent due to lack of suitable GPU, 'modprobe vgem' will create
+    one suitable for mesa llvmpipe software renderer)
+    serial - enable a serial console on /dev/ttyS0
+    serialstdio - enable a serial console on the console (regardless of graphics mode)
+    slirp - enable user networking, no root privilege is required
+    snapshot - don't write changes back to images
+    kvm - enable KVM when running x86/x86_64 (VT-capable CPU required)
+    kvm-vhost - enable KVM with vhost when running x86/x86_64 (VT-capable CPU required)
+    publicvnc - enable a VNC server open to all hosts
+    audio - enable audio
+    [*/]ovmf* - OVMF firmware file or base name for booting with UEFI
+  tcpserial=<port> - specify tcp serial port number
+  qemuparams=<xyz> - specify custom parameters to QEMU
+  bootparams=<xyz> - specify custom kernel parameters during boot
+  help, -h, --help: print this text
+  -d, --debug: Enable debug output
+  -q, --quiet: Hide most output except error messages
 
-create: 创建新qemuboot.conf文件名，应用该参数则会自动创建新的qemuboot.conf
+Examples:
+  runqemu
+  runqemu qemuarm
+  runqemu tmp/deploy/images/qemuarm
+  runqemu tmp/deploy/images/qemux86/<qemuboot.conf>
+  runqemu qemux86-64 core-image-sato ext4
+  runqemu qemux86-64 wic-image-minimal wic
+  runqemu path/to/bzImage-qemux86.bin path/to/nfsrootdir/ serial
+  runqemu qemux86 iso/hddimg/wic.vmdk/wic.vhd/wic.vhdx/wic.qcow2/wic.vdi/ramfs/cpio.gz...
+  runqemu qemux86 qemuparams="-m 256"
+  runqemu qemux86 bootparams="psplash=false"
+  runqemu path/to/<image>-<machine>.wic
+  runqemu path/to/<image>-<machine>.wic.vmdk
+  runqemu path/to/<image>-<machine>.wic.vhdx
+  runqemu path/to/<image>-<machine>.wic.vhd
+```
 
-kernel：内核文件，该参数用于指定启动内核文件路径，对应qemu的`-kernel xxx`
+> 注：runqemu功能需要在镜像构建时添加支持，即在镜像相关的bb文件中添加`IMAGE_CLASSES += "qemuboot"`，因为runqemu构建依qemuboot.conf，而qemuboot.conf是由qemuboot类产生的，具体qemu在构建时的启动参数参考yocto-meta-openeuler/conf/machine下的配置文件
 
-rootfs：系统文件，该参数用于指定系统文件路径，对应qemu的`-initrd xxx`
+##### oebuild deploy-target / undeploy-target
 
-smp：内核数，该参数用于指定系统启动的内核数，默认为1，对应qemu的`-smp 1 `
+软件包在线部署或卸载功能，通过该命令可以实现软件包实时部署到一个目标机上，该命令旨在帮助开发者对所开发的软件包实时进行部署调试
 
-mem：内存，该参数用于指定系统启动的内存，默认为1G，对应qemu的`-m 1G`
+```
+oebuild deploy-target/undeploy-target <package> name@ip
+```
+
+该命令是对poky的deploy-target与undeploy-target的封装，这个功能的使用需要提前准备好目标机，并且目标机和主机之间IP要联通。
 
 #### 配置文件介绍
 
