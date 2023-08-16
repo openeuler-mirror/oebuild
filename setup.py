@@ -42,7 +42,8 @@ setuptools.setup(
         'colorama',
         'ruamel.yaml',
         'dataclasses',
-        'reprint'
+        'reprint',
+        'prettytable'
     ],
     python_requires='>=3.8',
     entry_points={'console_scripts': ('oebuild = oebuild.app.main:main',)},

@@ -17,6 +17,8 @@ import sys
 import pathlib
 from shutil import copyfile
 
+from prettytable import PrettyTable
+
 from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
 from oebuild.parse_compile import ParseCompile,CheckCompileError
@@ -56,9 +58,9 @@ class Generate(OebuildCommand):
   %(prog)s [-p platform] [-f features] [-t toolchain_dir] [-d build_directory] [-l list] [-b_in build_in]
 ''')
 
-        parser.add_argument('-l', dest='list', choices=['platform', 'feature'],
+        parser.add_argument('-l', dest='list',action = "store_true",
             help='''
-            with platform will list support archs, with feature will list support features
+            will list support archs and features
             '''
         )
 
@@ -198,8 +200,8 @@ class Generate(OebuildCommand):
         if args.tmp_dir is not None:
             self.tmp_dir = args.tmp_dir
 
-        if args.list is not None:
-            self.list_info(args=args)
+        if args.list:
+            self.list_info()
             return
 
         build_dir = self._init_build_dir(args=args)
@@ -257,7 +259,7 @@ following container, enter it numerically, and enter q to exit:''')
                     index = int(k)
                     docker_tag = image_list[index]
                     break
-                except:
+                except IndexError:
                     print("please entry true number")
         docker_tag = docker_tag.strip()
         docker_tag = docker_tag.strip('\n')
@@ -349,16 +351,12 @@ oebuild bitbake
             os.makedirs(build_dir)
         return build_dir
 
-    def list_info(self, args):
+    def list_info(self,):
         '''
         print platform list or feature list
         '''
-        if args.list == 'platform':
-            self._list_platform()
-            return
-        if args.list == 'feature':
-            self._list_feature()
-            return
+        self._list_platform()
+        self._list_feature()
 
     def _list_platform(self):
         logger.info("=============================================")
@@ -366,30 +364,35 @@ oebuild bitbake
         yocto_oebuild_dir = os.path.join(yocto_dir, ".oebuild")
         list_platform = os.listdir(os.path.join(yocto_oebuild_dir, 'platform'))
         print("the platform list is:")
+        table = PrettyTable(['platform name'])
+        table.align = "l"
         for platform in list_platform:
             if platform.endswith('.yml'):
-                print(platform.replace('.yml', ''), INFO_COLOR)
+                table.add_row([platform.replace('.yml', '')])
             if platform.endswith('.yaml'):
-                print(platform.replace('.yaml', ''), INFO_COLOR)
+                table.add_row([platform.replace('.yaml', '')])
+        print(table, INFO_COLOR)
 
     def _list_feature(self,):
-        logger.info("=============================================")
         yocto_dir = self.configure.source_yocto_dir()
         yocto_oebuild_dir = os.path.join(yocto_dir, ".oebuild")
         list_feature = os.listdir(os.path.join(yocto_oebuild_dir, 'features'))
         print("the feature list is:")
+        table = PrettyTable(['feature name','support arch'])
+        table.align = "l"
         for feature in list_feature:
             if feature.endswith('.yml'):
-                print(feature.replace('.yml',''), INFO_COLOR)
+                feature_name = feature.replace('.yml','')
             if feature.endswith('.yaml'):
-                print(feature.replace('.yaml',''), INFO_COLOR)
+                feature_name = feature.replace('.yaml','')
             feat = oebuild_util.read_yaml(pathlib.Path(os.path.join(yocto_oebuild_dir,
                                                                     'features',
                                                                     feature)))
             if "support" in feat:
-                print("    support arch: %s", feat.get('support'))
+                table.add_row([feature_name, feat.get('support')])
             else:
-                print("    support arch: all")
+                table.add_row([feature_name, "all"])
+        print(table, INFO_COLOR)
 
     def check_support_oebuild(self, yocto_dir):
         '''
