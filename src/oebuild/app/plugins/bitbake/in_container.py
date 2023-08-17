@@ -18,7 +18,6 @@ from oebuild.local_conf import NATIVE_GCC_DIR, SSTATE_CACHE
 from oebuild.parse_env import ParseEnv, EnvContainer
 from oebuild.docker_proxy import DockerProxy
 from oebuild.configure import Configure
-from oebuild.ogit import OGit
 from oebuild.parse_compile import ParseCompile
 from oebuild.m_log import logger
 import oebuild.app.plugins.bitbake.const as bitbake_const
@@ -55,13 +54,8 @@ class InContainer(BaseBuild):
     `oebuild update docker`''')
             return
 
-        yocto_dir = os.path.join(
-            self.configure.source_dir(), "yocto-meta-openeuler")
-        remote, branch = OGit.get_repo_info(yocto_dir)
         self.deal_env_container(
             env=parse_env,
-            remote=remote,
-            branch=branch,
             toolchain_dir=parse_compile.toolchain_dir,
             sstate_cache=parse_compile.sstate_cache,
             docker_image=parse_compile.docker_image)
@@ -70,8 +64,6 @@ class InContainer(BaseBuild):
 
     def deal_env_container(self,
                            env: ParseEnv,
-                           remote: str,
-                           branch: str,
                            toolchain_dir=None,
                            sstate_cache = None,
                            docker_image = ""):
@@ -83,9 +75,12 @@ class InContainer(BaseBuild):
         are inconsistent, you need to create a new container, otherwise
         directly enable the sleeping container
         '''
+        cwd_name = os.path.basename(os.getcwd())
         volumns = []
         volumns.append(self.configure.source_dir() + ':' + bitbake_const.CONTAINER_SRC)
-        volumns.append(self.configure.build_dir() + ':' + bitbake_const.CONTAINER_BUILD)
+        volumns.append(os.path.join(self.configure.build_dir(), cwd_name)
+            + ':' +
+            os.path.join(bitbake_const.CONTAINER_BUILD, cwd_name))
         if toolchain_dir is not None:
             volumns.append(toolchain_dir + ":" + NATIVE_GCC_DIR)
 
@@ -94,8 +89,6 @@ class InContainer(BaseBuild):
 
         try:
             env_container = EnvContainer(
-                remote=remote,
-                branch=branch,
                 volumns=volumns,
                 short_id=""
             )

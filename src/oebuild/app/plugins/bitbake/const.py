@@ -12,7 +12,7 @@ See the Mulan PSL v2 for more details.
 
 BASH_END_FLAG = "  ###!!!###"
 CONTAINER_SRC = '/usr1/openeuler/src'
-CONTAINER_BUILD = '/home/openeuler/build'
+CONTAINER_BUILD = '/home/openeuler'
 CONTAINER_USER = "openeuler"
 
 BASH_BANNER = '''

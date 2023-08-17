@@ -21,10 +21,6 @@ class EnvContainer:
     '''
     the container object in env object
     '''
-    remote: str
-
-    branch: str
-
     short_id: Optional[str]
 
     volumns: list
@@ -64,8 +60,6 @@ class ParseEnv:
         if "container" in data:
             env_container = data['container']
             self.env.container =  EnvContainer(
-                remote=oebuild_util.add_git_suffix(env_container['remote']),
-                branch=env_container['branch'],
                 short_id=env_container['short_id'],
                 volumns=env_container['volumns']
             )
@@ -74,12 +68,6 @@ class ParseEnv:
         '''
         judge if container same with container in env.yaml
         '''
-        if data.remote is None:
-            raise ValueError("the key remote is lack")
-
-        if data.branch is None:
-            raise ValueError("the key branch is lack")
-
         if data.volumns is None:
             raise ValueError("the key volumns is lack")
 
@@ -87,12 +75,6 @@ class ParseEnv:
             return False
 
         if self.env.container is None:
-            return False
-
-        if self.env.container.remote != data.remote:
-            return False
-
-        if self.env.container.branch != data.branch:
             return False
 
         if len(self.env.container.volumns) != len(data.volumns):
@@ -121,8 +103,6 @@ class ParseEnv:
         if self.env.container is not None:
             container = self.env.container
             data['container'] = {
-                'remote': container.remote,
-                'branch': container.branch,
                 'short_id': container.short_id,
                 'volumns': container.volumns
             }
