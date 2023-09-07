@@ -64,9 +64,9 @@ class Generate(OebuildCommand):
             '''
         )
 
-        parser.add_argument('-p', dest='platform', default="aarch64-std",
+        parser.add_argument('-p', dest='platform', default="qemu-aarch64",
             help='''
-            this param is for arch, for example aarch4-std, aarch64-pro and so on
+            this param is for arch, you can find it in yocto-meta-openeuler/.oebuild/platform
             '''
         )
 
@@ -317,8 +317,7 @@ oebuild bitbake
             except BaseParseTemplate as e_p:
                 raise e_p
         else:
-            raise ValueError("wrong platform, please run\
-                    `oebuild generate -l platform` to view support platform")
+            raise ValueError("wrong platform, please run `oebuild generate -l` to view support platform")
 
     def _add_features_template(self, args, yocto_oebuild_dir, parser_template: ParseTemplate):
         if args.features:
@@ -331,8 +330,7 @@ oebuild bitbake
                     except BaseParseTemplate as b_t:
                         raise b_t
                 else:
-                    raise ValueError("wrong platform, please run \
-                            `oebuild generate -l feature` to view support feature")
+                    raise ValueError("wrong platform, please run `oebuild generate -l` to view support feature")
 
     def _init_build_dir(self, args):
         if not os.path.exists(self.configure.build_dir()):
