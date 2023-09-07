@@ -17,3 +17,6 @@ plugins:
 - name: clear
   class: Clear
   path: plugins/clear/clear.py
+- name: compile
+  class: compile
+  path: plugins/compile/compile.py
