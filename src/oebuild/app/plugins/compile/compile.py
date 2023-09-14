@@ -10,7 +10,6 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 '''
 
-import subprocess
 import argparse
 import textwrap
 import os
@@ -33,7 +32,7 @@ from oebuild.check_docker_tag import CheckDockerTag
 The command for cross-compile, configure runtime environment, run code and output results.
 '''
 
-class compile(OebuildCommand):
+class Compile(OebuildCommand):
 
     def __init__(self):
         self.compile_conf_dir = os.path.join(os.getcwd(), 'compile.yaml')
@@ -80,6 +79,8 @@ class compile(OebuildCommand):
         # Parse the command-line arguments
         args = args.parse_args(unknown)
         
+        if(args.source_directory) is None:
+            logger.error('Please specify directory of the source file')
         self.dir_platform, self.chain_platform = self._check_platform(args)
         self._check_file(args)
         self.cross_compile(cross_compile_dir_target_file = args.source_directory)

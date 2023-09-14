@@ -18,5 +18,8 @@ plugins:
   class: Clear
   path: plugins/clear/clear.py
 - name: compile
-  class: compile
+  class: Compile
   path: plugins/compile/compile.py
+- name: qemu_run
+  class: Qemu_run
+  path: plugins/qemu_run/qemu_run.py
