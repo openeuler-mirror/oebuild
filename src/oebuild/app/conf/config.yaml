@@ -3,6 +3,7 @@ docker:
     tag_map:
         openEuler-23.03: "23.03"
         openEuler-22.03-LTS-SP2: 22.03-lts-sp2
+        openEuler-23.09: "23.09"
         master: latest
 basic_repo:
     yocto_meta_openeuler: 
