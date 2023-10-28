@@ -169,7 +169,7 @@ class ParseTemplate:
                           build_in: str = BUILD_IN_DOCKER,
                           sstate_cache = None,
                           tmp_dir = None,
-                          is_datetime = False,
+                          datetime = None,
                           is_disable_fetch = False,
                           docker_image = ""):
         '''
@@ -230,9 +230,8 @@ class ParseTemplate:
             if feature.local_conf is not None:
                 local_conf = LiteralScalarString(feature.local_conf + '\n' + local_conf)
 
-        if is_datetime:
-            now_time = time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
-            datetime_str = LiteralScalarString(f'DATETIME = "{now_time}"')
+        if datetime is not None:
+            datetime_str = LiteralScalarString(f'DATETIME = "{datetime}"')
             local_conf = LiteralScalarString(local_conf + '\n' + datetime_str)
 
         if is_disable_fetch:

@@ -59,10 +59,10 @@ class Init(OebuildCommand):
   %(prog)s [directory] [-u yocto_remote_url] [-b branch]
 ''')
 
-        parser_adder.add_argument('-u', dest = 'yocto_remote_url',
+        parser_adder.add_argument('-u','--yocto_remote_url', dest = 'yocto_remote_url',
             help='''Specifies the remote of yocto-meta-openeuler''')
 
-        parser_adder.add_argument('-b', dest = 'branch',
+        parser_adder.add_argument('-b', '--branch', dest = 'branch',
             help='''Specifies the branch of yocto-meta-openeuler''')
 
         parser_adder.add_argument(

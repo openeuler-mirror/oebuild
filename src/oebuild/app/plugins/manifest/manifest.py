@@ -74,6 +74,7 @@ class Manifest(OebuildCommand):
             ''')
 
         parser.add_argument('-m_dir',
+                            '--manifest_dir',
                             dest='manifest_dir',
                             help='''
             specify a manifest path to perform the create or restore operation

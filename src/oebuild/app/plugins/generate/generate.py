@@ -58,37 +58,37 @@ class Generate(OebuildCommand):
   %(prog)s [-p platform] [-f features] [-t toolchain_dir] [-d build_directory] [-l list] [-b_in build_in]
 ''')
 
-        parser.add_argument('-l', dest='list',action = "store_true",
+        parser.add_argument('-l', '--list', dest='list',action = "store_true",
             help='''
             will list support archs and features
             '''
         )
 
-        parser.add_argument('-p', dest='platform', default="qemu-aarch64",
+        parser.add_argument('-p', '--platform', dest='platform', default="qemu-aarch64",
             help='''
             this param is for arch, you can find it in yocto-meta-openeuler/.oebuild/platform
             '''
         )
 
-        parser.add_argument('-s', dest='sstate_cache',
+        parser.add_argument('-s','--state_cache', dest='sstate_cache',
             help='''
             this param is for SSTATE_MIRRORS
             '''
         )
 
-        parser.add_argument('-s_dir', dest='sstate_dir',
+        parser.add_argument('-s_dir', '--sstate_dir', dest='sstate_dir',
             help='''
             this param is for SSTATE_DIR
             '''
         )
 
-        parser.add_argument('-m', dest='tmp_dir',
+        parser.add_argument('-m', '--tmp_dir', dest='tmp_dir',
             help='''
             this param is for tmp directory, the build result will be stored in
             '''
         )
 
-        parser.add_argument('-f', dest='features', action='append',
+        parser.add_argument('-f', '--features', dest='features', action='append',
             help='''
             this param is feature, it's a reuse command
             '''
@@ -100,33 +100,33 @@ class Generate(OebuildCommand):
             '''
         )
 
-        parser.add_argument('-d', dest='directory',
+        parser.add_argument('-d', '--directory', dest='directory',
             help='''
             this param is build directory, the default is same to platform
             '''
         )
 
-        parser.add_argument('-t', dest='toolchain_dir', default = '',
+        parser.add_argument('-t', '--toolchain_dir', dest='toolchain_dir', default = '',
             help='''
             this param is for external toolchain dir, if you want use your own toolchain
             '''
         )
 
-        parser.add_argument('-n', dest='nativesdk_dir', default = '',
+        parser.add_argument('-n', '--nativesdk_dir', dest='nativesdk_dir', default = '',
             help='''
             this param is for external nativesdk dir, the param will be useful when you want to build in host
             '''
         )
         
-        parser.add_argument('-tag', dest='docker_tag', default = '',
+        parser.add_argument('-tag', '--docker_tag', dest='docker_tag', default = '',
             help='''
             when build in docker, the param can be point docker image
             '''
         )
 
-        parser.add_argument('-dt', '--datetime', dest = "is_datetime", action = "store_true",
+        parser.add_argument('-dt', '--datetime', dest = "datetime",
             help='''
-            this param is add DATETIME to local.conf, the value is getting current time
+            this param is add DATETIME to local.conf, the value format is 20231212010101
             ''')
 
         parser.add_argument('-df',
@@ -137,7 +137,7 @@ class Generate(OebuildCommand):
             this param is set openeuler_fetch in local.conf, the default value is enable, if set -df, the OPENEULER_FETCH will set to 'disable'
             ''')
 
-        parser.add_argument('-b_in', dest='build_in', choices=[BUILD_IN_DOCKER, BUILD_IN_HOST],
+        parser.add_argument('-b_in', '--build_in', dest='build_in', choices=[BUILD_IN_DOCKER, BUILD_IN_HOST],
                             default = BUILD_IN_DOCKER, help='''
             This parameter marks the mode at build time, and is built in the container by docker
             '''
@@ -272,7 +272,7 @@ following container, enter it numerically, and enter q to exit:''')
             build_in=build_in,
             sstate_cache= self.sstate_cache,
             tmp_dir = self.tmp_dir,
-            is_datetime = args.is_datetime,
+            datetime = args.datetime,
             is_disable_fetch = args.is_disable_fetch,
             docker_image=docker_image
             ))

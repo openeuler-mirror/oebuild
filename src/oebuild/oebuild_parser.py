@@ -111,7 +111,7 @@ class OebuildArgumentParser(argparse.ArgumentParser):
         self._format_thing_and_help(append, opt_str, help_msg, width)
 
     def _format_command(self, append, command, width):
-        thing = f'  {command.name}:'
+        thing = f'  {command.name}'
         self._format_thing_and_help(append, thing, command.help, width)
 
     def _format_thing_and_help(self, append, thing, help_msg: str, width):

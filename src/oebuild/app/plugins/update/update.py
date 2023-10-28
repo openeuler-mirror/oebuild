@@ -66,7 +66,7 @@ class Update(OebuildCommand):
             usage='''
   %(prog)s [yocto docker layer] [-tag]
 ''')
-        parser.add_argument('-tag', dest='docker_tag',
+        parser.add_argument('-tag','--tag', dest='docker_tag',
             help='''
             with platform will list support archs, with feature will list support features
             '''
