@@ -15,6 +15,8 @@ import textwrap
 import os
 import pathlib
 
+from docker.errors import DockerException
+
 from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
 from oebuild.configure import Configure
@@ -22,10 +24,13 @@ from oebuild.docker_proxy import DockerProxy
 from oebuild.m_log import logger
 
 class Clear(OebuildCommand):
+    '''
+    for some clear task
+    '''
 
     def __init__(self):
         self.configure = Configure()
-        self.client = DockerProxy()
+        self.client = None
         super().__init__(
             'clear',
             'clear someone which oebuild generate',
@@ -58,6 +63,11 @@ class Clear(OebuildCommand):
         args = args.parse_args(unknown)
 
         if args.item == "docker":
+            try:
+                self.client = DockerProxy()
+            except DockerException:
+                logger.error("please install docker first!!!")
+                return
             self.clear_docker()
 
     def clear_docker(self,):

@@ -13,31 +13,24 @@ See the Mulan PSL v2 for more details.
 import argparse
 import textwrap
 import os
-import sys
-import pathlib
-from shutil import copyfile
+
+from docker.errors import DockerException
 
 from docker.models.containers import Container
 from oebuild.docker_proxy import DockerProxy
 
 from oebuild.command import OebuildCommand
-import oebuild.util as oebuild_util
-from oebuild.parse_compile import ParseCompile,CheckCompileError
-from oebuild.configure import Configure, ConfigBasicRepo, YOCTO_META_OPENEULER
-from oebuild.parse_template import BaseParseTemplate, ParseTemplate, BUILD_IN_DOCKER, BUILD_IN_HOST
-from oebuild.m_log import logger, INFO_COLOR
-from oebuild.check_docker_tag import CheckDockerTag
+from oebuild.configure import Configure
+from oebuild.m_log import logger
 
-'''
-The command for run executable file under qemu.
-'''
-
-class Qemu_run(OebuildCommand):
-
+class QemuRun(OebuildCommand):
+    '''
+    The command for run executable file under qemu.
+    '''
     def __init__(self):
         self.compile_conf_dir = os.path.join(os.getcwd(), 'compile.yaml')
         self.configure = Configure()
-        self.client = DockerProxy()
+        self.client = None
         self.container_id = None
 
         super().__init__(
@@ -73,16 +66,21 @@ class Qemu_run(OebuildCommand):
             this param is for the mode for running qemu. All possible choices: user, system
             '''
         )
-        
+
         return parser
 
     def do_run(self, args: argparse.Namespace, unknown=None):
-        
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
             return
         # Parse the command-line arguments
         args = args.parse_args(unknown)
+
+        try:
+            self.client = DockerProxy()
+        except DockerException:
+            logger.error("please install docker first!!!")
+            return
 
         if(args.target_directory) is None:
             logger.error('Please specify directory of the target file')
