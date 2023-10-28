@@ -241,7 +241,7 @@ class Generate(OebuildCommand):
         check_docker_tag = CheckDockerTag(args.docker_tag, self.configure)
         oebuild_config = self.configure.parse_oebuild_config()
         if check_docker_tag.get_tag() is not None:
-            docker_tag = check_docker_tag.get_tag()
+            docker_tag = str(check_docker_tag.get_tag())
         else:
             # select docker image
             while True:
