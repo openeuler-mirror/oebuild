@@ -57,16 +57,15 @@ class OGit:
         '''
         check out version
         '''
-        repo = Repo.init(self._repo_dir)
-        try:
-            repo.git.checkout(version)
-        except GitCommandError:
-            logger.error("checkout faild")
+        self._fetch_upstream(version=version)
 
-    def clone_or_pull_repo(self,):
+    def clone_or_pull_repo(self):
         '''
         clone or pull git repo
         '''
+        self._fetch_upstream()
+
+    def _fetch_upstream(self, version=None):
         repo = Repo.init(self._repo_dir)
         remote = None
         for item in repo.remotes:
@@ -80,7 +79,10 @@ class OGit:
         logger.info("Fetching into %s ...", self._repo_dir)
         remote.fetch(progress=CustomRemote())
         try:
-            repo.git.checkout(self._branch)
+            if version is None:
+                repo.git.checkout(self._branch)
+            else:
+                repo.git.checkout(version)
         except GitCommandError:
             logger.error("update faild")
 

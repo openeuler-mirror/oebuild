@@ -65,18 +65,18 @@ the openeuler embedded docker tag can be selected list:
             if self.docker_tag not in self.tag_list:
                 return None
             else:
-                return self.docker_tag
+                return str(self.docker_tag)
 
         yocto_dir = self.configure.source_yocto_dir()
         env_path = os.path.join(yocto_dir,".oebuild/env.yaml")
         if os.path.exists(env_path):
             env_parse = oebuild_util.read_yaml(pathlib.Path(env_path))
-            return env_parse['docker_tag']
+            return str(env_parse['docker_tag'])
 
         yocto_repo = Repo.init(yocto_dir)
         oebuild_config = self.configure.parse_oebuild_config()
         docker_config = oebuild_config.docker
         if yocto_repo.active_branch.name in docker_config.tag_map:
-            return docker_config.tag_map[yocto_repo.active_branch.name]
+            return str(docker_config.tag_map[yocto_repo.active_branch.name])
 
         return None
