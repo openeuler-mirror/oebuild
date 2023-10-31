@@ -23,7 +23,7 @@ from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
 from oebuild.m_log import logger
 
-class QemuRun(OebuildCommand):
+class Qemu_run(OebuildCommand):
     '''
     The command for run executable file under qemu.
     '''
@@ -129,10 +129,3 @@ class QemuRun(OebuildCommand):
         logger.info(f'''Output:
         ===================
         {output}''')
-
-        # output_lines = exec_result.output.decode('utf-8').split('\n')
-        # for line in output_lines:
-        #     if "OUTPUT" in line:
-        #         logger.info(line)
-        #     else:
-        #         logger.debug(line)  # 将其他信息输出为调试信息

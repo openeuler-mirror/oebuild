@@ -121,8 +121,8 @@ class Compile(OebuildCommand):
         # logger.info(exec_result)
 
         logger.info("cross-compilation copying file from docker to host ...")
-        # 从容器内复制编译后的文件到主机上
-        output_file = "./"  # 输出到当前工作目录
+        # copy compiled file from container to host
+        output_file = "./"  # output to ./
         self.client.copy_from_container(
             container=container, 
             from_path=f"{container_target_dir}{self._target_base_name}", 

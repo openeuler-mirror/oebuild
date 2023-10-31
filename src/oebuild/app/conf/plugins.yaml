@@ -17,3 +17,6 @@ plugins:
 - name: clear
   class: Clear
   path: plugins/clear/clear.py
+- name: deploy
+  class: Deploy
+  path: plugins/deploy/deploy.py
