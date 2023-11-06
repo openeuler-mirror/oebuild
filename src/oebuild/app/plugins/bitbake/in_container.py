@@ -22,6 +22,7 @@ from oebuild.parse_compile import ParseCompile
 from oebuild.m_log import logger
 import oebuild.app.plugins.bitbake.const as bitbake_const
 from oebuild.app.plugins.bitbake.base_build import BaseBuild
+import oebuild.util as oebuild_util
 
 class InContainer(BaseBuild):
     '''
@@ -157,7 +158,7 @@ class InContainer(BaseBuild):
         else:
             content = self._get_bashrc_content(container=container)
             for b_s in bitbake_const.BASH_BANNER.split('\n'):
-                b_s = f"echo {b_s}{bitbake_const.BASH_END_FLAG}"
+                b_s = f"echo {b_s}{oebuild_util.BASH_END_FLAG}"
                 content = self._add_bashrc(content=content, line=b_s)
             self.update_bashrc(container=container, content=content)
             os.system(

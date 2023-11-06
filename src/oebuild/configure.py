@@ -20,6 +20,7 @@ import oebuild.util as oebuild_util
 PathType = Union[str, os.PathLike]
 
 YOCTO_META_OPENEULER = "yocto_meta_openeuler"
+YOCTO_POKY = "yocto-poky"
 CONFIG = "config"
 COMPILE_YAML = "compile.yaml.sample"
 
@@ -130,6 +131,13 @@ class Configure:
         yocto_config:ConfigBasicRepo = basic_config[YOCTO_META_OPENEULER]
         yocto_dir = yocto_config.path
         return os.path.join(Configure.source_dir(), yocto_dir)
+
+    @staticmethod
+    def source_poky_dir():
+        '''
+        return src/yocto-poky path
+        '''
+        return os.path.join(Configure.source_dir(), YOCTO_POKY)
 
     @staticmethod
     def yocto_bak_dir():

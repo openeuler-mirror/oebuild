@@ -17,6 +17,6 @@ plugins:
 - name: clear
   class: Clear
   path: plugins/clear/clear.py
-- name: deploy
-  class: Deploy
-  path: plugins/deploy/deploy.py
+- name: runqemu
+  class: RunQemu
+  path: plugins/run_qemu/run_qemu.py

@@ -54,7 +54,7 @@ class BaseBuild:
         new_content = ''
         for line in old_content.split('\n'):
             line: str = line
-            if line.endswith(bitbake_const.BASH_END_FLAG) or line.replace(" ", '') == '':
+            if line.endswith(oebuild_util.BASH_END_FLAG) or line.replace(" ", '') == '':
                 continue
             new_content = new_content + line + '\n'
         return new_content
@@ -62,7 +62,7 @@ class BaseBuild:
     def _add_bashrc(self, content: str, line: str):
         if not content.endswith('\n'):
             content = content + '\n'
-        content = content + line + bitbake_const.BASH_END_FLAG + '\n'
+        content = content + line + oebuild_util.BASH_END_FLAG + '\n'
 
         return content
 
@@ -70,6 +70,6 @@ class BaseBuild:
         new_content = self._restore_bashrc_content(old_content=old_content)
 
         for command in init_command:
-            new_content = new_content + command + bitbake_const.BASH_END_FLAG + '\n'
+            new_content = new_content + command + oebuild_util.BASH_END_FLAG + '\n'
 
         return new_content

@@ -25,6 +25,7 @@ from oebuild.version import __version__
 CONFIG_YAML = 'config.yaml'
 UPGRADE_YAML = 'upgrade.yaml'
 COMPILE_YAML = 'compile.yaml.sample'
+BASH_END_FLAG = "  ###!!!###"
 
 def read_yaml(yaml_dir : pathlib.Path):
     '''
@@ -138,3 +139,36 @@ def get_instance(factory):
     Instantiate a class
     '''
     return factory()
+
+def restore_bashrc_content(old_content):
+    '''
+    restore .bashrc
+    '''
+    new_content = ''
+    for line in old_content.split('\n'):
+        line: str = line
+        if line.endswith(BASH_END_FLAG) or line.replace(" ", '') == '':
+            continue
+        new_content = new_content + line + '\n'
+    return new_content
+
+def init_bashrc_content(old_content, init_command: list):
+    '''
+    init bashrc
+    '''
+    new_content = restore_bashrc_content(old_content=old_content)
+
+    for command in init_command:
+        new_content = new_content + command + BASH_END_FLAG + '\n'
+
+    return new_content
+
+def add_bashrc(content: str, line: str):
+    '''
+    add command line to bashrc
+    '''
+    if not content.endswith('\n'):
+        content = content + '\n'
+    content = content + line + BASH_END_FLAG + '\n'
+
+    return content

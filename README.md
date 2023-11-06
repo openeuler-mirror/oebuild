@@ -286,42 +286,27 @@ oebuild bitbake -h
 
 由于oebuild二进制包存放在gitee仓库中，因此oebuild在升级时会先克隆最新的二进制仓到用户根目录，并以一个随机文件名命名，然后执行`sudo pip install <oebuild*.whl>`来完成升级，在这之中会要求用户输入root密码，在完成升级后会自动删除oebuild二进制包
 
-##### oebuild compile
+##### oebuild runqemu
 
-对指定C或者C++文件，进行交叉编译的指令。执行后，静态编译过的二进制文件将被复制到用户当前目录下。
-
-```
-oebuild compile [-d source_directory] [-p platform]
-```
-
-source_directory: 表示目标源代码文件目录。
-
-platform：表示交叉编译的目标架构。可选项：arm, aarch64, riscv64, x86_64。此值默认为aarch64。
-
-##### oebuild qemu_run
-
-运行二进制文件的指令。在容器内一键执行交叉编译过的二进制文件，并返回执行结果。使用qemu user模式实现。
+qemu 仿真命令，通过该命令可以在本地实现qemu仿真，该功能运行依赖qemuboot.conf，如果用户不指定或创建，oebuild会根据相关参数自动创建，该文件中记录有qemu启动相关参数，用户可以手动进行修改，如果在当下目录中有多个qemuboot.conf，则会给出选择交互由用户进行选择
 
 ```
-oebuild compile [-d target_directory] [-p platform]
+oebuild runqemu [-f conf] [-a arch] [-c create] [-k kernel] [-r rootfs] [-s smp] [-m mem]
 ```
 
-target_directory: 表示目标二进制文件目录。
+conf: qemuboot.conf配置文件，qemu仿真依赖该文件进行启动，该文件中记录有qemu启动所有必要的参数，注意，该参数一旦使用则其他参数则不再生效
 
-platform：表示可执行文件运行目标平台架构。可选项：arm, aarch64, riscv64, x86_64。此值默认为aarch64。
+arch: 运行架构，目前可选的架构有aarch64，arm，x86_64和riscv64，可以缺省启动，此时会进入交互界面供用户选择
 
-##### oebuild deploy
+create: 创建新qemuboot.conf文件名，应用该参数则会自动创建新的qemuboot.conf
 
-将openEuler镜像部署到指定平台的指令。该指令将编译或者下载的镜像文件，部署到指定平台。命令自动配置qemu的网络功能，实现传送文件的可能。目前仅支持qemu-system平台。
-一键执行后，命令行将直接跳转到qemu用户登录界面。
+kernel：内核文件，该参数用于指定启动内核文件路径，对应qemu的`-kernel xxx`
 
-```
-oebuild deploy [-d target_directory] [-p platform] [-m mode]
-```
+rootfs：系统文件，该参数用于指定系统文件路径，对应qemu的`-initrd xxx`
 
-target_directory: 表示目标镜像文件夹的目录。程序会将整个文件夹复制到容器内，再在容器端进行部署。
+smp：内核数，该参数用于指定系统启动的内核数，默认为1，对应qemu的`-smp 1 `
 
-platform：表示部署目标平台的架构。可选项：arm, aarch64, riscv64, x86_64。此值默认为aarch64。
+mem：内存，该参数用于指定系统启动的内存，默认为1G，对应qemu的`-m 1G`
 
 #### 配置文件介绍
 
