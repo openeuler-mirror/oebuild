@@ -20,3 +20,6 @@ plugins:
 - name: runqemu
   class: RunQemu
   path: plugins/run_qemu/run_qemu.py
+- name: menv
+  class: Menv
+  path: plugins/m_env/m_env.py

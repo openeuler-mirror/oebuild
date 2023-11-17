@@ -286,6 +286,15 @@ oebuild bitbake -h
 
 由于oebuild二进制包存放在gitee仓库中，因此oebuild在升级时会先克隆最新的二进制仓到用户根目录，并以一个随机文件名命名，然后执行`sudo pip install <oebuild*.whl>`来完成升级，在这之中会要求用户输入root密码，在完成升级后会自动删除oebuild二进制包
 
+##### oebuild menv
+```
+oebuild menv [-d setup_file_directory] [-f sdk_file_path]
+```
+setup_file_directory: 表示已经解压完成的对应sdk产生的setup文件夹。此文件夹中有且只能有一个setup文件
+
+sdk_file_path： 对应sdk文件路径,需要指定到sdk文件名。会在当前工作目录下产生一个sdk_info_当前时间戳的文件夹，
+用于存放对应的setup_file等文件。
+
 ##### oebuild runqemu
 
 qemu 仿真命令，通过该命令可以在本地实现qemu仿真，该功能运行依赖qemuboot.conf，如果用户不指定或创建，oebuild会根据相关参数自动创建，该文件中记录有qemu启动相关参数，用户可以手动进行修改，如果在当下目录中有多个qemuboot.conf，则会给出选择交互由用户进行选择
