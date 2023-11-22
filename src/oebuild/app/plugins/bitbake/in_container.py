@@ -78,6 +78,7 @@ class InContainer(BaseBuild):
         '''
         cwd_name = os.path.basename(os.getcwd())
         volumns = []
+        volumns.append("/dev/net/tun:/dev/net/tun")
         volumns.append(self.configure.source_dir() + ':' + bitbake_const.CONTAINER_SRC)
         volumns.append(os.path.join(self.configure.build_dir(), cwd_name)
             + ':' +

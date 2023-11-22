@@ -18,7 +18,6 @@ from typing import Optional
 import oebuild.util as oebuild_util
 from oebuild.ogit import OGit
 from oebuild.parse_template import PlatformTemplate, ParseTemplate, BUILD_IN_DOCKER
-from oebuild.check_docker_tag import CheckDockerTag
 
 @dataclass
 class Compile(PlatformTemplate):

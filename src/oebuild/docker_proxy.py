@@ -265,7 +265,7 @@ class DockerProxy:
         else:
             raise ValueError("docker start faild")
 
-    def container_run_simple(self, image:str, volumes: list, network="host"):
+    def container_run_simple(self, image:str, volumes: list, network="host", is_priv=False):
         '''
         it's just create a tty docker container to do some thing next
         '''
@@ -275,7 +275,8 @@ class DockerProxy:
             volumes=volumes,
             network_mode=network,
             detach=True,
-            tty=True
+            tty=True,
+            privileged=is_priv
         )
         container_name = str(container.attrs.get('Name')).lstrip("/")
         container.rename(f"oebuild_{container_name}")
