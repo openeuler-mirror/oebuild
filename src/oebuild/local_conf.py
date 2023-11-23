@@ -201,7 +201,7 @@ class LocalConf:
         if parse_compile.local_conf is None:
             return
         for line in parse_compile.local_conf.split('\n'):
-            ret = re.match(r'^([A-Z0-9_]+)(append)(\s)', line)
+            ret = re.match(r'^([A-Z0-9_:]+)(append)(\s)', line)
             if ret is not None:
                 content = match_and_add(line, content)
                 continue
