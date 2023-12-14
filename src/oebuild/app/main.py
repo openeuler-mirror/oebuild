@@ -9,7 +9,7 @@ EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 '''
-
+import os
 import sys
 import pathlib
 from collections import OrderedDict
@@ -38,22 +38,29 @@ class OebuildApp:
         self.cmd = None
         try:
             plugins_dir = pathlib.Path(self.base_oebuild_dir,'app/conf','plugins.yaml')
+            self.oebuild_plugins_path = os.path.expanduser('~') + '/.local/oebuild_plugins/'
+            self.append_plugins_dir = pathlib.Path(self.oebuild_plugins_path, 'append_plugins.yaml')
             self.command_ext = self.get_command_ext(oebuild_util.read_yaml(plugins_dir)['plugins'])
+            if os.path.exists(self.append_plugins_dir) and oebuild_util.read_yaml(self.append_plugins_dir):
+                self.command_ext = self.get_command_ext(oebuild_util.read_yaml(self.append_plugins_dir)['plugins'],
+                                                        self.command_ext)
             self.command_spec = {}
         except Exception as e_p:
             raise e_p
 
     @staticmethod
-    def get_command_ext(plugins:list):
+    def get_command_ext(plugins: list, command_ext=None):
         '''
         return command information object
         '''
-        command_ext = OrderedDict()
+        if command_ext is None:
+            command_ext = OrderedDict()
         for app in plugins:
-            command_ext[app['name']] = _ExtCommand(
-                name=app['name'],
-                class_name=app['class'],
-                path=app['path'])
+            if 'status' not in app or app['status'] == 'enable':
+                command_ext[app['name']] = _ExtCommand(
+                    name=app['name'],
+                    class_name=app['class'],
+                    path=app['path'])
         return command_ext
 
 

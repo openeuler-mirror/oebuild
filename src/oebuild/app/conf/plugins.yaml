@@ -29,3 +29,6 @@ plugins:
 - name: undeploy-target
   class: UnDeployTarget
   path: plugins/deploy/deploy-target.py
+- name: mplugin
+  class: MPlugin
+  path: plugins/m_plugin/m_plugin.py

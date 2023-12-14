@@ -108,8 +108,8 @@ def get_spec(pre_dir, command_ext: _ExtCommand):
     xxx
     '''
 
-    py_file = os.path.join(os.path.dirname(__file__), pre_dir, command_ext.path)
-
+    py_file = os.path.join(os.path.dirname(__file__), pre_dir, command_ext.path) if (
+        '/.local/oebuild_plugins/' not in command_ext.path) else command_ext.path
     factory = _CmdFactory(py_file=py_file, name=command_ext.name, attr=command_ext.class_name)
 
     return OebuildExtCommandSpec(
