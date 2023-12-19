@@ -22,7 +22,7 @@ from prettytable import PrettyTable
 from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
 from oebuild.parse_compile import ParseCompile,CheckCompileError
-from oebuild.configure import Configure
+from oebuild.configure import Configure, YoctoEnv
 from oebuild.parse_template import BaseParseTemplate, ParseTemplate, BUILD_IN_DOCKER, BUILD_IN_HOST
 from oebuild.m_log import logger, INFO_COLOR
 from oebuild.check_docker_tag import CheckDockerTag
@@ -238,32 +238,34 @@ class Generate(OebuildCommand):
         if os.path.exists(os.path.join(build_dir,'compile.yaml')):
             os.remove(os.path.join(build_dir,'compile.yaml'))
 
-        check_docker_tag = CheckDockerTag(args.docker_tag, self.configure)
-        oebuild_config = self.configure.parse_oebuild_config()
-        if check_docker_tag.get_tag() is not None:
-            docker_tag = str(check_docker_tag.get_tag())
-        else:
-            # select docker image
-            while True:
-                print('''
-If the system does not recognize which container image to use, select the
-following container, enter it numerically, and enter q to exit:''')
-                image_list = check_docker_tag.get_tags()
+        docker_image = YoctoEnv().get_docker_image(yocto_dir=yocto_dir)
+        if docker_image is None:
+            check_docker_tag = CheckDockerTag(args.docker_tag, self.configure)
+            oebuild_config = self.configure.parse_oebuild_config()
+            if check_docker_tag.get_tag() is not None:
+                docker_tag = str(check_docker_tag.get_tag())
+            else:
+                # select docker image
+                while True:
+                    print('''
+    If the system does not recognize which container image to use, select the
+    following container, enter it numerically, and enter q to exit:''')
+                    image_list = check_docker_tag.get_tags()
 
-                for key,value in enumerate(image_list):
-                    print(f"{key}, {oebuild_config.docker.repo_url}:{value}")
-                k = input("please entry number:")
-                if k == "q":
-                    return
-                try:
-                    index = int(k)
-                    docker_tag = image_list[index]
-                    break
-                except IndexError:
-                    print("please entry true number")
-        docker_tag = docker_tag.strip()
-        docker_tag = docker_tag.strip('\n')
-        docker_image = f"{oebuild_config.docker.repo_url}:{docker_tag}"
+                    for key,value in enumerate(image_list):
+                        print(f"{key}, {oebuild_config.docker.repo_url}:{value}")
+                    k = input("please entry number:")
+                    if k == "q":
+                        return
+                    try:
+                        index = int(k)
+                        docker_tag = image_list[index]
+                        break
+                    except IndexError:
+                        print("please entry true number")
+            docker_tag = docker_tag.strip()
+            docker_tag = docker_tag.strip('\n')
+            docker_image = f"{oebuild_config.docker.repo_url}:{docker_tag}"
 
         out_dir = pathlib.Path(os.path.join(build_dir,'compile.yaml'))
         oebuild_util.write_yaml(out_dir, parser_template.generate_template(
