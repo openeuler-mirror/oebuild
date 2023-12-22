@@ -23,3 +23,9 @@ plugins:
 - name: menv
   class: Menv
   path: plugins/m_env/m_env.py
+- name: deploy-target
+  class: DeployTarget
+  path: plugins/deploy/deploy-target.py
+- name: undeploy-target
+  class: UnDeployTarget
+  path: plugins/deploy/deploy-target.py

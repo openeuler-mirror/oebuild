@@ -9,9 +9,6 @@ EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 '''
-CONTAINER_SRC = '/usr1/openeuler/src'
-CONTAINER_BUILD = '/home/openeuler'
-CONTAINER_USER = "openeuler"
 
 BASH_BANNER = '''
     Welcome to the openEuler Embedded build environment, 

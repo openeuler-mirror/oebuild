@@ -79,34 +79,25 @@ class InContainer(BaseBuild):
         cwd_name = os.path.basename(os.getcwd())
         volumns = []
         volumns.append("/dev/net/tun:/dev/net/tun")
-        volumns.append(self.configure.source_dir() + ':' + bitbake_const.CONTAINER_SRC)
+        volumns.append(self.configure.source_dir() + ':' + oebuild_util.CONTAINER_SRC)
         volumns.append(os.path.join(self.configure.build_dir(), cwd_name)
             + ':' +
-            os.path.join(bitbake_const.CONTAINER_BUILD, cwd_name))
+            os.path.join(oebuild_util.CONTAINER_BUILD, cwd_name))
         if toolchain_dir is not None:
             volumns.append(toolchain_dir + ":" + NATIVE_GCC_DIR)
 
         if sstate_cache is not None:
             volumns.append(sstate_cache + ":" + SSTATE_CACHE)
 
-        try:
-            env_container = EnvContainer(
-                volumns=volumns,
-                short_id=""
-            )
-            check_container = env.is_same_container(data=env_container)
-        except Exception as e_p:
-            raise e_p
-
-        if not check_container \
-                or env.container.short_id is None \
-                or not self.client.is_container_exists(env.container.short_id):
+        if env.container is None \
+            or env.container.short_id is None \
+            or not self.client.is_container_exists(env.container.short_id):
             # judge which container
             container:Container = self.client.container_run_simple(
                 image=docker_image,
                 volumes=volumns) # type: ignore
 
-            env_container.short_id = container.short_id
+            env_container = EnvContainer(container.short_id)
             env.set_env_container(env_container)
             env.export_env()
 
@@ -122,7 +113,7 @@ class InContainer(BaseBuild):
         container:Container = self.client.get_container(self.container_id) # type: ignore
 
         self.init_bash(container=container,
-                       build_dir=os.path.basename(os.getcwd()))
+                       build_dir_name=os.path.basename(os.getcwd()))
 
         try:
             self.init_bitbake(container=container)
@@ -134,7 +125,7 @@ class InContainer(BaseBuild):
         bblayers_dir = os.path.join(os.getcwd(), "conf", "bblayers.conf")
         self.add_bblayers(
             bblayers_dir=bblayers_dir,
-            pre_dir=bitbake_const.CONTAINER_SRC,
+            pre_dir=oebuild_util.CONTAINER_SRC,
             base_dir=self.configure.source_dir(),
             layers=parse_compile.layers)
 
@@ -151,8 +142,8 @@ class InContainer(BaseBuild):
             res = self.client.container_exec_command(
                 container=container,
                 command="bash .bashrc",
-                user=bitbake_const.CONTAINER_USER,
-                work_space=f"/home/{bitbake_const.CONTAINER_USER}")
+                user=oebuild_util.CONTAINER_USER,
+                work_space=f"/home/{oebuild_util.CONTAINER_USER}")
 
             for line in res.output:
                 logger.info(line.decode().strip('\n'))
@@ -163,7 +154,7 @@ class InContainer(BaseBuild):
                 content = self._add_bashrc(content=content, line=b_s)
             self.update_bashrc(container=container, content=content)
             os.system(
-                f"docker exec -it -u {bitbake_const.CONTAINER_USER} {container.short_id} bash")
+                f"docker exec -it -u {oebuild_util.CONTAINER_USER} {container.short_id} bash")
 
         self.restore_bashrc(container=container)
 
@@ -178,9 +169,9 @@ class InContainer(BaseBuild):
 
         res = self.client.container_exec_command(
             container=container,
-            command=f"bash /home/{bitbake_const.CONTAINER_USER}/.bashrc",
-            user=bitbake_const.CONTAINER_USER,
-            work_space=f"/home/{bitbake_const.CONTAINER_USER}",
+            command=f"bash /home/{oebuild_util.CONTAINER_USER}/.bashrc",
+            user=oebuild_util.CONTAINER_USER,
+            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
             stream=False)
         if res.exit_code != 0:
             raise ValueError(res.output.decode())
@@ -190,8 +181,8 @@ class InContainer(BaseBuild):
         res = self.client.container_exec_command(
             container=container,
             user='root',
-            command=f"id {bitbake_const.CONTAINER_USER}",
-            work_space=f"/home/{bitbake_const.CONTAINER_USER}",
+            command=f"id {oebuild_util.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
             stream=False)
         if res.exit_code != 0:
             raise ValueError("check docker user id faild")
@@ -200,19 +191,19 @@ class InContainer(BaseBuild):
 
         cuids = res_cont.split(' ')
         # get uid from container in default user
-        pattern = re.compile(r'(?<=uid=)\d{1,}(?=\(' + bitbake_const.CONTAINER_USER + r'\))')
+        pattern = re.compile(r'(?<=uid=)\d{1,}(?=\(' + oebuild_util.CONTAINER_USER + r'\))')
         match_uid = pattern.search(cuids[0])
         if match_uid:
             cuid = match_uid.group()
         else:
-            raise ValueError(f"can not get container {bitbake_const.CONTAINER_USER} uid")
+            raise ValueError(f"can not get container {oebuild_util.CONTAINER_USER} uid")
         # get gid from container in default user
-        pattern = re.compile(r'(?<=gid=)\d{1,}(?=\(' + bitbake_const.CONTAINER_USER + r'\))')
+        pattern = re.compile(r'(?<=gid=)\d{1,}(?=\(' + oebuild_util.CONTAINER_USER + r'\))')
         match_gid = pattern.search(cuids[1])
         if match_gid:
             cgid = match_gid.group()
         else:
-            raise ValueError(f"can not get container {bitbake_const.CONTAINER_USER} gid")
+            raise ValueError(f"can not get container {oebuild_util.CONTAINER_USER} gid")
 
         # judge host uid and gid are same with container uid and gid
         # if not same and change container uid and gid equal to host's uid and gid
@@ -225,16 +216,16 @@ class InContainer(BaseBuild):
         self.client.container_exec_command(
             container=container,
             user='root',
-            command=f"usermod -u {uid} {bitbake_const.CONTAINER_USER}",
-            work_space=f"/home/{bitbake_const.CONTAINER_USER}",
+            command=f"usermod -u {uid} {oebuild_util.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
             stream=False)
 
     def _change_container_gid(self, container: Container, gid: int):
         self.client.container_exec_command(
             container=container,
             user='root',
-            command=f"groupmod -g {gid} {bitbake_const.CONTAINER_USER}",
-            work_space=f"/home/{bitbake_const.CONTAINER_USER}",
+            command=f"groupmod -g {gid} {oebuild_util.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
             stream=False)
 
     def _install_sudo(self, container: Container):
@@ -244,7 +235,7 @@ class InContainer(BaseBuild):
             container=container,
             user='root',
             command="which sudo",
-            work_space=f"/home/{bitbake_const.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
             stream=False
         )
         if resp.exit_code != 0:
@@ -257,7 +248,7 @@ class InContainer(BaseBuild):
             container=container,
             user='root',
             command=r"sed -i 's/repo.openeuler.org/mirrors.huaweicloud.com\/openeuler/g' /etc/yum.repos.d/openEuler.repo",
-            work_space=f"/home/{bitbake_const.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
             stream=False
         )
 
@@ -266,13 +257,13 @@ class InContainer(BaseBuild):
             container=container,
             user='root',
             command=f"yum install {software} -y",
-            work_space=f"/home/{bitbake_const.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
             stream=True
         )
         for line in resp.output:
             logger.info(line.decode().strip('\n'))
 
-    def init_bash(self, container: Container, build_dir):
+    def init_bash(self, container: Container, build_dir_name):
         '''
         Bitbake will initialize the compilation environment by reading
         the user initialization script first, then making directional
@@ -282,9 +273,9 @@ class InContainer(BaseBuild):
         content = self._get_bashrc_content(container=container)
 
         init_sdk_command = '. /opt/buildtools/nativesdk/environment-setup-x86_64-pokysdk-linux'
-        set_template = f'export TEMPLATECONF="{bitbake_const.CONTAINER_SRC}/yocto-meta-openeuler/.oebuild"'
-        init_oe_comand = f'. {bitbake_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
-            {bitbake_const.CONTAINER_BUILD}/{build_dir}'
+        set_template = f'export TEMPLATECONF="{oebuild_util.CONTAINER_SRC}/yocto-meta-openeuler/.oebuild"'
+        init_oe_comand = f'. {oebuild_util.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
+            {oebuild_util.CONTAINER_BUILD}/{build_dir_name}'
         init_command = [init_sdk_command, set_template, init_oe_comand]
         new_content = self._init_bashrc_content(content, init_command)
 
@@ -300,9 +291,9 @@ class InContainer(BaseBuild):
         self.client.copy_to_container(
             container=container,
             source_path=tmp_file,
-            to_path=f'/home/{bitbake_const.CONTAINER_USER}')
+            to_path=f'/home/{oebuild_util.CONTAINER_USER}')
         container.exec_run(
-            cmd=f"mv /home/{bitbake_const.CONTAINER_USER}/{tmp_file} /home/{bitbake_const.CONTAINER_USER}/.bashrc",
+            cmd=f"mv /home/{oebuild_util.CONTAINER_USER}/{tmp_file} /home/{oebuild_util.CONTAINER_USER}/.bashrc",
             user="root"
         )
         os.remove(tmp_file)
@@ -319,7 +310,7 @@ class InContainer(BaseBuild):
     def _get_bashrc_content(self, container: Container):
         content = self.client.container_exec_command(
             container=container,
-            command=f"cat /home/{bitbake_const.CONTAINER_USER}/.bashrc",
+            command=f"cat /home/{oebuild_util.CONTAINER_USER}/.bashrc",
             user="root",
             work_space=None,
             stream=False).output

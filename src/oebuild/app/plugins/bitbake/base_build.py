@@ -14,7 +14,6 @@ import os
 import oebuild.util as oebuild_util
 from oebuild.local_conf import LocalConf
 from oebuild.bblayers import BBLayers
-import oebuild.app.plugins.bitbake.const as bitbake_const
 
 class BaseBuild:
     '''

@@ -24,11 +24,6 @@ from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
 from oebuild.m_log import logger
 
-CONTAINER_BUILD = '/home/openeuler/build'
-DEFAULT_DOCKER = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-container:latest"
-CONTAINER_SRC = '/usr1/openeuler/src'
-CONTAINER_USER = "openeuler"
-
 class RunQemu(OebuildCommand):
     '''
     The command for run in qemu platform.
@@ -108,12 +103,12 @@ the container {self.container_id} failed to be destroyed, please run
         self.bak_bash(container=container)
         self.init_bash(container=container)
         content = self._get_bashrc_content(container=container)
-        qemu_helper_usr = CONTAINER_BUILD+"/tmp/work/x86_64-linux/qemu-helper-native/1.0-r1/recipe-sysroot-native/usr"
-        qemu_helper_dir = CONTAINER_BUILD+"/tmp/work/x86_64-linux/qemu-helper-native"
+        qemu_helper_usr = oebuild_util.CONTAINER_BUILD+"/tmp/work/x86_64-linux/qemu-helper-native/1.0-r1/recipe-sysroot-native/usr"
+        qemu_helper_dir = oebuild_util.CONTAINER_BUILD+"/tmp/work/x86_64-linux/qemu-helper-native"
         STAGING_BINDIR_NATIVE = f"""
 if [ ! -d {qemu_helper_usr} ];then
     mkdir -p {qemu_helper_usr}
-    chown -R {CONTAINER_USER}:{CONTAINER_USER} {qemu_helper_dir}
+    chown -R {oebuild_util.CONTAINER_USER}:{oebuild_util.CONTAINER_USER} {qemu_helper_dir}
     ln -s /opt/buildtools/nativesdk/sysroots/x86_64-pokysdk-linux/usr/bin {qemu_helper_usr}
 fi
 """
@@ -160,8 +155,8 @@ now, you can continue run `oebuild runqemu` in compile directory
         volumns = []
         volumns.append("/dev/net/tun:/dev/net/tun")
         volumns.append("/etc/qemu-ifup:/etc/qemu-ifup")
-        volumns.append(self.work_dir + ':' + CONTAINER_BUILD)
-        volumns.append(self.configure.source_dir() + ':' + CONTAINER_SRC)
+        volumns.append(self.work_dir + ':' + oebuild_util.CONTAINER_BUILD)
+        volumns.append(self.configure.source_dir() + ':' + oebuild_util.CONTAINER_SRC)
         container:Container = self.client.container_run_simple(
             image=docker_image,
             volumes=volumns,
@@ -176,7 +171,7 @@ now, you can continue run `oebuild runqemu` in compile directory
         '''
         this is function is to get openeuler docker image automatic
         '''
-        return DEFAULT_DOCKER
+        return oebuild_util.DEFAULT_DOCKER
 
     def bak_bash(self, container: Container):
         '''
@@ -201,7 +196,7 @@ now, you can continue run `oebuild runqemu` in compile directory
         content = self._get_bashrc_content(container=container)
 
         init_sdk_command = '. /opt/buildtools/nativesdk/environment-setup-x86_64-pokysdk-linux'
-        init_oe_command = f'. {CONTAINER_SRC}/yocto-poky/oe-init-build-env {CONTAINER_BUILD}'
+        init_oe_command = f'. {oebuild_util.CONTAINER_SRC}/yocto-poky/oe-init-build-env {oebuild_util.CONTAINER_BUILD}'
         init_command = [init_sdk_command, init_oe_command]
         new_content = oebuild_util.init_bashrc_content(content, init_command)
         self.update_bashrc(container=container, content=new_content)

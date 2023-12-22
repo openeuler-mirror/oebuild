@@ -26,6 +26,13 @@ CONFIG_YAML = 'config.yaml'
 UPGRADE_YAML = 'upgrade.yaml'
 COMPILE_YAML = 'compile.yaml.sample'
 BASH_END_FLAG = "  ###!!!###"
+CONTAINER_USER = "openeuler"
+CONTAINER_BUILD = '/home/openeuler/build'
+DEFAULT_DOCKER = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-container:latest"
+CONTAINER_SRC = '/usr1/openeuler/src'
+CONTAINER_USER = "openeuler"
+SDK_ABSOLATE_PATH = "/opt/buildtools/nativesdk/environment-setup-x86_64-pokysdk-linux"
+
 
 def read_yaml(yaml_dir : pathlib.Path):
     '''

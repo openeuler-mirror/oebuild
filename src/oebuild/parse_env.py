@@ -23,8 +23,6 @@ class EnvContainer:
     '''
     short_id: Optional[str]
 
-    volumns: list
-
 @dataclass
 class Env:
     '''
@@ -60,34 +58,8 @@ class ParseEnv:
         if "container" in data:
             env_container = data['container']
             self.env.container =  EnvContainer(
-                short_id=env_container['short_id'],
-                volumns=env_container['volumns']
+                short_id=env_container['short_id']
             )
-
-    def is_same_container(self, data: EnvContainer):
-        '''
-        judge if container same with container in env.yaml
-        '''
-        if data.volumns is None:
-            raise ValueError("the key volumns is lack")
-
-        if self.env is None:
-            return False
-
-        if self.env.container is None:
-            return False
-
-        if len(self.env.container.volumns) != len(data.volumns):
-            return False
-
-        a_gather = set(self.env.container.volumns)
-        b_gather = set(data.volumns)
-
-        c_gather = a_gather.symmetric_difference(b_gather)
-        if len(c_gather) != 0:
-            return False
-
-        return True
 
     def set_env_container(self, env_container: EnvContainer):
         '''
@@ -103,8 +75,7 @@ class ParseEnv:
         if self.env.container is not None:
             container = self.env.container
             data['container'] = {
-                'short_id': container.short_id,
-                'volumns': container.volumns
+                'short_id': container.short_id
             }
 
         oebuild_util.write_yaml(pathlib.Path(self.env_dir), data=data)
