@@ -38,6 +38,7 @@ class Manifest(OebuildCommand):
 
     def __init__(self):
         self.configure = Configure()
+        self.manifest_command = ['download', 'create']
         super().__init__(
             'manifest',
             'generate manifest from oebuild workspace',
@@ -53,27 +54,11 @@ class Manifest(OebuildCommand):
             parser_adder,
             usage='''
 
-  %(prog)s [-c CREATE] [-r recover] [-m_dir MANIFEST_DIR]
+  %(prog)s [create / download] [-f MANIFEST_DIR]
 
 ''')
 
-        parser.add_argument('-c',
-                            '--create', 
-                            dest = "is_create",
-                            action = "store_true",
-                            help='''
-            create manifest from oebuild workspace src directory
-            ''')
-
-        parser.add_argument('-r',
-                            '--recover', 
-                            dest = "is_recover",
-                            action = "store_true",
-                            help='''
-            restore repo version to oebuild workspace src directory from a manifest
-            ''')
-
-        parser.add_argument('-m_dir',
+        parser.add_argument('-f',
                             '--manifest_dir',
                             dest='manifest_dir',
                             help='''
@@ -84,20 +69,30 @@ class Manifest(OebuildCommand):
         return parser
 
     def do_run(self, args: argparse.Namespace, unknown = None):
+        if not self.configure.is_oebuild_dir():
+            logger.error('your current directory had not finishd init')
+            sys.exit(-1)
+
+        if not (unknown and unknown[0] in self.manifest_command):
+            unknown = ['-h']
+        else:
+            command = unknown[0]
+            unknown = unknown[1:]
+
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
             return
 
         args = args.parse_args(unknown)
-
-        if not self.configure.is_oebuild_dir():
-            logger.error('your current directory had not finishd init')
-            sys.exit(-1)
-
-        if args.is_create:
-            self._create_manifest(args.manifest_dir)
-        elif args.is_recover:
-            self._restore_manifest(args.manifest_dir)
+        manifest_dir = args.manifest_dir if args.manifest_dir else (self.configure.source_yocto_dir()
+                                                                    + '/.oebuild/manifest.yaml')
+        if command == 'create':
+            self._create_manifest(manifest_dir)
+        elif command == 'download':
+            if not os.path.exists(manifest_dir):
+                logger.error('The path is invalid, please check the path')
+                sys.exit(1)
+            self._restore_manifest(manifest_dir)
 
     def _create_manifest(self, manifest_dir):
         src_list = os.listdir(self.configure.source_dir())
