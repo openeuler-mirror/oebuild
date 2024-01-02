@@ -187,17 +187,21 @@ class Update(OebuildCommand):
         and if the version branch does not correspond to it, it will enter 
         interactive mode, which is selected by the user
         '''
+        oebuild_config = self.configure.parse_oebuild_config()
+        docker_config = oebuild_config.docker
+        check_docker_tag = CheckDockerTag(docker_tag=docker_tag,configure=self.configure)
         if docker_tag is not None:
-            oebuild_config = self.configure.parse_oebuild_config()
-            docker_config = oebuild_config.docker
-
-            check_docker_tag = CheckDockerTag(docker_tag=docker_tag,configure=self.configure)
             if check_docker_tag.get_tag() is None or check_docker_tag.get_tag() == "":
                 check_docker_tag.list_image_tag()
                 return
             docker_image = docker_config.repo_url + ":" + check_docker_tag.get_tag()
         else:
             docker_image = YoctoEnv().get_docker_image(self.configure.source_yocto_dir())
+            if docker_image is None or docker_image == "":
+                if check_docker_tag.get_tag() is None or check_docker_tag.get_tag() == "":
+                    check_docker_tag.list_image_tag()
+                    return
+                docker_image = docker_config.repo_url + ":" + check_docker_tag.get_tag()
 
         client = DockerProxy()
         logger.info("pull %s ...", docker_image)
