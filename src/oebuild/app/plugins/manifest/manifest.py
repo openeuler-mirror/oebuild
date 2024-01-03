@@ -70,7 +70,7 @@ class Manifest(OebuildCommand):
 
     def do_run(self, args: argparse.Namespace, unknown = None):
         if not self.configure.is_oebuild_dir():
-            logger.error('your current directory had not finishd init')
+            logger.error('Your current directory had not finished init')
             sys.exit(-1)
 
         if not (unknown and unknown[0] in self.manifest_command):

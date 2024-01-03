@@ -66,7 +66,7 @@ class Clear(OebuildCommand):
             try:
                 self.client = DockerProxy()
             except DockerException:
-                logger.error("please install docker first!!!")
+                logger.error("Please install docker first!!!")
                 return
             self.clear_docker()
 
@@ -75,7 +75,7 @@ class Clear(OebuildCommand):
         clear container
         '''
         # get all build directory and get .env from every build directory
-        logger.info("clearing container, please waiting ...")
+        logger.info("Clearing container, please waiting ...")
         env_list = []
         build_list = os.listdir(self.configure.build_dir())
         for build_dir in build_list:
@@ -91,7 +91,7 @@ class Clear(OebuildCommand):
                 container = self.client.get_container(container_id=container_id)
                 DockerProxy().stop_container(container=container)
                 DockerProxy().delete_container(container=container)
-                logger.info("delete container: %s successful",container.short_id)
+                logger.info("Delete container: %s successful",container.short_id)
             except:
                 continue
 

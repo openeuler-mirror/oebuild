@@ -76,7 +76,7 @@ class Compile(OebuildCommand):
         try:
             self.client = DockerProxy()
         except DockerException:
-            logger.error("please install docker first!!!")
+            logger.error("Please install docker first!!!")
             return
 
         if(args.source_directory) is None:
@@ -99,7 +99,7 @@ class Compile(OebuildCommand):
 
         # parse_compile = ParseCompile(self.compile_conf_dir)
         if not self.client.is_image_exists(default_image):
-            logger.error(f'''the docker image does not exists, please run fellow command:
+            logger.error(f'''The docker image does not exists, please run fellow command:
         `oebuild update docker`''')
         container:Container = self.client.container_run_simple(image=default_image, volumes=[])
 

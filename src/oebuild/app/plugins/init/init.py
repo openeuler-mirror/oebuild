@@ -95,7 +95,7 @@ class Init(OebuildCommand):
             return
 
         if not self.init_workspace(args.directory):
-            logger.error("mkdir %s faild", args.directory)
+            logger.error("mkdir %s failed", args.directory)
             return
 
         os.chdir(args.directory)
@@ -147,7 +147,7 @@ please execute the follow commands next
             os.mkdir(oebuild_dir)
             return oebuild_dir
         except FileExistsError:
-            logger.error("mkdir .oebuild faild")
+            logger.error("mkdir .oebuild failed")
             return ""
 
     @staticmethod
@@ -160,7 +160,7 @@ please execute the follow commands next
             os.makedirs(src_dir)
             return src_dir
         except FileExistsError:
-            logger.error("mkdir src faild")
+            logger.error("mkdir src failed")
             return None
 
     @staticmethod
@@ -183,4 +183,4 @@ please execute the follow commands next
             compil = oebuild_util.get_compile_yaml_dir()
             shutil.copyfile(compil, os.path.join(updir, COMPILE_YAML))
         except FileNotFoundError:
-            logger.error("mkdir compile.yaml.sample faild")
+            logger.error("mkdir compile.yaml.sample failed")

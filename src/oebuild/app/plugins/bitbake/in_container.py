@@ -47,11 +47,11 @@ class InContainer(BaseBuild):
         '''
         execute bitbake command
         '''
-        logger.info("bitbake starting ...")
+        logger.info("Bitbake starting ...")
         # check docker image if exists
         docker_proxy = DockerProxy()
         if not docker_proxy.is_image_exists(parse_compile.docker_image):
-            logger.error('''the docker image does not exists, please run fellow command:
+            logger.error('''The docker image does not exists, please run fellow command:
     `oebuild update docker`''')
             return
 

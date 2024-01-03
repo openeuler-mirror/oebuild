@@ -41,23 +41,23 @@ class ComTarget:
         self.client = DockerProxy()
 
         if not self._check_compile_directory():
-            logger.error("you must be worked in compile directory")
+            logger.error("You must be worked in compile directory")
             sys.exit(-1)
 
         if not self._check_if_docker_compile():
-            logger.error("the deploy function only be supported in working with docker build")
+            logger.error("The deploy function only be supported in working with docker build")
             sys.exit(-1)
 
         if not self._check_yocto_poky():
-            logger.error("""please make sure that yocto-poky source code in src directory, or you can run:
-        oebuild update layer""")
+            logger.error('''Please make sure that yocto-poky source code in src directory, or you can run:
+        oebuild update layer''')
             sys.exit(-1)
 
         if not self._check_conf_directory():
-            logger.error("you must work in a exist build directory, that mean you built before or initialize environment at least")
+            logger.error("You must work in a exist build directory, that mean you built before or initialize environment at least")
             sys.exit(-1)
 
-        logger.info("initializing environment, please wait ...")
+        logger.info("Initializing environment, please wait ...")
         parse_env = ParseEnv(env_dir='.env')
         self.deal_env_container(parse_env, oebuild_util.DEFAULT_DOCKER)
         container:Container = self.client.get_container(self.container_id)

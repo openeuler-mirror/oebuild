@@ -153,7 +153,7 @@ class Generate(OebuildCommand):
         args = args.parse_args(unknown)
 
         if not self.configure.is_oebuild_dir():
-            logger.error('your current directory had not finishd init')
+            logger.error('Your current directory had not finished init')
             sys.exit(-1)
 
         yocto_dir = self.configure.source_yocto_dir()
@@ -168,7 +168,7 @@ class Generate(OebuildCommand):
                 args.platform = platform
                 build_dir = self._init_build_dir(args=args)
                 if build_dir is None:
-                    logger.error("build directory can not mkdir")
+                    logger.error("Build directory can not mkdir")
                     return
                 # copy compile.yaml to build directory
                 copyfile(args.compile_dir, os.path.join(build_dir, "compile.yaml"))
@@ -344,7 +344,7 @@ oebuild bitbake
             build_dir = os.path.join(self.configure.build_dir(), args.directory)
 
         if not os.path.abspath(build_dir).startswith(self.configure.build_dir()):
-            logger.error("build path must in oebuild workspace")
+            logger.error("Build path must in oebuild workspace")
             return None
 
         if not os.path.exists(build_dir):

@@ -78,7 +78,7 @@ the container {self.container_id} failed to be destroyed, please run
         try:
             self.client = DockerProxy()
         except DockerException:
-            logger.error("please install docker first!!!")
+            logger.error("Please install docker first!!!")
             return
         logger.info('Run QEMU......')
 

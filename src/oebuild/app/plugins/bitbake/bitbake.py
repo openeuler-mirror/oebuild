@@ -76,7 +76,7 @@ class Bitbake(OebuildCommand):
         command = self._get_command(unknow=unknown)
 
         if not self.check_support_bitbake():
-            logger.error("please do it in compile workspace which contain compile.yaml")
+            logger.error("Please do it in compile workspace which contain compile.yaml")
             return
 
         if not os.path.exists('.env'):

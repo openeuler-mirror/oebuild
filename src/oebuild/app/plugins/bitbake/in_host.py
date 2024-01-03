@@ -55,7 +55,7 @@ class InHost(BaseBuild):
                 src_dir=self.configure.source_dir())
         except NativesdkNotExist as n_e:
             logger.error(str(n_e))
-            logger.error("please set valid nativesdk directory")
+            logger.error("Please set valid nativesdk directory")
             return
         except NativesdkNotValid as n_e:
             logger.error(str(n_e))

@@ -89,7 +89,7 @@ class Update(OebuildCommand):
         args = args.parse_args(unknown)
 
         if not self.configure.is_oebuild_dir():
-            logger.error('your current directory had not finishd init')
+            logger.error('Your current directory had not finished init')
             sys.exit(-1)
 
         # if args.list is not None:
@@ -107,7 +107,7 @@ class Update(OebuildCommand):
         elif args.item == "layer":
             update_layer = True
         else:
-            logger.error('please run oebuild update [yocto docker layer]')
+            logger.error('Please run oebuild update [yocto docker layer]')
             sys.exit(-1)
 
 
@@ -204,6 +204,6 @@ class Update(OebuildCommand):
                 docker_image = docker_config.repo_url + ":" + check_docker_tag.get_tag()
 
         client = DockerProxy()
-        logger.info("pull %s ...", docker_image)
+        logger.info("Pull %s ...", docker_image)
         client.pull_image_with_progress(docker_image)
-        logger.info("finishd pull %s ...", docker_image)
+        logger.info("Finished pull %s ...", docker_image)
