@@ -77,7 +77,7 @@ class Configure:
         cur_dir = pathlib.Path(start or os.getcwd())
 
         while True:
-            if (cur_dir / '.oebuild').is_dir():
+            if (cur_dir / '.oebuild/config').is_file():
                 return os.fspath(cur_dir)
 
             parent_dir = cur_dir.parent
