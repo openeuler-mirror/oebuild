@@ -279,11 +279,19 @@ class InContainer(BaseBuild):
         # read container default user .bashrc content
         content = self._get_bashrc_content(container=container)
 
+        # get host proxy information and set in container
+        init_proxy_command = ""
+        host_proxy = oebuild_util.get_host_proxy(oebuild_util.PROXY_LIST)
+        for key, value in host_proxy.items():
+            key_git = key.replace('_', '.')
+            command = f'export {key}={value}; git config --global {key_git} {value};'
+            init_proxy_command = f'{init_proxy_command} {command}'
+
         init_sdk_command = f'. {oebuild_util.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
         set_template = f'export TEMPLATECONF="{oebuild_util.CONTAINER_SRC}/yocto-meta-openeuler/.oebuild"'
         init_oe_comand = f'. {oebuild_util.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
             {oebuild_util.CONTAINER_BUILD}/{build_dir_name}'
-        init_command = [init_sdk_command, set_template, init_oe_comand]
+        init_command = [init_proxy_command, init_sdk_command, set_template, init_oe_comand]
         new_content = self._init_bashrc_content(content, init_command)
 
         self.update_bashrc(container=container, content=new_content)

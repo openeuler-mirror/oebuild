@@ -17,6 +17,7 @@ import random
 import getpass
 import sys
 import re
+import subprocess
 
 from ruamel.yaml import YAML
 from docker.errors import DockerException
@@ -36,6 +37,7 @@ DEFAULT_DOCKER = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-
 CONTAINER_SRC = '/usr1/openeuler/src'
 CONTAINER_USER = "openeuler"
 NATIVESDK_DIR = "/opt/buildtools/nativesdk"
+PROXY_LIST = ['http_proxy', 'https_proxy']
 
 def get_nativesdk_environment(nativesdk_dir=NATIVESDK_DIR, container: Container = None):
     '''
@@ -219,3 +221,27 @@ def add_bashrc(content: str, line: str):
     content = content + line + BASH_END_FLAG + '\n'
 
     return content
+
+def get_host_proxy(proxy_name):
+    '''
+    get proxy information from host
+    '''
+    host_proxy = {}
+    if proxy_name is None:
+        return host_proxy
+
+    for name in proxy_name:
+        command = "env | grep %s | awk -F'=' '{print$NF}'" % name
+        res = subprocess.run(command,
+                             shell=True,
+                             capture_output=True,
+                             encoding="utf-8",
+                             check=False)
+        if res.returncode != 0:
+            logger.error("get proxy variable failed")
+            sys.exit(res.returncode)
+        value = res.stdout.strip()
+        if value != "":
+            host_proxy[name] = value
+
+    return host_proxy
