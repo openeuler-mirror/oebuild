@@ -15,7 +15,7 @@ import textwrap
 import os
 import sys
 import pathlib
-from shutil import copyfile
+from shutil import copyfile, rmtree
 
 from prettytable import PrettyTable
 
@@ -347,7 +347,23 @@ oebuild bitbake
             logger.error("Build path must in oebuild workspace")
             return None
 
-        if not os.path.exists(build_dir):
+        # detects if a build directory already exists
+        if os.path.exists(build_dir):
+            logger.warn("the build directory %s already exists", build_dir)
+            while True:
+                in_res = input("""
+    do you want to overwrite it? the overwrite action will replace the compile.yaml
+    to new and delete conf directory, enter Y for yes, N for no:""")
+                if in_res not in ["Y", "y", "yes", "N", "n", "no"]:
+                    print("""
+    wrong input""")
+                    continue
+                if in_res in ['N','n', 'no']:
+                    return None
+                break
+            if os.path.exists(os.path.join(build_dir, "conf")):
+                rmtree(os.path.join(build_dir, "conf"))
+        else:
             os.makedirs(build_dir)
         return build_dir
 
