@@ -206,4 +206,8 @@ class Update(OebuildCommand):
         client = DockerProxy()
         logger.info("Pull %s ...", docker_image)
         client.pull_image_with_progress(docker_image)
-        logger.info("Finished pull %s ...", docker_image)
+        # check if docker image had download successful
+        if not client.is_image_exists(docker_image):
+            logger.error("docker pull %s failed", docker_image)
+            sys.exit(-1)
+        logger.info("finishd pull %s ...", docker_image)

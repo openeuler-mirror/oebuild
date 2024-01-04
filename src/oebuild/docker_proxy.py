@@ -13,13 +13,10 @@ See the Mulan PSL v2 for more details.
 import os
 from io import BytesIO
 import tarfile
-from queue import Queue
-import threading
 
 import docker
 from docker.errors import ImageNotFound, NotFound
 from docker.models.containers import Container
-from reprint import output
 
 class DockerProxy:
     '''
@@ -66,40 +63,7 @@ class DockerProxy:
         '''
         pull docker image and print progress
         '''
-        def flush_print(in_q:Queue):
-            with output(output_type='dict') as output_lines:
-                while True:
-                    data = in_q.get()
-                    if data == "over":
-                        break
-                    if 'foot_msg' in data:
-                        output_lines.append(data['foot_msg'])
-                        continue
-                    output_lines[data['id']] = data['message']
-
-        client = docker.APIClient()
-        repository,tag = self._get_image_name_tag(image_name=image_name)
-        p_q = Queue()
-        f_p = threading.Thread(target=flush_print, args=(p_q,))
-        f_p.start()
-        resp = client.pull(repository=repository, tag=tag, stream=True, decode=True)
-        for line in resp:
-            if 'id' in line:
-                if "progressDetail" in line:
-                    tmp_data = {
-                        'id': line['id'],
-                        'message': f"{line['status']}"
-                    }
-                    if line['progressDetail'] != {}:
-                        tmp_data['message'] = f"{tmp_data['message']} {line['progress']}"
-                    p_q.put(tmp_data)
-            else:
-                if 'status' in line:
-                    if 'status' in line:
-                        tmp_data = {'foot_msg': line['status']}
-                        p_q.put(tmp_data)
-
-        p_q.put("over")
+        os.system(f"docker pull {image_name}")
 
     def _get_image_name_tag(self, image_name: str):
         repository = image_name.split(':')[0]
