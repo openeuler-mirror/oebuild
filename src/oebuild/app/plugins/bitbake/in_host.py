@@ -13,6 +13,7 @@ import os
 import subprocess
 import pty
 import shutil
+import sys
 
 from oebuild.local_conf import NativesdkNotExist, NativesdkNotValid
 from oebuild.configure import Configure
@@ -71,17 +72,24 @@ initialization operations''')
                         shell=True,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
-                        encoding="utf-8") as s_p:
+                        encoding="utf-8",
+                        text=True) as s_p:
                 if s_p.returncode is not None and s_p.returncode != 0:
                     err_msg = ''
                     if s_p.stderr is not None:
                         for line in s_p.stderr:
                             err_msg.join(line)
                         raise ValueError(err_msg)
-
-                if s_p.stdout is not None:
-                    for line in s_p.stdout:
-                        logger.info(line.strip('\n'))
+                res = None
+                while res is None:
+                    res = s_p.poll()
+                    if s_p.stdout is not None:
+                        for line in s_p.stdout:
+                            logger.info(line.strip('\n'))
+                    if s_p.stderr is not None:
+                        for line in s_p.stderr:
+                            logger.error(line.strip('\n'))
+                sys.exit(res)
         else:
             # run in Interactive mode
             banner_list = []

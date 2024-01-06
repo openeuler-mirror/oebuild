@@ -184,7 +184,8 @@ class DockerProxy:
                                command: str or list,
                                user: str = '',
                                work_space = None,
-                               stream = True):
+                               stream = True,
+                               demux = False):
         '''
         run command like 'docker run exec', other param
         will be default and just use a little params
@@ -196,7 +197,8 @@ class DockerProxy:
             workdir=work_space,
             stderr=True,
             stdout=True,
-            stream=stream
+            stream=stream,
+            demux=demux
         )
 
         return res

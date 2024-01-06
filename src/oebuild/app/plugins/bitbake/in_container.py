@@ -11,8 +11,9 @@ See the Mulan PSL v2 for more details.
 '''
 import re
 import os
+import sys
 
-from docker.models.containers import Container
+from docker.models.containers import Container,ExecResult
 
 from oebuild.local_conf import NATIVE_GCC_DIR, SSTATE_CACHE
 from oebuild.parse_env import ParseEnv, EnvContainer
@@ -139,14 +140,20 @@ class InContainer(BaseBuild):
             content = self._get_bashrc_content(container=container)
             new_content = self._add_bashrc(content=content, line=command)
             self.update_bashrc(container=container, content=new_content)
-            res = self.client.container_exec_command(
+            res:ExecResult = self.client.container_exec_command(
                 container=container,
                 command="bash .bashrc",
                 user=oebuild_util.CONTAINER_USER,
-                work_space=f"/home/{oebuild_util.CONTAINER_USER}")
-
+                work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+                demux=True)
+            exit_code = 0
             for line in res.output:
-                logger.info(line.decode().strip('\n'))
+                if line[1] is not None:
+                    logger.error(line[1].decode().strip('\n'))
+                    exit_code = 1
+                else:
+                    logger.info(line[0].decode().strip('\n'))
+            sys.exit(exit_code)
         else:
             content = self._get_bashrc_content(container=container)
             for b_s in bitbake_const.BASH_BANNER.split('\n'):
@@ -308,11 +315,15 @@ class InContainer(BaseBuild):
                            content=self._restore_bashrc_content(old_content=old_content))
 
     def _get_bashrc_content(self, container: Container):
-        content = self.client.container_exec_command(
+        res = self.client.container_exec_command(
             container=container,
             command=f"cat /home/{oebuild_util.CONTAINER_USER}/.bashrc",
             user="root",
             work_space=None,
-            stream=False).output
+            stream=False)
 
-        return content.decode()
+        if res.exit_code != 0:
+            logger.error(res.output)
+            sys.exit(1)
+
+        return res.output.decode()
