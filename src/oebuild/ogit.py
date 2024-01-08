@@ -111,28 +111,7 @@ class CustomRemote(git.RemoteProgress):
         '''
         rewrote update function
         '''
-        def print_progress(op_title, cur_count, max_count, message):
-            percent_done = int(cur_count / max_count * 100)
-            if percent_done == 100:
-                message = "done"
-            pmsg = f"{op_title}: {percent_done}% ({cur_count}/{max_count}), {message}"
-            print(pmsg, end="\r")
-
-        if op_code % 2 == RemoteProgress.BEGIN:
-            print("")
-        elif op_code == RemoteProgress.COUNTING:
-            op_title = "remote: Counting objects"
-            print_progress(op_title, cur_count, max_count, message)
-        elif op_code == RemoteProgress.COMPRESSING:
-            op_title = "remote: Compressing objects"
-            print_progress(op_title, cur_count, max_count, message)
-        elif op_code == RemoteProgress.RECEIVING:
-            op_title = "Receiving objects"
-            print_progress(op_title, cur_count, max_count, message)
-        elif op_code == RemoteProgress.RESOLVING:
-            op_title = "Resolving deltas"
-            print_progress(op_title, cur_count, max_count, message)
-        elif op_code and RemoteProgress.END == 2:
-            print("")
-        else:
-            return
+        end_str = "\r"
+        if op_code & 2 == 2:
+            end_str = "\r\n"
+        print(self._cur_line, end=end_str)
