@@ -35,6 +35,7 @@ class ComTarget:
         self.client:DockerProxy = None
         self.container_id = None
         self.work_dir = os.getcwd()
+        self.old_bashrc = None
 
     def exec(self, str_args: str, fun):
 
@@ -174,7 +175,7 @@ class ComTarget:
         self._check_change_ugid(container=container)
         # read container default user .bashrc content
         content = self._get_bashrc_content(container=container)
-        init_sdk_command = f'. {oebuild_util.SDK_ABSOLATE_PATH}'
+        init_sdk_command = f'. {oebuild_util.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
         build_dir_name = os.path.basename(self.work_dir)
         init_oe_command = f'. {oebuild_util.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
             {oebuild_util.CONTAINER_BUILD}/{build_dir_name}'

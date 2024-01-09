@@ -195,7 +195,7 @@ now, you can continue run `oebuild runqemu` in compile directory
         # read container default user .bashrc content
         content = self._get_bashrc_content(container=container)
 
-        init_sdk_command = '. /opt/buildtools/nativesdk/environment-setup-x86_64-pokysdk-linux'
+        init_sdk_command = f'. {oebuild_util.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
         init_oe_command = f'. {oebuild_util.CONTAINER_SRC}/yocto-poky/oe-init-build-env {oebuild_util.CONTAINER_BUILD}'
         init_command = [init_sdk_command, init_oe_command]
         new_content = oebuild_util.init_bashrc_content(content, init_command)

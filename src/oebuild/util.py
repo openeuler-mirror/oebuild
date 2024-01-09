@@ -15,11 +15,15 @@ import os
 import time
 import random
 import getpass
+import sys
+import re
 
 from ruamel.yaml import YAML
 from docker.errors import DockerException
 
+from docker.models.containers import Container
 from oebuild.docker_proxy import DockerProxy
+from oebuild.m_log import logger
 from oebuild.version import __version__
 
 CONFIG_YAML = 'config.yaml'
@@ -31,8 +35,44 @@ CONTAINER_BUILD = '/home/openeuler/build'
 DEFAULT_DOCKER = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-container:latest"
 CONTAINER_SRC = '/usr1/openeuler/src'
 CONTAINER_USER = "openeuler"
-SDK_ABSOLATE_PATH = "/opt/buildtools/nativesdk/environment-setup-x86_64-pokysdk-linux"
+NATIVESDK_DIR = "/opt/buildtools/nativesdk"
 
+def get_nativesdk_environment(nativesdk_dir=NATIVESDK_DIR, container: Container = None):
+    '''
+    return environment initialization shell, if nativesdk directory is not exists
+    or can not find any initialization shell, raise error
+    '''
+    if container is None:
+        if not os.path.isdir(nativesdk_dir):
+            logger.error("the %s directory is not exists", nativesdk_dir)
+            sys.exit(1)
+        # list items in nativesdk to find environment shell
+        list_items = os.listdir(nativesdk_dir)
+        for item in list_items:
+            ret = re.match("^(environment-setup-)", item)
+            if ret is not None:
+                abs_path = os.path.join(nativesdk_dir, item)
+                if os.path.isfile(abs_path) and not os.path.islink(abs_path):
+                    return item
+    else:
+        res = container.exec_run("ls -al", user=CONTAINER_USER, workdir=nativesdk_dir)
+        if res.exit_code != 0:
+            logger.error("can not find any nativesdk environment initialization shell")
+            sys.exit(res.exit_code)
+        list_items = res.output.decode("utf-8").split("\n")
+        for item in list_items:
+            item:str = item
+            # notice: the item is like format with "drwxr-xr-x 3 openeuler openeuler 4096 Nov  8 08:10 ."
+            # so we must get the last clip from split with space
+            item_split = item.split(" ")
+            if len(item_split) <= 0:
+                continue
+            ret = re.match("^(environment-setup-)", item_split[len(item_split) - 1])
+            if ret is not None and item_split[0].startswith("-"):
+                return item_split[len(item_split) - 1]
+
+    logger.error("can not find any nativesdk environment initialization shell")
+    sys.exit(1)
 
 def read_yaml(yaml_dir : pathlib.Path):
     '''

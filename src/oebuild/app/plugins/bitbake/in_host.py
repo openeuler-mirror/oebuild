@@ -109,7 +109,7 @@ initialization operations''')
             pty.spawn("bash")
 
     def _mk_build_sh(self, nativesdk_dir, build_dir):
-        init_sdk_command = f'. {nativesdk_dir}/environment-setup-x86_64-pokysdk-linux'
+        init_sdk_command = f'. {nativesdk_dir}/{oebuild_util.get_nativesdk_environment(nativesdk_dir)}'
         set_template = f'export TEMPLATECONF="{self.configure.source_dir()}/yocto-meta-openeuler/.oebuild"'
         init_oe_command = f'. {self.configure.source_dir()}/yocto-poky/oe-init-build-env {build_dir}'
         ps1_command = 'PS1="\\u\\h:\\W> "'

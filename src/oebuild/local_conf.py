@@ -12,9 +12,12 @@ See the Mulan PSL v2 for more details.
 
 import os
 import re
+import sys
 
 from oebuild.parse_compile import ParseCompile
 from oebuild.parse_template import BUILD_IN_DOCKER, BUILD_IN_HOST
+import oebuild.util as oebuild_util
+from oebuild.m_log import logger
 
 class BaseLocalConf(ValueError):
     '''
@@ -30,15 +33,37 @@ class NativesdkNotValid(BaseLocalConf):
     '''
 
 NATIVESDK_DIR_NAME = "OPENEULER_NATIVESDK_SYSROOT"
-NATIVESDK_SYSROOT = "sysroots/x86_64-pokysdk-linux"
 OPENEULER_SP_DIR = "OPENEULER_SP_DIR"
-NATIVESDK_ENVIRONMENT = "environment-setup-x86_64-pokysdk-linux"
 SSTATE_MIRRORS = "SSTATE_MIRRORS"
 SSTATE_DIR = "SSTATE_DIR"
 TMP_DIR = "TMPDIR"
 
 NATIVE_GCC_DIR = '/usr1/openeuler/native_gcc'
 SSTATE_CACHE = '/usr1/openeuler/sstate-cache'
+
+def get_nativesdk_sysroot(nativesdk_dir = oebuild_util.NATIVESDK_DIR):
+    '''
+    return environment initialization shell, if nativesdk directory is not exists
+    or can not find any initialization shell, raise error
+    '''
+    sysroot_dir = os.path.join(nativesdk_dir, "sysroots")
+    if not os.path.isdir(nativesdk_dir):
+        logger.error("the %s is not exists", nativesdk_dir)
+        sys.exit(1)
+    if not os.path.isdir(sysroot_dir):
+        logger.error("the %s is not value", nativesdk_dir)
+        sys.exit(1)
+    # list items in nativesdk to find environment shell
+    list_items = os.listdir(sysroot_dir)
+    for item in list_items:
+        ret = re.match("^(x86_64-)[a-zA-Z0-9]{1,}(-linux)$", item)
+        if ret is not None:
+            abs_path = os.path.join(sysroot_dir, item)
+            if os.path.isdir(abs_path):
+                return item
+    logger.error("can not find any sysroot directory")
+    sys.exit(1)
+
 
 def match_and_add(new_str: str, content: str):
     '''
@@ -122,7 +147,8 @@ class LocalConf:
             self.check_nativesdk_valid(parse_compile.nativesdk_dir)
             if parse_compile.nativesdk_dir is None:
                 raise ValueError("please set nativesdk dir")
-            nativesdk_sys_dir = os.path.join(parse_compile.nativesdk_dir, NATIVESDK_SYSROOT)
+            nativesdk_sysroot = get_nativesdk_sysroot(parse_compile.nativesdk_dir)
+            nativesdk_sys_dir = os.path.join(parse_compile.nativesdk_dir, nativesdk_sysroot)
             content = match_and_replace(
                 pre=NATIVESDK_DIR_NAME,
                 new_str=f'{NATIVESDK_DIR_NAME} = "{nativesdk_sys_dir}"',
@@ -224,9 +250,11 @@ class LocalConf:
         if not os.path.exists(nativesdk_dir):
             raise NativesdkNotExist(f"nativesdk directory: {nativesdk_dir} not exist")
 
-        nativesdk_environment_dir = os.path.join(nativesdk_dir, NATIVESDK_ENVIRONMENT)
+        nativesdk_environment_path = os.path.join(
+            nativesdk_dir,
+            oebuild_util.get_nativesdk_environment(nativesdk_dir))
 
-        with open(nativesdk_environment_dir, 'r', encoding='utf-8') as r_f:
+        with open(nativesdk_environment_path, 'r', encoding='utf-8') as r_f:
             for line in r_f.readlines():
                 line = line.strip('\n')
                 if not line.startswith("export OECORE_NATIVE_SYSROOT="):

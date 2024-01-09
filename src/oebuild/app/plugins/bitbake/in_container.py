@@ -279,7 +279,7 @@ class InContainer(BaseBuild):
         # read container default user .bashrc content
         content = self._get_bashrc_content(container=container)
 
-        init_sdk_command = '. /opt/buildtools/nativesdk/environment-setup-x86_64-pokysdk-linux'
+        init_sdk_command = f'. {oebuild_util.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
         set_template = f'export TEMPLATECONF="{oebuild_util.CONTAINER_SRC}/yocto-meta-openeuler/.oebuild"'
         init_oe_comand = f'. {oebuild_util.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
             {oebuild_util.CONTAINER_BUILD}/{build_dir_name}'
