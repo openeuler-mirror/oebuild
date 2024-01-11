@@ -16,17 +16,12 @@ import pathlib
 from dataclasses import dataclass
 
 import oebuild.util as oebuild_util
+import oebuild.const as oebuild_const
 
 PathType = Union[str, os.PathLike]
 
-YOCTO_META_OPENEULER = "yocto_meta_openeuler"
-YOCTO_POKY = "yocto-poky"
-CONFIG = "config"
-COMPILE_YAML = "compile.yaml.sample"
-
 class OebuildNotFound(RuntimeError):
     '''Neither the current directory nor any parent has a oebuild workspace.'''
-
 
 @dataclass
 class ConfigContainer:
@@ -128,7 +123,7 @@ class Configure:
         '''
         config = Configure.parse_oebuild_config()
         basic_config = config.basic_repo
-        yocto_config:ConfigBasicRepo = basic_config[YOCTO_META_OPENEULER]
+        yocto_config:ConfigBasicRepo = basic_config[oebuild_const.YOCTO_META_OPENEULER]
         yocto_dir = yocto_config.path
         return os.path.join(Configure.source_dir(), yocto_dir)
 
@@ -137,7 +132,7 @@ class Configure:
         '''
         return src/yocto-poky path
         '''
-        return os.path.join(Configure.source_dir(), YOCTO_POKY)
+        return os.path.join(Configure.source_dir(), oebuild_const.YOCTO_POKY)
 
     @staticmethod
     def yocto_bak_dir():
@@ -168,7 +163,8 @@ class Configure:
         the file path is {WORKSPACE}.oebuild/config
         '''
 
-        config = oebuild_util.read_yaml(yaml_dir = pathlib.Path(Configure.oebuild_dir(), CONFIG))
+        config = oebuild_util.read_yaml(
+            yaml_dir = pathlib.Path(Configure.oebuild_dir(), oebuild_const.CONFIG))
 
         tag_map = {}
         for key, value in config['docker']['tag_map'].items():
@@ -209,14 +205,17 @@ class Configure:
                                        'branch': repo.branch}
 
         try:
-            oebuild_util.write_yaml(yaml_dir = pathlib.Path(Configure.oebuild_dir(), CONFIG),
-                                    data=data)
+            oebuild_util.write_yaml(
+                yaml_dir = pathlib.Path(Configure.oebuild_dir(), oebuild_const.CONFIG),
+                data=data)
             return True
         except TypeError:
             return False
 
 class YoctoEnv:
-
+    '''
+    the YoctoEnv class is used for yocto-meta-openeuler/.oebuild/env.yaml
+    '''
     @staticmethod
     def get_docker_image(yocto_dir):
         '''
@@ -228,9 +227,9 @@ class YoctoEnv:
         env_path = os.path.join(yocto_dir,".oebuild/env.yaml")
         if not os.path.exists(env_path):
             return None
-        
+
         env_parse = oebuild_util.read_yaml(pathlib.Path(env_path))
         if "docker_image" in env_parse:
             return str(env_parse['docker_image'])
-        
+
         return None

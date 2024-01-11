@@ -22,11 +22,11 @@ import oebuild.util as oebuild_util
 from oebuild.command import OebuildCommand
 from oebuild.parse_template import OebuildRepo
 from oebuild.parse_compile import ParseCompile
-from oebuild.configure import Configure, ConfigBasicRepo, YOCTO_META_OPENEULER, YoctoEnv
+from oebuild.configure import Configure, ConfigBasicRepo, YoctoEnv
 from oebuild.docker_proxy import DockerProxy
 from oebuild.ogit import OGit
 from oebuild.check_docker_tag import CheckDockerTag
-
+import oebuild.const as oebuild_const
 from oebuild.m_log import logger
 
 class Update(OebuildCommand):
@@ -171,7 +171,7 @@ class Update(OebuildCommand):
         embedded/src/yocto-meta-openeuler not exists, so just clone from config setting.
         '''
         oebuild_config = self.configure.parse_oebuild_config()
-        yocto_config:ConfigBasicRepo = oebuild_config.basic_repo[YOCTO_META_OPENEULER]
+        yocto_config:ConfigBasicRepo = oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
 
         local_dir = os.path.join(self.configure.source_dir(), yocto_config.path)
         yocto_repo = OGit(repo_dir=local_dir,

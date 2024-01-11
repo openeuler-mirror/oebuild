@@ -23,9 +23,10 @@ from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
 from oebuild.parse_compile import ParseCompile,CheckCompileError
 from oebuild.configure import Configure, YoctoEnv
-from oebuild.parse_template import BaseParseTemplate, ParseTemplate, BUILD_IN_DOCKER, BUILD_IN_HOST
+from oebuild.parse_template import BaseParseTemplate, ParseTemplate
 from oebuild.m_log import logger, INFO_COLOR
 from oebuild.check_docker_tag import CheckDockerTag
+import oebuild.const as oebuild_const
 
 class Generate(OebuildCommand):
     '''
@@ -117,7 +118,7 @@ class Generate(OebuildCommand):
             this param is for external nativesdk dir, the param will be useful when you want to build in host
             '''
         )
-        
+
         parser.add_argument('-tag', '--docker_tag', dest='docker_tag', default = '',
             help='''
             when build in docker, the param can be point docker image
@@ -137,11 +138,13 @@ class Generate(OebuildCommand):
             this param is set openeuler_fetch in local.conf, the default value is enable, if set -df, the OPENEULER_FETCH will set to 'disable'
             ''')
 
-        parser.add_argument('-b_in', '--build_in', dest='build_in', choices=[BUILD_IN_DOCKER, BUILD_IN_HOST],
-                            default = BUILD_IN_DOCKER, help='''
+        parser.add_argument('-b_in',
+                            '--build_in',
+                            dest='build_in',
+                            choices=[oebuild_const.BUILD_IN_DOCKER, oebuild_const.BUILD_IN_HOST],
+                            default = oebuild_const.BUILD_IN_DOCKER, help='''
             This parameter marks the mode at build time, and is built in the container by docker
-            '''
-        )
+            ''')
 
         return parser
 
@@ -181,15 +184,15 @@ class Generate(OebuildCommand):
                 logger.error(str(e))
             return
 
-        build_in = BUILD_IN_DOCKER
-        if args.build_in == BUILD_IN_HOST:
+        build_in = oebuild_const.BUILD_IN_DOCKER
+        if args.build_in == oebuild_const.BUILD_IN_HOST:
             try:
                 self._check_param_in_host(args=args)
             except ValueError as v_e:
                 logger.error(str(v_e))
                 return
             self.nativesdk_dir = args.nativesdk_dir
-            build_in = BUILD_IN_HOST
+            build_in = oebuild_const.BUILD_IN_HOST
 
         if args.toolchain_dir != '':
             self.toolchain_dir = args.toolchain_dir
@@ -268,7 +271,8 @@ class Generate(OebuildCommand):
             docker_image = f"{oebuild_config.docker.repo_url}:{docker_tag}"
 
         out_dir = pathlib.Path(os.path.join(build_dir,'compile.yaml'))
-        oebuild_util.write_yaml(out_dir, parser_template.generate_template(
+
+        oebuild_util.write_yaml(out_dir, parser_template.generate_compile_conf(
             nativesdk_dir= self.nativesdk_dir,
             toolchain_dir= self.toolchain_dir,
             build_in=build_in,
@@ -276,7 +280,9 @@ class Generate(OebuildCommand):
             tmp_dir = self.tmp_dir,
             datetime = args.datetime,
             is_disable_fetch = args.is_disable_fetch,
-            docker_image=docker_image
+            docker_image=docker_image,
+            src_dir=self.configure.source_dir(),
+            compile_dir=build_dir
             ))
 
         self._print_generate(build_dir=build_dir)
@@ -349,7 +355,7 @@ oebuild bitbake
 
         # detects if a build directory already exists
         if os.path.exists(build_dir):
-            logger.warn("the build directory %s already exists", build_dir)
+            logger.warning("the build directory %s already exists", build_dir)
             while True:
                 in_res = input("""
     do you want to overwrite it? the overwrite action will replace the compile.yaml

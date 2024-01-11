@@ -15,15 +15,14 @@ import sys
 
 from docker.models.containers import Container,ExecResult
 
-from oebuild.local_conf import NATIVE_GCC_DIR, SSTATE_CACHE
 from oebuild.parse_env import ParseEnv, EnvContainer
 from oebuild.docker_proxy import DockerProxy
 from oebuild.configure import Configure
-from oebuild.parse_compile import ParseCompile
+from oebuild.parse_compile import ParseCompile, DockerParam
 from oebuild.m_log import logger
-import oebuild.app.plugins.bitbake.const as bitbake_const
 from oebuild.app.plugins.bitbake.base_build import BaseBuild
 import oebuild.util as oebuild_util
+import oebuild.const as oebuild_const
 
 class InContainer(BaseBuild):
     '''
@@ -51,24 +50,16 @@ class InContainer(BaseBuild):
         logger.info("Bitbake starting ...")
         # check docker image if exists
         docker_proxy = DockerProxy()
-        if not docker_proxy.is_image_exists(parse_compile.docker_image):
+        if not docker_proxy.is_image_exists(parse_compile.docker_param.image):
             logger.error('''The docker image does not exists, please run fellow command:
     `oebuild update docker`''')
             return
 
-        self.deal_env_container(
-            env=parse_env,
-            toolchain_dir=parse_compile.toolchain_dir,
-            sstate_cache=parse_compile.sstate_cache,
-            docker_image=parse_compile.docker_image)
+        self.deal_env_container(env=parse_env,docker_param=parse_compile.docker_param)
 
         self.exec_compile(parse_compile=parse_compile, command=command)
 
-    def deal_env_container(self,
-                           env: ParseEnv,
-                           toolchain_dir=None,
-                           sstate_cache = None,
-                           docker_image = ""):
+    def deal_env_container(self, env: ParseEnv, docker_param: DockerParam):
         '''
         This operation realizes the processing of the container,
         controls how the container is processed by parsing the env
@@ -77,26 +68,15 @@ class InContainer(BaseBuild):
         are inconsistent, you need to create a new container, otherwise
         directly enable the sleeping container
         '''
-        cwd_name = os.path.basename(os.getcwd())
-        volumns = []
-        volumns.append("/dev/net/tun:/dev/net/tun")
-        volumns.append(self.configure.source_dir() + ':' + oebuild_util.CONTAINER_SRC)
-        volumns.append(os.path.join(self.configure.build_dir(), cwd_name)
-            + ':' +
-            os.path.join(oebuild_util.CONTAINER_BUILD, cwd_name))
-        if toolchain_dir is not None:
-            volumns.append(toolchain_dir + ":" + NATIVE_GCC_DIR)
-
-        if sstate_cache is not None:
-            volumns.append(sstate_cache + ":" + SSTATE_CACHE)
-
         if env.container is None \
             or env.container.short_id is None \
             or not self.client.is_container_exists(env.container.short_id):
             # judge which container
-            container:Container = self.client.container_run_simple(
-                image=docker_image,
-                volumes=volumns) # type: ignore
+            container:Container = self.client.create_container(
+                image = docker_param.image,
+                parameters=" ".join(docker_param.parameters),
+                volumes=docker_param.volumns,
+                command=docker_param.command)
 
             env_container = EnvContainer(container.short_id)
             env.set_env_container(env_container)
@@ -126,7 +106,7 @@ class InContainer(BaseBuild):
         bblayers_dir = os.path.join(os.getcwd(), "conf", "bblayers.conf")
         self.add_bblayers(
             bblayers_dir=bblayers_dir,
-            pre_dir=oebuild_util.CONTAINER_SRC,
+            pre_dir=oebuild_const.CONTAINER_SRC,
             base_dir=self.configure.source_dir(),
             layers=parse_compile.layers)
 
@@ -143,8 +123,8 @@ class InContainer(BaseBuild):
             res:ExecResult = self.client.container_exec_command(
                 container=container,
                 command="bash .bashrc",
-                user=oebuild_util.CONTAINER_USER,
-                work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+                user=oebuild_const.CONTAINER_USER,
+                work_space=f"/home/{oebuild_const.CONTAINER_USER}",
                 demux=True)
             exit_code = 0
             for line in res.output:
@@ -156,12 +136,12 @@ class InContainer(BaseBuild):
             sys.exit(exit_code)
         else:
             content = self._get_bashrc_content(container=container)
-            for b_s in bitbake_const.BASH_BANNER.split('\n'):
-                b_s = f"echo {b_s}{oebuild_util.BASH_END_FLAG}"
+            for b_s in oebuild_const.BASH_BANNER.split('\n'):
+                b_s = f"echo {b_s}{oebuild_const.BASH_END_FLAG}"
                 content = self._add_bashrc(content=content, line=b_s)
             self.update_bashrc(container=container, content=content)
             os.system(
-                f"docker exec -it -u {oebuild_util.CONTAINER_USER} {container.short_id} bash")
+                f"docker exec -it -u {oebuild_const.CONTAINER_USER} {container.short_id} bash")
 
         self.restore_bashrc(container=container)
 
@@ -176,9 +156,9 @@ class InContainer(BaseBuild):
 
         res = self.client.container_exec_command(
             container=container,
-            command=f"bash /home/{oebuild_util.CONTAINER_USER}/.bashrc",
-            user=oebuild_util.CONTAINER_USER,
-            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+            command=f"bash /home/{oebuild_const.CONTAINER_USER}/.bashrc",
+            user=oebuild_const.CONTAINER_USER,
+            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=False)
         if res.exit_code != 0:
             raise ValueError(res.output.decode())
@@ -188,8 +168,8 @@ class InContainer(BaseBuild):
         res = self.client.container_exec_command(
             container=container,
             user='root',
-            command=f"id {oebuild_util.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+            command=f"id {oebuild_const.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=False)
         if res.exit_code != 0:
             raise ValueError("check docker user id faild")
@@ -198,19 +178,19 @@ class InContainer(BaseBuild):
 
         cuids = res_cont.split(' ')
         # get uid from container in default user
-        pattern = re.compile(r'(?<=uid=)\d{1,}(?=\(' + oebuild_util.CONTAINER_USER + r'\))')
+        pattern = re.compile(r'(?<=uid=)\d{1,}(?=\(' + oebuild_const.CONTAINER_USER + r'\))')
         match_uid = pattern.search(cuids[0])
         if match_uid:
             cuid = match_uid.group()
         else:
-            raise ValueError(f"can not get container {oebuild_util.CONTAINER_USER} uid")
+            raise ValueError(f"can not get container {oebuild_const.CONTAINER_USER} uid")
         # get gid from container in default user
-        pattern = re.compile(r'(?<=gid=)\d{1,}(?=\(' + oebuild_util.CONTAINER_USER + r'\))')
+        pattern = re.compile(r'(?<=gid=)\d{1,}(?=\(' + oebuild_const.CONTAINER_USER + r'\))')
         match_gid = pattern.search(cuids[1])
         if match_gid:
             cgid = match_gid.group()
         else:
-            raise ValueError(f"can not get container {oebuild_util.CONTAINER_USER} gid")
+            raise ValueError(f"can not get container {oebuild_const.CONTAINER_USER} gid")
 
         # judge host uid and gid are same with container uid and gid
         # if not same and change container uid and gid equal to host's uid and gid
@@ -223,16 +203,16 @@ class InContainer(BaseBuild):
         self.client.container_exec_command(
             container=container,
             user='root',
-            command=f"usermod -u {uid} {oebuild_util.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+            command=f"usermod -u {uid} {oebuild_const.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=False)
 
     def _change_container_gid(self, container: Container, gid: int):
         self.client.container_exec_command(
             container=container,
             user='root',
-            command=f"groupmod -g {gid} {oebuild_util.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+            command=f"groupmod -g {gid} {oebuild_const.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=False)
 
     def _install_sudo(self, container: Container):
@@ -242,7 +222,7 @@ class InContainer(BaseBuild):
             container=container,
             user='root',
             command="which sudo",
-            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=False
         )
         if resp.exit_code != 0:
@@ -255,7 +235,7 @@ class InContainer(BaseBuild):
             container=container,
             user='root',
             command=r"sed -i 's/repo.openeuler.org/mirrors.huaweicloud.com\/openeuler/g' /etc/yum.repos.d/openEuler.repo",
-            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=False
         )
 
@@ -264,7 +244,7 @@ class InContainer(BaseBuild):
             container=container,
             user='root',
             command=f"yum install {software} -y",
-            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=True
         )
         for line in resp.output:
@@ -281,16 +261,16 @@ class InContainer(BaseBuild):
 
         # get host proxy information and set in container
         init_proxy_command = ""
-        host_proxy = oebuild_util.get_host_proxy(oebuild_util.PROXY_LIST)
+        host_proxy = oebuild_util.get_host_proxy(oebuild_const.PROXY_LIST)
         for key, value in host_proxy.items():
             key_git = key.replace('_', '.')
             command = f'export {key}={value}; git config --global {key_git} {value};'
             init_proxy_command = f'{init_proxy_command} {command}'
 
-        init_sdk_command = f'. {oebuild_util.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
-        set_template = f'export TEMPLATECONF="{oebuild_util.CONTAINER_SRC}/yocto-meta-openeuler/.oebuild"'
-        init_oe_comand = f'. {oebuild_util.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
-            {oebuild_util.CONTAINER_BUILD}/{build_dir_name}'
+        init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
+        set_template = f'export TEMPLATECONF="{oebuild_const.CONTAINER_SRC}/yocto-meta-openeuler/.oebuild"'
+        init_oe_comand = f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
+            {oebuild_const.CONTAINER_BUILD}/{build_dir_name}'
         init_command = [init_proxy_command, init_sdk_command, set_template, init_oe_comand]
         new_content = self._init_bashrc_content(content, init_command)
 
@@ -306,9 +286,9 @@ class InContainer(BaseBuild):
         self.client.copy_to_container(
             container=container,
             source_path=tmp_file,
-            to_path=f'/home/{oebuild_util.CONTAINER_USER}')
+            to_path=f'/home/{oebuild_const.CONTAINER_USER}')
         container.exec_run(
-            cmd=f"mv /home/{oebuild_util.CONTAINER_USER}/{tmp_file} /home/{oebuild_util.CONTAINER_USER}/.bashrc",
+            cmd=f"mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINER_USER}/.bashrc",
             user="root"
         )
         os.remove(tmp_file)
@@ -325,7 +305,7 @@ class InContainer(BaseBuild):
     def _get_bashrc_content(self, container: Container):
         res = self.client.container_exec_command(
             container=container,
-            command=f"cat /home/{oebuild_util.CONTAINER_USER}/.bashrc",
+            command=f"cat /home/{oebuild_const.CONTAINER_USER}/.bashrc",
             user="root",
             work_space=None,
             stream=False)

@@ -16,13 +16,14 @@ import re
 import logging
 
 from docker.models.containers import Container
+from docker.errors import DockerException
 
 from oebuild.docker_proxy import DockerProxy
 from oebuild.configure import Configure
 import oebuild.util as oebuild_util
-from oebuild.parse_compile import ParseCompile, CheckCompileError,BUILD_IN_DOCKER
-from oebuild.parse_env import ParseEnv,EnvContainer
+from oebuild.parse_compile import ParseCompile, CheckCompileError
 from oebuild.m_log import logger
+import oebuild.const as oebuild_const
 
 logger = logging.getLogger()
 
@@ -36,6 +37,19 @@ class ComTarget:
         self.container_id = None
         self.work_dir = os.getcwd()
         self.old_bashrc = None
+
+    def __del__(self):
+        if self.client is not None:
+            try:
+                container = self.client.get_container(self.container_id)
+                self.client.delete_container(container=container, is_force=True)
+            except DockerException:
+                print(f"""
+the container {self.container_id} failed to be destroyed, please run 
+
+`docker rm {self.container_id}`
+
+""")
 
     def exec(self, str_args: str, fun):
 
@@ -59,20 +73,19 @@ class ComTarget:
             sys.exit(-1)
 
         logger.info("Initializing environment, please wait ...")
-        parse_env = ParseEnv(env_dir='.env')
-        self.deal_env_container(parse_env, oebuild_util.DEFAULT_DOCKER)
+        self.deal_env_container(oebuild_const.DEFAULT_DOCKER)
         container:Container = self.client.get_container(self.container_id)
         self._make_and_copy_lib(container=container)
         self.bak_bash(container=container)
         self.init_bash(container=container)
         content = self._get_bashrc_content(container=container)
         content = oebuild_util.add_bashrc(content=content, line=f"export PATH=$PATH:/home/openeuler/{TARGET_DIR_NAME}")
-        content = oebuild_util.add_bashrc(content=content, line=f"mv -f /home/{oebuild_util.CONTAINER_USER}/{self.old_bashrc} /home/{oebuild_util.CONTAINER_USER}/.bashrc")
+        content = oebuild_util.add_bashrc(content=content, line=f"mv -f /home/{oebuild_const.CONTAINER_USER}/{self.old_bashrc} /home/{oebuild_const.CONTAINER_USER}/.bashrc")
         content = oebuild_util.add_bashrc(content=content, line=f"{TARGET_SCRIPT_NAME} {fun} {str_args}")
         print(f"{TARGET_SCRIPT_NAME} {str_args}")
         content = oebuild_util.add_bashrc(content=content, line=f"rm -rf /home/openeuler/{TARGET_DIR_NAME} && exit")
         self.update_bashrc(container=container, content=content)
-        os.system(f"docker exec -it -u {oebuild_util.CONTAINER_USER} {container.short_id}  bash")
+        os.system(f"docker exec -it -u {oebuild_const.CONTAINER_USER} {container.short_id}  bash")
 
     def _check_conf_directory(self,):
         # check if exists local.conf
@@ -93,7 +106,7 @@ class ComTarget:
         except CheckCompileError as c_e:
             logger.error(str(c_e))
             sys.exit(-1)
-        if parse_compile.build_in != BUILD_IN_DOCKER:
+        if parse_compile.build_in != oebuild_const.BUILD_IN_DOCKER:
             return False
         return True
 
@@ -119,7 +132,7 @@ class ComTarget:
         self.client.copy_to_container(container=container, source_path=lib_path, to_path="/home/openeuler/")
         container.exec_run(f"chmod 755 /home/openeuler/{TARGET_DIR_NAME}/{TARGET_SCRIPT_NAME}")
 
-    def deal_env_container(self, env: ParseEnv,docker_image:str):
+    def deal_env_container(self,docker_image:str):
         '''
         This operation realizes the processing of the container,
         controls how the container is processed by parsing the env
@@ -131,24 +144,19 @@ class ComTarget:
         cwd_name = os.path.basename(self.work_dir)
         volumns = []
         volumns.append("/dev/net/tun:/dev/net/tun")
-        volumns.append(self.configure.source_dir() + ':' + oebuild_util.CONTAINER_SRC)
+        volumns.append(self.configure.source_dir() + ':' + oebuild_const.CONTAINER_SRC)
         volumns.append(os.path.join(self.configure.build_dir(), cwd_name)
             + ':' +
-            os.path.join(oebuild_util.CONTAINER_BUILD, cwd_name))
+            os.path.join(oebuild_const.CONTAINER_BUILD, cwd_name))
 
-        if env.container is None \
-            or env.container.short_id is None \
-            or not self.client.is_container_exists(env.container.short_id):
-            # judge which container
-            container:Container = self.client.container_run_simple(
-                image=docker_image,
-                volumes=volumns) # type: ignore
+        parameters = "-itd"
+        container:Container = self.client.create_container(
+        image=docker_image,
+        parameters=parameters,
+        volumes=volumns,
+        command="bash")
 
-            env_container = EnvContainer(container.short_id)
-            env.set_env_container(env_container)
-            env.export_env()
-
-        self.container_id = env.container.short_id
+        self.container_id = container.short_id
         container:Container = self.client.get_container(self.container_id) # type: ignore
         if not self.client.is_container_running(container):
             self.client.start_container(container)
@@ -160,7 +168,7 @@ class ComTarget:
         old_bash = oebuild_util.generate_random_str(6)
         self.client.container_exec_command(
             container=container,
-            command=f"cp /home/{oebuild_util.CONTAINER_USER}/.bashrc /home/{oebuild_util.CONTAINER_USER}/{old_bash}",
+            command=f"cp /home/{oebuild_const.CONTAINER_USER}/.bashrc /home/{oebuild_const.CONTAINER_USER}/{old_bash}",
             user="root",
             work_space=None,
             stream=False)
@@ -175,10 +183,10 @@ class ComTarget:
         self._check_change_ugid(container=container)
         # read container default user .bashrc content
         content = self._get_bashrc_content(container=container)
-        init_sdk_command = f'. {oebuild_util.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
+        init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
         build_dir_name = os.path.basename(self.work_dir)
-        init_oe_command = f'. {oebuild_util.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
-            {oebuild_util.CONTAINER_BUILD}/{build_dir_name}'
+        init_oe_command = f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
+            {oebuild_const.CONTAINER_BUILD}/{build_dir_name}'
         init_command = [init_sdk_command, init_oe_command]
         new_content = oebuild_util.init_bashrc_content(content, init_command)
         self.update_bashrc(container=container, content=new_content)
@@ -186,7 +194,7 @@ class ComTarget:
     def _get_bashrc_content(self, container: Container):
         content = self.client.container_exec_command(
             container=container,
-            command=f"cat /home/{oebuild_util.CONTAINER_USER}/.bashrc",
+            command=f"cat /home/{oebuild_const.CONTAINER_USER}/.bashrc",
             user="root",
             work_space=None,
             stream=False).output
@@ -203,9 +211,9 @@ class ComTarget:
         self.client.copy_to_container(
             container=container,
             source_path=tmp_file,
-            to_path=f'/home/{oebuild_util.CONTAINER_USER}')
+            to_path=f'/home/{oebuild_const.CONTAINER_USER}')
         container.exec_run(
-            cmd=f"mv /home/{oebuild_util.CONTAINER_USER}/{tmp_file} /home/{oebuild_util.CONTAINER_USER}/.bashrc",
+            cmd=f"mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINER_USER}/.bashrc",
             user="root"
         )
         os.remove(tmp_file)
@@ -233,7 +241,7 @@ class ComTarget:
         new_content = ''
         for line in old_content.split('\n'):
             line: str = line
-            if line.endswith(oebuild_util.BASH_END_FLAG) or line.replace(" ", '') == '':
+            if line.endswith(oebuild_const.BASH_END_FLAG) or line.replace(" ", '') == '':
                 continue
             new_content = new_content + line + '\n'
         return new_content
@@ -242,8 +250,8 @@ class ComTarget:
         res = self.client.container_exec_command(
             container=container,
             user='root',
-            command=f"id {oebuild_util.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+            command=f"id {oebuild_const.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=False)
         if res.exit_code != 0:
             raise ValueError("check docker user id faild")
@@ -252,19 +260,19 @@ class ComTarget:
 
         cuids = res_cont.split(' ')
         # get uid from container in default user
-        pattern = re.compile(r'(?<=uid=)\d{1,}(?=\(' + oebuild_util.CONTAINER_USER + r'\))')
+        pattern = re.compile(r'(?<=uid=)\d{1,}(?=\(' + oebuild_const.CONTAINER_USER + r'\))')
         match_uid = pattern.search(cuids[0])
         if match_uid:
             cuid = match_uid.group()
         else:
-            raise ValueError(f"can not get container {oebuild_util.CONTAINER_USER} uid")
+            raise ValueError(f"can not get container {oebuild_const.CONTAINER_USER} uid")
         # get gid from container in default user
-        pattern = re.compile(r'(?<=gid=)\d{1,}(?=\(' + oebuild_util.CONTAINER_USER + r'\))')
+        pattern = re.compile(r'(?<=gid=)\d{1,}(?=\(' + oebuild_const.CONTAINER_USER + r'\))')
         match_gid = pattern.search(cuids[1])
         if match_gid:
             cgid = match_gid.group()
         else:
-            raise ValueError(f"can not get container {oebuild_util.CONTAINER_USER} gid")
+            raise ValueError(f"can not get container {oebuild_const.CONTAINER_USER} gid")
 
         # judge host uid and gid are same with container uid and gid
         # if not same and change container uid and gid equal to host's uid and gid
@@ -277,14 +285,14 @@ class ComTarget:
         self.client.container_exec_command(
             container=container,
             user='root',
-            command=f"usermod -u {uid} {oebuild_util.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+            command=f"usermod -u {uid} {oebuild_const.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=False)
 
     def _change_container_gid(self, container: Container, gid: int):
         self.client.container_exec_command(
             container=container,
             user='root',
-            command=f"groupmod -g {gid} {oebuild_util.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_util.CONTAINER_USER}",
+            command=f"groupmod -g {gid} {oebuild_const.CONTAINER_USER}",
+            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=False)

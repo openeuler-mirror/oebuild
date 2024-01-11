@@ -23,6 +23,7 @@ from oebuild.docker_proxy import DockerProxy
 from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
 from oebuild.m_log import logger
+import oebuild.const as oebuild_const
 
 class RunQemu(OebuildCommand):
     '''
@@ -45,15 +46,9 @@ class RunQemu(OebuildCommand):
 
     def __del__(self):
         if self.client is not None:
-            print("""
-
-            container is being destroyed, please wait ...
-
-""")
             try:
                 container = self.client.get_container(self.container_id)
-                self.client.stop_container(container=container)
-                self.client.delete_container(container=container)
+                self.client.delete_container(container=container, is_force=True)
             except DockerException:
                 print(f"""
 the container {self.container_id} failed to be destroyed, please run 
@@ -85,9 +80,7 @@ the container {self.container_id} failed to be destroyed, please run
         docker_image = self.get_docker_image()
         self._check_qemu_ifup()
         self.deal_env_container(docker_image=docker_image)
-        # container:Container = self.client.get_container(self.container_id)
 
-        #
         for index, param in enumerate(unknown):
             if param.startswith("qemuparams"):
                 unknown[index] = "qemuparams=\""+param.split("=")[1]+"\""
@@ -103,12 +96,12 @@ the container {self.container_id} failed to be destroyed, please run
         self.bak_bash(container=container)
         self.init_bash(container=container)
         content = self._get_bashrc_content(container=container)
-        qemu_helper_usr = oebuild_util.CONTAINER_BUILD+"/tmp/work/x86_64-linux/qemu-helper-native/1.0-r1/recipe-sysroot-native/usr"
-        qemu_helper_dir = oebuild_util.CONTAINER_BUILD+"/tmp/work/x86_64-linux/qemu-helper-native"
+        qemu_helper_usr = oebuild_const.CONTAINER_BUILD+"/tmp/work/x86_64-linux/qemu-helper-native/1.0-r1/recipe-sysroot-native/usr"
+        qemu_helper_dir = oebuild_const.CONTAINER_BUILD+"/tmp/work/x86_64-linux/qemu-helper-native"
         STAGING_BINDIR_NATIVE = f"""
 if [ ! -d {qemu_helper_usr} ];then
     mkdir -p {qemu_helper_usr}
-    chown -R {oebuild_util.CONTAINER_USER}:{oebuild_util.CONTAINER_USER} {qemu_helper_dir}
+    chown -R {oebuild_const.CONTAINER_USER}:{oebuild_const.CONTAINER_USER} {qemu_helper_dir}
     ln -s /opt/buildtools/nativesdk/sysroots/x86_64-pokysdk-linux/usr/bin {qemu_helper_usr}
 fi
 """
@@ -155,15 +148,18 @@ now, you can continue run `oebuild runqemu` in compile directory
         volumns = []
         volumns.append("/dev/net/tun:/dev/net/tun")
         volumns.append("/etc/qemu-ifup:/etc/qemu-ifup")
-        volumns.append(self.work_dir + ':' + oebuild_util.CONTAINER_BUILD)
-        volumns.append(self.configure.source_dir() + ':' + oebuild_util.CONTAINER_SRC)
-        container:Container = self.client.container_run_simple(
+        volumns.append(self.work_dir + ':' + oebuild_const.CONTAINER_BUILD)
+        volumns.append(self.configure.source_dir() + ':' + oebuild_const.CONTAINER_SRC)
+
+        parameters = "-itd --privileged"
+        container:Container = self.client.create_container(
             image=docker_image,
+            parameters=parameters,
             volumes=volumns,
-            is_priv=True) # type: ignore
+            command="bash")
 
         self.container_id = container.short_id
-        container:Container = self.client.get_container(self.container_id) # type: ignore
+        container:Container = self.client.get_container(self.container_id)
         if not self.client.is_container_running(container):
             self.client.start_container(container)
 
@@ -171,7 +167,7 @@ now, you can continue run `oebuild runqemu` in compile directory
         '''
         this is function is to get openeuler docker image automatic
         '''
-        return oebuild_util.DEFAULT_DOCKER
+        return oebuild_const.DEFAULT_DOCKER
 
     def bak_bash(self, container: Container):
         '''
@@ -195,8 +191,8 @@ now, you can continue run `oebuild runqemu` in compile directory
         # read container default user .bashrc content
         content = self._get_bashrc_content(container=container)
 
-        init_sdk_command = f'. {oebuild_util.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
-        init_oe_command = f'. {oebuild_util.CONTAINER_SRC}/yocto-poky/oe-init-build-env {oebuild_util.CONTAINER_BUILD}'
+        init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
+        init_oe_command = f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env {oebuild_const.CONTAINER_BUILD}'
         init_command = [init_sdk_command, init_oe_command]
         new_content = oebuild_util.init_bashrc_content(content, init_command)
         self.update_bashrc(container=container, content=new_content)

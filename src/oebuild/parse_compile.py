@@ -14,10 +14,28 @@ import os
 from dataclasses import dataclass
 import pathlib
 from typing import Optional
+import sys
 
 import oebuild.util as oebuild_util
 from oebuild.ogit import OGit
-from oebuild.parse_template import PlatformTemplate, ParseTemplate, BUILD_IN_DOCKER
+from oebuild.parse_template import PlatformTemplate, ParseTemplate
+import oebuild.const as oebuild_const
+from oebuild.m_log import logger
+
+@dataclass
+class DockerParam:
+    '''
+    xxxxxxxxx
+    '''
+    # point out the docker image
+    image: str
+    # point out the parameter for create container
+    parameters: list[str]
+    # point out the volumns for create container
+    volumns: list[str]
+    # point out the command for create container
+    command: str
+
 
 @dataclass
 class Compile(PlatformTemplate):
@@ -38,7 +56,7 @@ class Compile(PlatformTemplate):
 
     tmp_dir: Optional[str]
 
-    docker_image: Optional[str]
+    docker_param: Optional[DockerParam]
 
 class BaseParseCompileError(ValueError):
     '''
@@ -71,9 +89,22 @@ class ParseCompile:
         except Exception as e_p:
             raise e_p
 
-        default_image = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-container:latest"
+        docker_param:DockerParam = None
+        if "docker_param" in data and data['docker_param'] is not None:
+            try:
+                dparam = data['docker_param']
+                docker_param = DockerParam(
+                    image=dparam['image'],
+                    parameters=dparam['parameters'],
+                    volumns=dparam['volumns'],
+                    command=dparam['command']
+                )
+            except KeyError:
+                logger.error("the compile.yaml parse failed, please check it again")
+                sys.exit(1)
+
         self.compile = Compile(
-            build_in=BUILD_IN_DOCKER if 'build_in' not in data else data['build_in'],
+            build_in=oebuild_const.BUILD_IN_DOCKER if 'build_in' not in data else data['build_in'],
             platform=data['platform'],
             machine=data['machine'],
             toolchain_type=data['toolchain_type'],
@@ -86,8 +117,7 @@ class ParseCompile:
             repos=None if "repos" not in data else ParseTemplate.parse_oebuild_repo(data['repos']),
             local_conf=None if "local_conf" not in data else data['local_conf'],
             layers=None if "layers" not in data else data['layers'],
-            docker_image=default_image if "docker_image" not in data else data['docker_image']
-        )
+            docker_param=docker_param)
 
     @property
     def build_in(self):
@@ -179,13 +209,13 @@ class ParseCompile:
         return attr of repos
         '''
         return self.compile.repos
-    
+
     @property
-    def docker_image(self):
+    def docker_param(self):
         '''
-        return attr of docker_tag
+        return attr of docker_param
         '''
-        return self.compile.docker_image
+        return self.compile.docker_param
 
     def check_with_version(self, base_dir, manifest_path):
         '''

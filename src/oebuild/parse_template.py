@@ -18,10 +18,7 @@ import os
 from ruamel.yaml.scalarstring import LiteralScalarString
 
 import oebuild.util as oebuild_util
-
-PLATFORM = 'platform'
-BUILD_IN_DOCKER = "docker"
-BUILD_IN_HOST = "host"
+import oebuild.const as oebuild_const
 
 @dataclass
 class OebuildRepo:
@@ -130,7 +127,7 @@ class ParseTemplate:
 
             config_type = data['type']
             config_name = os.path.basename(config_dir)
-            if config_type == PLATFORM:
+            if config_type == oebuild_const.PLATFORM:
                 self.platform_template = PlatformTemplate(
                     platform=LiteralScalarString(os.path.splitext(config_name)[0]),
                     machine=data['machine'],
@@ -162,15 +159,17 @@ class ParseTemplate:
         except Exception as e_p:
             raise e_p
 
-    def generate_template(self,
+    def generate_compile_conf(self,
                           nativesdk_dir = None,
                           toolchain_dir = None,
-                          build_in: str = BUILD_IN_DOCKER,
+                          build_in: str = oebuild_const.BUILD_IN_DOCKER,
                           sstate_cache = None,
                           tmp_dir = None,
                           datetime = None,
                           is_disable_fetch = False,
-                          docker_image = ""):
+                          docker_image: str = None,
+                          src_dir: str = None,
+                          compile_dir: str = None):
         '''
         first param common yaml
         '''
@@ -183,7 +182,6 @@ class ParseTemplate:
 
         common_yaml_dir = pathlib.Path(common_yaml_dir)
         data = oebuild_util.read_yaml(common_yaml_dir)
-        data['docker_image'] = docker_image
 
         repos = {}
         if 'repos' in data :
@@ -237,12 +235,11 @@ class ParseTemplate:
             disable_fetch_str = LiteralScalarString('OPENEULER_FETCH = "disable"')
             local_conf = LiteralScalarString(local_conf + '\n' + disable_fetch_str)
 
-        compile_conf = {
-            'build_in': build_in,
-            'docker_image': docker_image,
-            'platform': self.platform_template.platform,
-            'machine': self.platform_template.machine,
-            'toolchain_type': self.platform_template.toolchain_type}
+        compile_conf = {}
+        compile_conf['build_in'] = build_in
+        compile_conf['platform'] = self.platform_template.platform
+        compile_conf['machine'] = self.platform_template.machine
+        compile_conf['toolchain_type'] = self.platform_template.toolchain_type
 
         if nativesdk_dir is not None:
             compile_conf['nativesdk_dir'] = nativesdk_dir
@@ -256,6 +253,27 @@ class ParseTemplate:
         compile_conf['repos'] = repos
         compile_conf['local_conf'] = local_conf
         compile_conf['layers'] = layers
+
+        if build_in == oebuild_const.BUILD_IN_HOST:
+            return compile_conf
+
+        parameters = ['-itd']
+        volumns = []
+        volumns.append("/dev/net/tun:/dev/net/tun")
+        volumns.append(src_dir + ':' + oebuild_const.CONTAINER_SRC)
+        volumns.append(compile_dir + ':' +
+            os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(compile_dir)))
+        if toolchain_dir is not None:
+            volumns.append(toolchain_dir + ":" + oebuild_const.NATIVE_GCC_DIR)
+        if sstate_cache is not None:
+            volumns.append(sstate_cache + ":" + oebuild_const.SSTATE_CACHE)
+
+        docker_param = {}
+        docker_param['image'] = docker_image
+        docker_param['parameters'] = parameters
+        docker_param['volumns'] = volumns
+        docker_param['command'] = "bash"
+        compile_conf['docker_param'] = docker_param
 
         return compile_conf
 

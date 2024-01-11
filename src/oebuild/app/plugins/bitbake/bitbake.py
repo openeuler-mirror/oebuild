@@ -14,6 +14,8 @@ import os
 import argparse
 import textwrap
 
+from docker.errors import DockerException
+
 from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
 from oebuild.parse_compile import ParseCompile, CheckCompileError
@@ -21,9 +23,8 @@ from oebuild.parse_env import ParseEnv
 import oebuild.util as oebuild_util
 from oebuild.app.plugins.bitbake.in_container import InContainer
 from oebuild.app.plugins.bitbake.in_host import InHost
-from oebuild.parse_template import BUILD_IN_HOST
 from oebuild.m_log import logger
-from docker.errors import DockerException
+import oebuild.const as oebuild_const
 
 class Bitbake(OebuildCommand):
     '''
@@ -94,7 +95,7 @@ class Bitbake(OebuildCommand):
         parse_compile.check_with_version(self.configure.source_dir(), manifest_path=manifest_path)
         parse_env = ParseEnv(env_dir='.env')
 
-        if parse_compile.build_in == BUILD_IN_HOST:
+        if parse_compile.build_in == oebuild_const.BUILD_IN_HOST:
             in_host = InHost(self.configure)
             in_host.exec(parse_compile=parse_compile, command=command)
             return

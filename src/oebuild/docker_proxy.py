@@ -13,10 +13,14 @@ See the Mulan PSL v2 for more details.
 import os
 from io import BytesIO
 import tarfile
+import subprocess
+import sys
 
 import docker
 from docker.errors import ImageNotFound, NotFound
 from docker.models.containers import Container
+
+from oebuild.m_log import logger
 
 class DockerProxy:
     '''
@@ -108,13 +112,13 @@ class DockerProxy:
         container.stop()
 
     @staticmethod
-    def delete_container(container: Container):
+    def delete_container(container: Container, is_force:bool = False):
         '''
         rm a container which not running like command 'docker rm'
         args:
             container (Container): container object
         '''
-        container.remove()
+        container.remove(force = is_force)
 
     @staticmethod
     def start_container(container: Container):
@@ -203,67 +207,17 @@ class DockerProxy:
 
         return res
 
-    def container_run_command(self,
-                              image:str,
-                              command: str,
-                              user: str,
-                              volumes: list,
-                              work_space: str):
+    def create_container(self, image:str, parameters:str, volumes:list[str], command:str) -> str:
         '''
-        run command like 'docker run' with tty being true
-        to keep container alive and then run command in
-        docker container
+        create a new container
         '''
-        container = self._docker.containers.run(
-            image=image,
-            command="bash",
-            volumes=volumes,
-            detach=True,
-            tty=True
-        )
-        if isinstance(container, Container):
-            res = self.container_exec_command(
-            container=container,
-            command=command,
-            user=user,
-            work_space=work_space)
-            return container, res.output
-        else:
-            raise ValueError("docker start faild")
-
-    def container_run_simple(self, image:str, volumes: list, network="host", is_priv=False):
-        '''
-        it's just create a tty docker container to do some thing next
-        '''
-        container = self._docker.containers.run(
-            image=image,
-            command="bash",
-            volumes=volumes,
-            network_mode=network,
-            detach=True,
-            tty=True,
-            privileged=is_priv
-        )
-        container_name = str(container.attrs.get('Name')).lstrip("/")
-        container.rename(f"oebuild_{container_name}")
-        return container
-
-    def container_exec_with_tty(self,
-                                container: Container,
-                                user:str,
-                                work_space: str):
-        '''
-        run docker container with tty, you can has a tty terminal
-        '''
-        cli = container.exec_run(
-            cmd="bash",
-            stdout=True,
-            stderr=True,
-            stdin=True,
-            user=user,
-            workdir=work_space,
-            tty=True,
-            socket=True,
-            ).output
-
-        return cli.fileno()
+        run_command = f"docker run {parameters}"
+        for volume in volumes:
+            run_command = f"{run_command} -v {volume}"
+        run_command = f"{run_command} {image} {command}"
+        res = subprocess.run(run_command, shell=True, capture_output=True, check=True, text=True)
+        if res.returncode != 0:
+            logger.error(res.stderr.strip())
+            sys.exit(res.returncode)
+        container_id = res.stdout.strip()
+        return self.get_container(container_id=container_id)

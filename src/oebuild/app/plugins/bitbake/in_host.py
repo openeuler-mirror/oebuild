@@ -19,9 +19,9 @@ from oebuild.local_conf import NativesdkNotExist, NativesdkNotValid
 from oebuild.configure import Configure
 from oebuild.parse_compile import ParseCompile
 from oebuild.m_log import logger
-import oebuild.app.plugins.bitbake.const as bitbake_const
 from oebuild.app.plugins.bitbake.base_build import BaseBuild
 import oebuild.util as oebuild_util
+import oebuild.const as oebuild_const
 
 class InHost(BaseBuild):
     '''
@@ -93,11 +93,11 @@ initialization operations''')
         else:
             # run in Interactive mode
             banner_list = []
-            for b_s in bitbake_const.BASH_BANNER.split('\n'):
-                b_s = f"echo {b_s}{oebuild_util.BASH_END_FLAG}"
+            for b_s in oebuild_const.BASH_BANNER.split('\n'):
+                b_s = f"echo {b_s}{oebuild_const.BASH_END_FLAG}"
                 banner_list.append(b_s)
             self._append_build_sh(str_list=banner_list, build_dir= os.getcwd())
-            append_str = f"sed -i '/{oebuild_util.BASH_END_FLAG}/d' $HOME/.bashrc"
+            append_str = f"sed -i '/{oebuild_const.BASH_END_FLAG}/d' $HOME/.bashrc"
             self._append_build_sh(str_list = [append_str], build_dir= os.getcwd())
 
             build_sh_dir = os.path.join(os.getcwd(), 'build.sh')

@@ -18,8 +18,9 @@ import sys
 
 from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
-from oebuild.configure import Configure, YOCTO_META_OPENEULER, ConfigBasicRepo, CONFIG, COMPILE_YAML, Config
+from oebuild.configure import Configure, ConfigBasicRepo, Config
 from oebuild.m_log import logger
+import oebuild.const as oebuild_const
 
 class Init(OebuildCommand):
     '''
@@ -101,12 +102,12 @@ class Init(OebuildCommand):
         os.chdir(args.directory)
         oebuild_config:Config = self.configure.parse_oebuild_config()
 
-        yocto_config:ConfigBasicRepo = oebuild_config.basic_repo[YOCTO_META_OPENEULER]
+        yocto_config:ConfigBasicRepo = oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
         if args.yocto_remote_url is not None:
             yocto_config.remote_url = args.yocto_remote_url
         if args.branch is not None:
             yocto_config.branch = args.branch
-        oebuild_config.basic_repo[YOCTO_META_OPENEULER] = yocto_config
+        oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER] = yocto_config
 
         self.configure.update_oebuild_config(oebuild_config)
 
@@ -170,7 +171,7 @@ please execute the follow commands next
         '''
         try:
             config = oebuild_util.get_config_yaml_dir()
-            shutil.copyfile(config, os.path.join(updir, CONFIG))
+            shutil.copyfile(config, os.path.join(updir, oebuild_const.CONFIG))
         except FileNotFoundError:
             logger.error("mkdir config faild")
 
@@ -181,6 +182,6 @@ please execute the follow commands next
         '''
         try:
             compil = oebuild_util.get_compile_yaml_dir()
-            shutil.copyfile(compil, os.path.join(updir, COMPILE_YAML))
+            shutil.copyfile(compil, os.path.join(updir, oebuild_const.COMPILE_YAML))
         except FileNotFoundError:
             logger.error("mkdir compile.yaml.sample failed")

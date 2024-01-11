@@ -21,25 +21,16 @@ import subprocess
 
 from ruamel.yaml import YAML
 from docker.errors import DockerException
-
 from docker.models.containers import Container
+
 from oebuild.docker_proxy import DockerProxy
 from oebuild.m_log import logger
 from oebuild.version import __version__
+import oebuild.const as oebuild_const
 
-CONFIG_YAML = 'config.yaml'
-UPGRADE_YAML = 'upgrade.yaml'
-COMPILE_YAML = 'compile.yaml.sample'
-BASH_END_FLAG = "  ###!!!###"
-CONTAINER_USER = "openeuler"
-CONTAINER_BUILD = '/home/openeuler/build'
-DEFAULT_DOCKER = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-container:latest"
-CONTAINER_SRC = '/usr1/openeuler/src'
-CONTAINER_USER = "openeuler"
-NATIVESDK_DIR = "/opt/buildtools/nativesdk"
-PROXY_LIST = ['http_proxy', 'https_proxy']
 
-def get_nativesdk_environment(nativesdk_dir=NATIVESDK_DIR, container: Container = None):
+def get_nativesdk_environment(nativesdk_dir=oebuild_const.NATIVESDK_DIR,
+                              container: Container = None):
     '''
     return environment initialization shell, if nativesdk directory is not exists
     or can not find any initialization shell, raise error
@@ -57,7 +48,7 @@ def get_nativesdk_environment(nativesdk_dir=NATIVESDK_DIR, container: Container 
                 if os.path.isfile(abs_path) and not os.path.islink(abs_path):
                     return item
     else:
-        res = container.exec_run("ls -al", user=CONTAINER_USER, workdir=nativesdk_dir)
+        res = container.exec_run("ls -al", user=oebuild_const.CONTAINER_USER, workdir=nativesdk_dir)
         if res.exit_code != 0:
             logger.error("can not find any nativesdk environment initialization shell")
             sys.exit(res.exit_code)
@@ -131,19 +122,19 @@ def get_config_yaml_dir():
     '''
     return config yaml dir
     '''
-    return os.path.join(get_base_oebuild(), 'app/conf', CONFIG_YAML)
+    return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.CONFIG_YAML)
 
 def get_compile_yaml_dir():
     '''
     return compile.yaml.sample yaml dir
     '''
-    return os.path.join(get_base_oebuild(), 'app/conf', COMPILE_YAML)
+    return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.COMPILE_YAML)
 
 def get_upgrade_yaml_dir():
     '''
     return upgrade yaml dir
     '''
-    return os.path.join(get_base_oebuild(), 'app/conf', UPGRADE_YAML)
+    return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.UPGRADE_YAML)
 
 def generate_random_str(randomlength=16):
     '''
@@ -196,7 +187,7 @@ def restore_bashrc_content(old_content):
     new_content = ''
     for line in old_content.split('\n'):
         line: str = line
-        if line.endswith(BASH_END_FLAG) or line.replace(" ", '') == '':
+        if line.endswith(oebuild_const.BASH_END_FLAG) or line.replace(" ", '') == '':
             continue
         new_content = new_content + line + '\n'
     return new_content
@@ -208,7 +199,7 @@ def init_bashrc_content(old_content, init_command: list):
     new_content = restore_bashrc_content(old_content=old_content)
 
     for command in init_command:
-        new_content = new_content + command + BASH_END_FLAG + '\n'
+        new_content = new_content + command + oebuild_const.BASH_END_FLAG + '\n'
 
     return new_content
 
@@ -218,7 +209,7 @@ def add_bashrc(content: str, line: str):
     '''
     if not content.endswith('\n'):
         content = content + '\n'
-    content = content + line + BASH_END_FLAG + '\n'
+    content = content + line + oebuild_const.BASH_END_FLAG + '\n'
 
     return content
 

@@ -15,9 +15,9 @@ import re
 import sys
 
 from oebuild.parse_compile import ParseCompile
-from oebuild.parse_template import BUILD_IN_DOCKER, BUILD_IN_HOST
 import oebuild.util as oebuild_util
 from oebuild.m_log import logger
+import oebuild.const as oebuild_const
 
 class BaseLocalConf(ValueError):
     '''
@@ -32,16 +32,7 @@ class NativesdkNotValid(BaseLocalConf):
     nativesdk directory not valid
     '''
 
-NATIVESDK_DIR_NAME = "OPENEULER_NATIVESDK_SYSROOT"
-OPENEULER_SP_DIR = "OPENEULER_SP_DIR"
-SSTATE_MIRRORS = "SSTATE_MIRRORS"
-SSTATE_DIR = "SSTATE_DIR"
-TMP_DIR = "TMPDIR"
-
-NATIVE_GCC_DIR = '/usr1/openeuler/native_gcc'
-SSTATE_CACHE = '/usr1/openeuler/sstate-cache'
-
-def get_nativesdk_sysroot(nativesdk_dir = oebuild_util.NATIVESDK_DIR):
+def get_nativesdk_sysroot(nativesdk_dir = oebuild_const.NATIVESDK_DIR):
     '''
     return environment initialization shell, if nativesdk directory is not exists
     or can not find any initialization shell, raise error
@@ -132,8 +123,8 @@ class LocalConf:
 
         # replace toolchain
         if parse_compile.toolchain_dir is not None:
-            if parse_compile.build_in == BUILD_IN_DOCKER:
-                replace_toolchain_str = f'{parse_compile.toolchain_type} = "{NATIVE_GCC_DIR}"'
+            if parse_compile.build_in == oebuild_const.BUILD_IN_DOCKER:
+                replace_toolchain_str = f'{parse_compile.toolchain_type} = "{oebuild_const.NATIVE_GCC_DIR}"'
             else:
                 replace_toolchain_str = f'{parse_compile.toolchain_type} = "{parse_compile.toolchain_dir}"'
             content = match_and_replace(
@@ -143,21 +134,21 @@ class LocalConf:
             )
 
         # replace nativesdk OPENEULER_SP_DIR
-        if parse_compile.build_in == BUILD_IN_HOST:
+        if parse_compile.build_in == oebuild_const.BUILD_IN_HOST:
             self.check_nativesdk_valid(parse_compile.nativesdk_dir)
             if parse_compile.nativesdk_dir is None:
                 raise ValueError("please set nativesdk dir")
             nativesdk_sysroot = get_nativesdk_sysroot(parse_compile.nativesdk_dir)
             nativesdk_sys_dir = os.path.join(parse_compile.nativesdk_dir, nativesdk_sysroot)
             content = match_and_replace(
-                pre=NATIVESDK_DIR_NAME,
-                new_str=f'{NATIVESDK_DIR_NAME} = "{nativesdk_sys_dir}"',
+                pre=oebuild_const.NATIVESDK_DIR_NAME,
+                new_str=f'{oebuild_const.NATIVESDK_DIR_NAME} = "{nativesdk_sys_dir}"',
                 content=content
             )
 
             content = match_and_replace(
-                pre=OPENEULER_SP_DIR,
-                new_str= f"{OPENEULER_SP_DIR} = '{src_dir}'",
+                pre=oebuild_const.OPENEULER_SP_DIR,
+                new_str= f"{oebuild_const.OPENEULER_SP_DIR} = '{src_dir}'",
                 content=content
             )
 
@@ -166,29 +157,29 @@ class LocalConf:
             if os.path.islink(parse_compile.sstate_cache):
                 new_str= f"file://.* {parse_compile.sstate_cache}/PATH;downloadfilename=PATH"
             else:
-                if parse_compile.build_in == BUILD_IN_DOCKER:
-                    new_str= f"file://.* file://{SSTATE_CACHE}/PATH"
+                if parse_compile.build_in == oebuild_const.BUILD_IN_DOCKER:
+                    new_str= f"file://.* file://{oebuild_const.SSTATE_CACHE}/PATH"
                 else:
                     new_str= f"file://.* file://{parse_compile.sstate_cache}/PATH"
             content = match_and_replace(
-                    pre=SSTATE_MIRRORS,
-                    new_str = f'{SSTATE_MIRRORS} = "{new_str}"',
+                    pre=oebuild_const.SSTATE_MIRRORS,
+                    new_str = f'{oebuild_const.SSTATE_MIRRORS} = "{new_str}"',
                     content=content
                 )
 
         # replace sstate_dir
         if parse_compile.sstate_dir is not None:
             content = match_and_replace(
-                    pre=SSTATE_DIR,
-                    new_str = f'{SSTATE_DIR} = "{parse_compile.sstate_dir}"',
+                    pre=oebuild_const.SSTATE_DIR,
+                    new_str = f'{oebuild_const.SSTATE_DIR} = "{parse_compile.sstate_dir}"',
                     content=content
                 )
 
         # replace tmpdir
         if parse_compile.tmp_dir is not None:
             content = match_and_replace(
-                    pre=TMP_DIR,
-                    new_str = f'{TMP_DIR} = "{parse_compile.tmp_dir}"',
+                    pre=oebuild_const.TMP_DIR,
+                    new_str = f'{oebuild_const.TMP_DIR} = "{parse_compile.tmp_dir}"',
                     content=content
                 )
 
