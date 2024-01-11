@@ -56,6 +56,8 @@ class Compile(PlatformTemplate):
 
     tmp_dir: Optional[str]
 
+    docker_image: Optional[str]
+
     docker_param: Optional[DockerParam]
 
 class BaseParseCompileError(ValueError):
@@ -117,6 +119,7 @@ class ParseCompile:
             repos=None if "repos" not in data else ParseTemplate.parse_oebuild_repo(data['repos']),
             local_conf=None if "local_conf" not in data else data['local_conf'],
             layers=None if "layers" not in data else data['layers'],
+            docker_image=None if "docker_image" not in data else data['docker_image'],
             docker_param=docker_param)
 
     @property
@@ -209,6 +212,13 @@ class ParseCompile:
         return attr of repos
         '''
         return self.compile.repos
+
+    @property
+    def docker_image(self):
+        '''
+        return attr of repos, it will be abandoned in new version
+        '''
+        return self.compile.docker_image
 
     @property
     def docker_param(self):

@@ -48,16 +48,51 @@ class InContainer(BaseBuild):
         execute bitbake command
         '''
         logger.info("Bitbake starting ...")
+
+        docker_param:DockerParam = None
+        if parse_compile.docker_param is not None:
+            docker_param = parse_compile.docker_param
+        else:
+            docker_param = self._trans_docker_param(
+                docker_image=parse_compile.docker_image,
+                toolchain_dir=parse_compile.toolchain_dir,
+                sstate_cache=parse_compile.sstate_cache)
+
         # check docker image if exists
         docker_proxy = DockerProxy()
-        if not docker_proxy.is_image_exists(parse_compile.docker_param.image):
+        if not docker_proxy.is_image_exists(docker_param.image):
             logger.error('''The docker image does not exists, please run fellow command:
     `oebuild update docker`''')
             return
 
-        self.deal_env_container(env=parse_env,docker_param=parse_compile.docker_param)
-
+        self.deal_env_container(env=parse_env,docker_param=docker_param)
         self.exec_compile(parse_compile=parse_compile, command=command)
+
+    def _trans_docker_param(self,
+                            docker_image: str,
+                            toolchain_dir: str = None,
+                            sstate_cache: str = None) -> DockerParam:
+        '''
+        this function is to adapt the old compile.yaml
+        '''
+        parameters = ['-itd']
+        volumns = []
+        volumns.append("/dev/net/tun:/dev/net/tun")
+        volumns.append(self.configure.source_dir() + ':' + oebuild_const.CONTAINER_SRC)
+        volumns.append(os.getcwd() + ':' +
+            os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(os.getcwd())))
+        if toolchain_dir is not None:
+            volumns.append(toolchain_dir + ":" + oebuild_const.NATIVE_GCC_DIR)
+        if sstate_cache is not None:
+            volumns.append(sstate_cache + ":" + oebuild_const.SSTATE_CACHE)
+
+        docker_param = DockerParam(
+            image=docker_image,
+            parameters=parameters,
+            volumns=volumns,
+            command="bash"
+        )
+        return docker_param
 
     def deal_env_container(self, env: ParseEnv, docker_param: DockerParam):
         '''
