@@ -51,7 +51,7 @@ def get_nativesdk_sysroot(nativesdk_dir = oebuild_const.NATIVESDK_DIR):
         if ret is not None:
             abs_path = os.path.join(sysroot_dir, item)
             if os.path.isdir(abs_path):
-                return item
+                return os.path.join("sysroot", item)
     logger.error("can not find any sysroot directory")
     sys.exit(1)
 
