@@ -18,6 +18,7 @@ import getpass
 import colorama
 
 import oebuild.util as oebuild_util
+from oebuild.auto_completion import AutoCompletion
 from oebuild.version import __version__
 from oebuild.spec import get_spec,_ExtCommand
 from oebuild.command import OebuildCommand
@@ -42,7 +43,7 @@ class OebuildApp:
             self.append_plugins_dir = pathlib.Path(self.oebuild_plugins_path, 'append_plugins.yaml')
             self.command_ext = self.get_command_ext(oebuild_util.read_yaml(plugins_dir)['plugins'])
             if os.path.exists(self.append_plugins_dir) \
-                and oebuild_util.read_yaml(self.append_plugins_dir):
+                    and oebuild_util.read_yaml(self.append_plugins_dir):
                 self.command_ext = self.get_command_ext(
                     oebuild_util.read_yaml(self.append_plugins_dir)['plugins'],
                     self.command_ext)
@@ -194,6 +195,7 @@ def main(argv=None):
         return
 
     colorama.init()
+    AutoCompletion().run()
     app = OebuildApp()
     app.run(argv or sys.argv[1:])
 
