@@ -107,7 +107,6 @@ class ParseCompile:
 
         self.compile = Compile(
             build_in=oebuild_const.BUILD_IN_DOCKER if 'build_in' not in data else data['build_in'],
-            platform=data['platform'],
             machine=data['machine'],
             toolchain_type=data['toolchain_type'],
             toolchain_dir=None if 'toolchain_dir' not in data else data['toolchain_dir'],
@@ -128,13 +127,6 @@ class ParseCompile:
         return attr of buildin
         '''
         return self.compile.build_in
-
-    @property
-    def platform(self):
-        '''
-        return attr of platform
-        '''
-        return self.compile.platform
 
     @property
     def machine(self):
@@ -257,7 +249,6 @@ class ParseCompile:
         '''
 
         keys = {
-            "platform": "the key platform is None",
             "machine": "the key machine is None",
             "toolchain_type": "the key toolchain_type is None"
             }

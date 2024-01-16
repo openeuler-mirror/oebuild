@@ -55,8 +55,6 @@ class PlatformTemplate(Template):
     '''
     the object will be parsed by platform config
     '''
-    platform: LiteralScalarString
-
     machine: LiteralScalarString
 
     toolchain_type: LiteralScalarString
@@ -127,9 +125,9 @@ class ParseTemplate:
 
             config_type = data['type']
             config_name = os.path.basename(config_dir)
+            platform = os.path.splitext(config_name)[0].strip("\n")
             if config_type == oebuild_const.PLATFORM:
                 self.platform_template = PlatformTemplate(
-                    platform=LiteralScalarString(os.path.splitext(config_name)[0]),
                     machine=data['machine'],
                     toolchain_type=data['toolchain_type'],
                     repos=repo_dict,
@@ -143,8 +141,8 @@ class ParseTemplate:
             support_arch = []
             if 'support' in data:
                 support_arch = data['support'].split('|')
-                if self.platform_template.platform not in support_arch:
-                    raise FeatureNotSupport(f'your arch is {self.platform_template.platform}, \
+                if platform not in support_arch:
+                    raise FeatureNotSupport(f'your arch is {platform}, \
                                             the feature is not supported, please check your \
                                             application support archs')
 
@@ -237,7 +235,6 @@ class ParseTemplate:
 
         compile_conf = {}
         compile_conf['build_in'] = build_in
-        compile_conf['platform'] = self.platform_template.platform
         compile_conf['machine'] = self.platform_template.machine
         compile_conf['toolchain_type'] = self.platform_template.toolchain_type
 

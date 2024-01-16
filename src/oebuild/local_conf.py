@@ -114,13 +114,6 @@ class LocalConf:
             new_str=f'MACHINE = "{parse_compile.machine}"',
             content=content)
 
-        # replace platform
-        content = match_and_replace(
-            pre="OPENEULER_PLATFORM ",
-            new_str=f'OPENEULER_PLATFORM = "{parse_compile.platform}"',
-            content=content
-        )
-
         # replace toolchain
         if parse_compile.toolchain_dir is not None:
             if parse_compile.build_in == oebuild_const.BUILD_IN_DOCKER:
