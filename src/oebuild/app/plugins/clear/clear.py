@@ -92,7 +92,9 @@ class Clear(OebuildCommand):
                 DockerProxy().stop_container(container=container)
                 DockerProxy().delete_container(container=container)
                 logger.info("Delete container: %s successful",container.short_id)
-            except:
+            except DockerException:
+                continue
+            except KeyError:
                 continue
 
         # get all container which name start with oebuild and delete it,

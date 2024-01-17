@@ -207,7 +207,11 @@ class DockerProxy:
 
         return res
 
-    def create_container(self, image:str, parameters:str, volumes:list[str], command:str) -> Container:
+    def create_container(self,
+                         image:str,
+                         parameters:str,
+                         volumes:list[str],
+                         command:str) -> Container:
         '''
         create a new container
         '''

@@ -41,9 +41,11 @@ class OebuildApp:
             self.oebuild_plugins_path = os.path.expanduser('~') + '/.local/oebuild_plugins/'
             self.append_plugins_dir = pathlib.Path(self.oebuild_plugins_path, 'append_plugins.yaml')
             self.command_ext = self.get_command_ext(oebuild_util.read_yaml(plugins_dir)['plugins'])
-            if os.path.exists(self.append_plugins_dir) and oebuild_util.read_yaml(self.append_plugins_dir):
-                self.command_ext = self.get_command_ext(oebuild_util.read_yaml(self.append_plugins_dir)['plugins'],
-                                                        self.command_ext)
+            if os.path.exists(self.append_plugins_dir) \
+                and oebuild_util.read_yaml(self.append_plugins_dir):
+                self.command_ext = self.get_command_ext(
+                    oebuild_util.read_yaml(self.append_plugins_dir)['plugins'],
+                    self.command_ext)
             self.command_spec = {}
         except Exception as e_p:
             raise e_p

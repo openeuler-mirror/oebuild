@@ -34,15 +34,6 @@ class InContainer(BaseBuild):
         self.client = DockerProxy()
         self.container_id = None
 
-    def __del__(self):
-        if self.container_id is None:
-            return
-        # try:
-        #     container = self.client.get_container(self.container_id)
-        #     self.client.stop_container(container=container)
-        # except Exception as e_p:
-        #     raise e_p
-
     def exec(self, parse_env: ParseEnv, parse_compile: ParseCompile, command):
         '''
         execute bitbake command
@@ -172,7 +163,7 @@ class InContainer(BaseBuild):
         else:
             content = self._get_bashrc_content(container=container)
             for b_s in oebuild_const.BASH_BANNER.split('\n'):
-                b_s = f"echo {b_s}{oebuild_const.BASH_END_FLAG}"
+                b_s = f"echo {b_s}"
                 content = self._add_bashrc(content=content, line=b_s)
             self.update_bashrc(container=container, content=content)
             os.system(
@@ -266,10 +257,21 @@ class InContainer(BaseBuild):
             self._install_software(container=container, software="sudo")
 
     def _replace_yum_mirror(self, container: Container):
+        """
+        replace the yum mirror in container
+
+        Args:
+            container (Container): 目标容器
+
+        Returns:
+            None
+        """
         self.client.container_exec_command(
             container=container,
             user='root',
-            command=r"sed -i 's/repo.openeuler.org/mirrors.huaweicloud.com\/openeuler/g' /etc/yum.repos.d/openEuler.repo",
+            command=r"""
+            sed -i 's/repo.openeuler.org/mirrors.huaweicloud.com\/openeuler/g' /etc/yum.repos.d/openEuler.repo
+            """,
             work_space=f"/home/{oebuild_const.CONTAINER_USER}",
             stream=False
         )
@@ -302,8 +304,13 @@ class InContainer(BaseBuild):
             command = f'export {key}={value}; git config --global {key_git} {value};'
             init_proxy_command = f'{init_proxy_command} {command}'
 
-        init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
-        set_template = f'export TEMPLATECONF="{oebuild_const.CONTAINER_SRC}/yocto-meta-openeuler/.oebuild"'
+        # get nativesdk environment path automatic for next step
+        sdk_env_path = oebuild_util.get_nativesdk_environment(container=container)
+        init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{sdk_env_path}'
+        # get template dir for initialize yocto build environment
+        template_dir = f"{oebuild_const.CONTAINER_SRC}/yocto-meta-openeuler/.oebuild"
+        set_template = f'export TEMPLATECONF="{template_dir}"'
+
         init_oe_comand = f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
             {oebuild_const.CONTAINER_BUILD}/{build_dir_name}'
         init_command = [init_proxy_command, init_sdk_command, set_template, init_oe_comand]
@@ -323,7 +330,9 @@ class InContainer(BaseBuild):
             source_path=tmp_file,
             to_path=f'/home/{oebuild_const.CONTAINER_USER}')
         container.exec_run(
-            cmd=f"mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINER_USER}/.bashrc",
+            cmd=f'''
+            mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINER_USER}/.bashrc
+            ''',
             user="root"
         )
         os.remove(tmp_file)

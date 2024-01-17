@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details.
 
 # used for util.py
 CONFIG_YAML = 'config.yaml'
+PLUGINS_YAML = 'plugins.yaml'
 UPGRADE_YAML = 'upgrade.yaml'
 COMPILE_YAML = 'compile.yaml.sample'
 BASH_END_FLAG = "  ###!!!###"

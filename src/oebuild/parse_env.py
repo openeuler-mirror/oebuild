@@ -13,8 +13,10 @@ See the Mulan PSL v2 for more details.
 from typing import Optional
 from dataclasses import dataclass
 import pathlib
+import sys
 
 import oebuild.util as oebuild_util
+from oebuild.m_log import logger
 
 @dataclass
 class EnvContainer:
@@ -57,9 +59,13 @@ class ParseEnv:
 
         if "container" in data:
             env_container = data['container']
-            self.env.container =  EnvContainer(
-                short_id=env_container['short_id']
-            )
+            try:
+                self.env.container =  EnvContainer(
+                    short_id=env_container['short_id']
+                )
+            except KeyError:
+                logger.error(".env parse error, please check it")
+                sys.exit(-1)
 
     def set_env_container(self, env_container: EnvContainer):
         '''

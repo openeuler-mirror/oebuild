@@ -325,7 +325,9 @@ oebuild bitbake
             except BaseParseTemplate as e_p:
                 raise e_p
         else:
-            raise ValueError("wrong platform, please run `oebuild generate -l` to view support platform")
+            logger.error("""
+wrong platform, please run `oebuild generate -l` to view support platform""")
+            sys.exit(-1)
 
     def _add_features_template(self, args, yocto_oebuild_dir, parser_template: ParseTemplate):
         if args.features:
@@ -338,7 +340,9 @@ oebuild bitbake
                     except BaseParseTemplate as b_t:
                         raise b_t
                 else:
-                    raise ValueError("wrong platform, please run `oebuild generate -l` to view support feature")
+                    logger.error("""
+wrong platform, please run `oebuild generate -l` to view support feature""")
+                    sys.exit(-1)
 
     def _init_build_dir(self, args):
         if not os.path.exists(self.configure.build_dir()):

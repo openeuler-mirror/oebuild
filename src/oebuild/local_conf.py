@@ -117,9 +117,11 @@ class LocalConf:
         # replace toolchain
         if parse_compile.toolchain_dir is not None:
             if parse_compile.build_in == oebuild_const.BUILD_IN_DOCKER:
-                replace_toolchain_str = f'{parse_compile.toolchain_type} = "{oebuild_const.NATIVE_GCC_DIR}"'
+                replace_toolchain_str = f'''
+{parse_compile.toolchain_type} = "{oebuild_const.NATIVE_GCC_DIR}"'''
             else:
-                replace_toolchain_str = f'{parse_compile.toolchain_type} = "{parse_compile.toolchain_dir}"'
+                replace_toolchain_str = f'''
+{parse_compile.toolchain_type} = "{parse_compile.toolchain_dir}"'''
             content = match_and_replace(
                 pre=parse_compile.toolchain_type,
                 new_str=replace_toolchain_str,

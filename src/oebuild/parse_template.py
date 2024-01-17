@@ -142,9 +142,9 @@ class ParseTemplate:
             if 'support' in data:
                 support_arch = data['support'].split('|')
                 if platform not in support_arch:
-                    raise FeatureNotSupport(f'your arch is {platform}, \
-                                            the feature is not supported, please check your \
-                                            application support archs')
+                    raise FeatureNotSupport(f'''
+your arch is {platform}, the feature is not supported, please check your application support archs
+''')
 
             self.feature_template.append(FeatureTemplate(
                 feature_name=LiteralScalarString(os.path.splitext(config_name)[0]),

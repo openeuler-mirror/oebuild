@@ -25,10 +25,10 @@ plugins:
   path: plugins/m_env/m_env.py
 - name: deploy-target
   class: DeployTarget
-  path: plugins/deploy/deploy-target.py
+  path: plugins/deploy/deploy_target.py
 - name: undeploy-target
   class: UnDeployTarget
-  path: plugins/deploy/deploy-target.py
+  path: plugins/deploy/deploy_target.py
 - name: mplugin
   class: MPlugin
   path: plugins/m_plugin/m_plugin.py

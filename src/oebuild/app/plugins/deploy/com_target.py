@@ -31,6 +31,10 @@ TARGET_DIR_NAME = "target_dev"
 TARGET_SCRIPT_NAME = "oebuild_dev"
 
 class ComTarget:
+    '''
+    The class is used to deploy-target and undeploy-target, this is a main body, the deploy-target
+    and undeploy-target is just a interface and finally go into ComTarget
+    '''
     def __init__(self) -> None:
         self.configure = Configure()
         self.client:DockerProxy = None
@@ -52,7 +56,10 @@ the container {self.container_id} failed to be destroyed, please run
 """)
 
     def exec(self, str_args: str, fun):
-
+        '''
+        the exec as a common function that will be invoked by deploy-target and undeploy-target,
+        it means this is a entry runner.
+        '''
         self.client = DockerProxy()
 
         if not self._check_compile_directory():
@@ -64,12 +71,15 @@ the container {self.container_id} failed to be destroyed, please run
             sys.exit(-1)
 
         if not self._check_yocto_poky():
-            logger.error('''Please make sure that yocto-poky source code in src directory, or you can run:
+            logger.error('''
+        Please make sure that yocto-poky source code be in src directory, or you can run:
         oebuild update layer''')
             sys.exit(-1)
 
         if not self._check_conf_directory():
-            logger.error("You must work in a exist build directory, that mean you built before or initialize environment at least")
+            logger.error('''
+        You must work in a exist build directory, that mean you built before or initialize environment at least
+        ''')
             sys.exit(-1)
 
         logger.info("Initializing environment, please wait ...")
@@ -79,11 +89,21 @@ the container {self.container_id} failed to be destroyed, please run
         self.bak_bash(container=container)
         self.init_bash(container=container)
         content = self._get_bashrc_content(container=container)
-        content = oebuild_util.add_bashrc(content=content, line=f"export PATH=$PATH:/home/openeuler/{TARGET_DIR_NAME}")
-        content = oebuild_util.add_bashrc(content=content, line=f"mv -f /home/{oebuild_const.CONTAINER_USER}/{self.old_bashrc} /home/{oebuild_const.CONTAINER_USER}/.bashrc")
-        content = oebuild_util.add_bashrc(content=content, line=f"{TARGET_SCRIPT_NAME} {fun} {str_args}")
+        content = oebuild_util.add_bashrc(
+            content=content,
+            line=f"export PATH=$PATH:/home/openeuler/{TARGET_DIR_NAME}")
+        content = oebuild_util.add_bashrc(
+            content=content,
+            line=f"""
+            mv -f /home/{oebuild_const.CONTAINER_USER}/{self.old_bashrc} /home/{oebuild_const.CONTAINER_USER}/.bashrc
+            """)
+        content = oebuild_util.add_bashrc(
+            content=content,
+            line=f"{TARGET_SCRIPT_NAME} {fun} {str_args}")
         print(f"{TARGET_SCRIPT_NAME} {str_args}")
-        content = oebuild_util.add_bashrc(content=content, line=f"rm -rf /home/openeuler/{TARGET_DIR_NAME} && exit")
+        content = oebuild_util.add_bashrc(
+            content=content,
+            line=f"rm -rf /home/openeuler/{TARGET_DIR_NAME} && exit")
         self.update_bashrc(container=container, content=content)
         os.system(f"docker exec -it -u {oebuild_const.CONTAINER_USER} {container.short_id}  bash")
 
@@ -116,7 +136,7 @@ the container {self.container_id} failed to be destroyed, please run
         on compile.yaml, which is initialized by parsing the file
         '''
         return os.path.exists(os.path.join(self.work_dir, 'compile.yaml'))
-    
+
     def _check_yocto_poky(self,):
         '''
         package deploy need poky lib, so we have a detect about yocto-poky
@@ -129,7 +149,10 @@ the container {self.container_id} failed to be destroyed, please run
         # copy package lib to docker
         curr_path = os.path.dirname(os.path.realpath(__file__))
         lib_path = os.path.join(curr_path, TARGET_DIR_NAME)
-        self.client.copy_to_container(container=container, source_path=lib_path, to_path="/home/openeuler/")
+        self.client.copy_to_container(
+            container=container,
+            source_path=lib_path,
+            to_path="/home/openeuler/")
         container.exec_run(f"chmod 755 /home/openeuler/{TARGET_DIR_NAME}/{TARGET_SCRIPT_NAME}")
 
     def deal_env_container(self,docker_image:str):
@@ -163,17 +186,20 @@ the container {self.container_id} failed to be destroyed, please run
 
     def bak_bash(self, container: Container):
         '''
-        xxx
+        before we alter .bashrc we should make a copy or named bak to another where, thus when we
+        finished some thing we can restore it.
         '''
         old_bash = oebuild_util.generate_random_str(6)
         self.client.container_exec_command(
             container=container,
-            command=f"cp /home/{oebuild_const.CONTAINER_USER}/.bashrc /home/{oebuild_const.CONTAINER_USER}/{old_bash}",
+            command=f"""
+            cp /home/{oebuild_const.CONTAINER_USER}/.bashrc /home/{oebuild_const.CONTAINER_USER}/{old_bash}
+            """,
             user="root",
             work_space=None,
             stream=False)
         self.old_bashrc = old_bash
-    
+
     def init_bash(self, container: Container):
         '''
         Bitbake will initialize the compilation environment by reading
@@ -183,7 +209,9 @@ the container {self.container_id} failed to be destroyed, please run
         self._check_change_ugid(container=container)
         # read container default user .bashrc content
         content = self._get_bashrc_content(container=container)
-        init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
+        # get nativesdk environment path automatic for next step
+        sdk_env_path = oebuild_util.get_nativesdk_environment(container=container)
+        init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{sdk_env_path}'
         build_dir_name = os.path.basename(self.work_dir)
         init_oe_command = f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
             {oebuild_const.CONTAINER_BUILD}/{build_dir_name}'
@@ -200,7 +228,7 @@ the container {self.container_id} failed to be destroyed, please run
             stream=False).output
 
         return content.decode()
-    
+
     def update_bashrc(self, container: Container, content: str):
         '''
         update user initialization script by replace file, first create
@@ -213,7 +241,9 @@ the container {self.container_id} failed to be destroyed, please run
             source_path=tmp_file,
             to_path=f'/home/{oebuild_const.CONTAINER_USER}')
         container.exec_run(
-            cmd=f"mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINER_USER}/.bashrc",
+            cmd=f"""
+            mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINER_USER}/.bashrc
+            """,
             user="root"
         )
         os.remove(tmp_file)
@@ -236,7 +266,7 @@ the container {self.container_id} failed to be destroyed, please run
         old_content = self._get_bashrc_content(container=container)
         self.update_bashrc(container=container,
                            content=self._restore_bashrc_content(old_content=old_content))
-    
+
     def _restore_bashrc_content(self, old_content):
         new_content = ''
         for line in old_content.split('\n'):

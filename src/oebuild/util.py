@@ -55,7 +55,8 @@ def get_nativesdk_environment(nativesdk_dir=oebuild_const.NATIVESDK_DIR,
         list_items = res.output.decode("utf-8").split("\n")
         for item in list_items:
             item:str = item
-            # notice: the item is like format with "drwxr-xr-x 3 openeuler openeuler 4096 Nov  8 08:10 ."
+            # notice: the item is like format with
+            # "drwxr-xr-x 3 openeuler openeuler 4096 Nov  8 08:10 ."
             # so we must get the last clip from split with space
             item_split = item.split(" ")
             if len(item_split) <= 0:
@@ -123,6 +124,12 @@ def get_config_yaml_dir():
     return config yaml dir
     '''
     return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.CONFIG_YAML)
+
+def get_plugins_yaml_path():
+    '''
+    return plugin yaml path
+    '''
+    return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.PLUGINS_YAML)
 
 def get_compile_yaml_dir():
     '''

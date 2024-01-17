@@ -96,18 +96,27 @@ the container {self.container_id} failed to be destroyed, please run
         self.bak_bash(container=container)
         self.init_bash(container=container)
         content = self._get_bashrc_content(container=container)
-        qemu_helper_usr = oebuild_const.CONTAINER_BUILD+"/tmp/work/x86_64-linux/qemu-helper-native/1.0-r1/recipe-sysroot-native/usr"
-        qemu_helper_dir = oebuild_const.CONTAINER_BUILD+"/tmp/work/x86_64-linux/qemu-helper-native"
-        STAGING_BINDIR_NATIVE = f"""
+        qemu_helper_usr = os.path.join(
+            oebuild_const.CONTAINER_BUILD,
+            "/tmp/work/x86_64-linux/qemu-helper-native/1.0-r1/recipe-sysroot-native/usr"
+        )
+        qemu_helper_dir = os.path.join(
+            oebuild_const.CONTAINER_BUILD,
+            "/tmp/work/x86_64-linux/qemu-helper-native"
+        )
+        staging_bindir_native = f"""
 if [ ! -d {qemu_helper_usr} ];then
     mkdir -p {qemu_helper_usr}
     chown -R {oebuild_const.CONTAINER_USER}:{oebuild_const.CONTAINER_USER} {qemu_helper_dir}
     ln -s /opt/buildtools/nativesdk/sysroots/x86_64-pokysdk-linux/usr/bin {qemu_helper_usr}
 fi
 """
-        content = oebuild_util.add_bashrc(content=content, line=STAGING_BINDIR_NATIVE)
-        content = oebuild_util.add_bashrc(content=content, line=f"mv -f /root/{self.old_bashrc} /root/.bashrc")
-        content = oebuild_util.add_bashrc(content=content, line=f"""runqemu {params} && exit""")
+        content = oebuild_util.add_bashrc(
+            content=content, line=staging_bindir_native)
+        content = oebuild_util.add_bashrc(
+            content=content, line=f"mv -f /root/{self.old_bashrc} /root/.bashrc")
+        content = oebuild_util.add_bashrc(
+            content=content, line=f"""runqemu {params} && exit""")
         self.update_bashrc(container=container, content=content)
         os.system(f"docker exec -it -u root {container.short_id}  bash")
 
@@ -190,9 +199,11 @@ now, you can continue run `oebuild runqemu` in compile directory
         '''
         # read container default user .bashrc content
         content = self._get_bashrc_content(container=container)
-
-        init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{oebuild_util.get_nativesdk_environment(container=container)}'
-        init_oe_command = f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env {oebuild_const.CONTAINER_BUILD}'
+        # get nativesdk environment path automatic for next step
+        sdk_env_path = oebuild_util.get_nativesdk_environment(container=container)
+        init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{sdk_env_path}'
+        init_oe_command = f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
+            {oebuild_const.CONTAINER_BUILD}'
         init_command = [init_sdk_command, init_oe_command]
         new_content = oebuild_util.init_bashrc_content(content, init_command)
         self.update_bashrc(container=container, content=new_content)

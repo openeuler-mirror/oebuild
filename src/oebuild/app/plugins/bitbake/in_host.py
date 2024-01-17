@@ -109,13 +109,20 @@ initialization operations''')
             pty.spawn("bash")
 
     def _mk_build_sh(self, nativesdk_dir, build_dir):
-        init_sdk_command = f'. {nativesdk_dir}/{oebuild_util.get_nativesdk_environment(nativesdk_dir)}'
-        set_template = f'export TEMPLATECONF="{self.configure.source_dir()}/yocto-meta-openeuler/.oebuild"'
-        init_oe_command = f'. {self.configure.source_dir()}/yocto-poky/oe-init-build-env {build_dir}'
+        # get nativesdk environment path automatic for next step
+        sdk_env_path = oebuild_util.get_nativesdk_environment(nativesdk_dir)
+        init_sdk_command = f'. {nativesdk_dir}/{sdk_env_path}'
+        # get template dir for initialize yocto build environment
+        template_dir = f"{self.configure.source_dir()}/yocto-meta-openeuler/.oebuild"
+        set_template = f'export TEMPLATECONF="{template_dir}"'
+        init_oe_command = f'. {self.configure.source_dir()}/yocto-poky/oe-init-build-env \
+            {build_dir}'
         ps1_command = 'PS1="\\u\\h:\\W> "'
 
-        self._append_build_sh(str_list= [init_sdk_command, set_template, init_oe_command, ps1_command],
-                              build_dir=build_dir)
+        self._append_build_sh(
+            str_list= [init_sdk_command, set_template, init_oe_command, ps1_command],
+            build_dir=build_dir
+        )
 
     def _init_build_sh(self, build_dir):
         build_sh_dir = os.path.join(build_dir, 'build.sh')

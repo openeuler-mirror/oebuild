@@ -112,6 +112,6 @@ class CustomRemote(git.RemoteProgress):
         rewrote update function
         '''
         end_str = "\r"
-        if op_code & 2 == 2:
+        if op_code & 2 == RemoteProgress.END:
             end_str = "\r\n"
         print(self._cur_line, end=end_str)
