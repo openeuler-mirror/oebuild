@@ -192,7 +192,6 @@ oebuild generate [-p platform] [-f features] [-t toolchain_dir] [-d build_direct
 
 -n: external nativesdk parameter, full name, an optional parameter for  generating configuration files, without a default value, which means  that if we do not need the nativesdk provided by the system and choose  the nativesdk we specify `nativesdk_dir` , we can select this parameter.
 
--s：sstate_mirrors值，全称`sstate_cache`，生成配置文件可选的一个参数，没有默认值，该值表示如果我们想要将主机端的sstate-cache应用于构建，则可以使用该参数指定。
 -s: sstate_mirrors value, full name `sstate_cache` , an optional parameter for the build configuration file, without a  default value, which means that if we want to apply the host-side  sstate-cache to the build, we can use that parameter to specify.
 
 -s_dir: the address of the generated sstate-cache, the full name `sstate_dir` , an optional parameter of the generation configuration file, there is  no default value, this value can specify where the sstate-cache is  stored at the time of construction
