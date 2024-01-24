@@ -35,7 +35,7 @@ setuptools.setup(
     description='',
     long_description=long_description,
     # http://docutils.sourceforge.net/FAQ.html#what-s-the-official-mime-type-for-restructuredtext-data
-    long_description_content_type="text/x-rst",
+    long_description_content_type="text/markdown",
     url='',
     packages=setuptools.find_packages(where='src'),
     package_dir={'': 'src'},
