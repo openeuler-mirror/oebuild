@@ -9,7 +9,8 @@ EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 '''
-
+import logging
+import sys
 from dataclasses import dataclass
 from typing import Dict, Optional
 import pathlib
@@ -102,6 +103,7 @@ class ParseTemplate:
         self.build_in = None
         self.platform_template = None
         self.feature_template = []
+        self.platform = None
 
     def add_template(self, config_dir):
         '''
@@ -125,8 +127,13 @@ class ParseTemplate:
 
             config_type = data['type']
             config_name = os.path.basename(config_dir)
-            platform = os.path.splitext(config_name)[0].strip("\n")
+
             if config_type == oebuild_const.PLATFORM:
+                if self.platform is None:
+                    self.platform = os.path.splitext(config_name)[0].strip("\n")
+                else:
+                    logging.error("Only one platform is allowed")
+                    sys.exit(-1)
                 self.platform_template = PlatformTemplate(
                     machine=data['machine'],
                     toolchain_type=data['toolchain_type'],
@@ -138,12 +145,16 @@ class ParseTemplate:
             if self.platform_template is None:
                 raise PlatformNotAdd('please add platform template first')
 
+            if self.platform is None:
+                logging.error("Platform not specified")
+                sys.exit(-1)
+
             support_arch = []
             if 'support' in data:
                 support_arch = data['support'].split('|')
-                if platform not in support_arch:
+                if self.platform not in support_arch:
                     raise FeatureNotSupport(f'''
-your arch is {platform}, the feature is not supported, please check your application support archs
+your arch is {self.platform}, the feature is not supported, please check your application support archs
 ''')
 
             self.feature_template.append(FeatureTemplate(
