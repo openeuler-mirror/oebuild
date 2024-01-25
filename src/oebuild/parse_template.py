@@ -265,7 +265,7 @@ your arch is {self.platform}, the feature is not supported, please check your ap
         if build_in == oebuild_const.BUILD_IN_HOST:
             return compile_conf
 
-        parameters = ['-itd']
+        parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS
         volumns = []
         volumns.append("/dev/net/tun:/dev/net/tun")
         volumns.append(src_dir + ':' + oebuild_const.CONTAINER_SRC)

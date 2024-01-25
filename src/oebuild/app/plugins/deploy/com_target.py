@@ -172,7 +172,7 @@ the container {self.container_id} failed to be destroyed, please run
             + ':' +
             os.path.join(oebuild_const.CONTAINER_BUILD, cwd_name))
 
-        parameters = "-itd"
+        parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS
         container:Container = self.client.create_container(
         image=docker_image,
         parameters=parameters,

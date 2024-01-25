@@ -51,3 +51,5 @@ COMPILE_YAML = "compile.yaml.sample"
 PLATFORM = 'platform'
 BUILD_IN_DOCKER = "docker"
 BUILD_IN_HOST = "host"
+
+DEFAULT_CONTAINER_PARAMS = "-itd --network host"

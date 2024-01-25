@@ -30,7 +30,7 @@ class DockerParam:
     # point out the docker image
     image: str
     # point out the parameter for create container
-    parameters: list[str]
+    parameters: str
     # point out the volumns for create container
     volumns: list[str]
     # point out the command for create container
@@ -95,6 +95,8 @@ class ParseCompile:
         if "docker_param" in data and data['docker_param'] is not None:
             try:
                 dparam = data['docker_param']
+                if isinstance(dparam, list):
+                    dparam = " ".join(dparam)
                 docker_param = DockerParam(
                     image=dparam['image'],
                     parameters=dparam['parameters'],

@@ -160,7 +160,7 @@ now, you can continue run `oebuild runqemu` in compile directory
         volumns.append(self.work_dir + ':' + oebuild_const.CONTAINER_BUILD)
         volumns.append(self.configure.source_dir() + ':' + oebuild_const.CONTAINER_SRC)
 
-        parameters = "-itd --privileged"
+        parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS + " --privileged"
         container:Container = self.client.create_container(
             image=docker_image,
             parameters=parameters,

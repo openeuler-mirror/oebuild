@@ -66,7 +66,7 @@ class InContainer(BaseBuild):
         '''
         this function is to adapt the old compile.yaml
         '''
-        parameters = ['-itd']
+        parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS
         volumns = []
         volumns.append("/dev/net/tun:/dev/net/tun")
         volumns.append(self.configure.source_dir() + ':' + oebuild_const.CONTAINER_SRC)
@@ -100,7 +100,7 @@ class InContainer(BaseBuild):
             # judge which container
             container:Container = self.client.create_container(
                 image = docker_param.image,
-                parameters=" ".join(docker_param.parameters),
+                parameters=docker_param.parameters,
                 volumes=docker_param.volumns,
                 command=docker_param.command)
 
