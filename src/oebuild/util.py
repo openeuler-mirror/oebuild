@@ -18,6 +18,7 @@ import getpass
 import sys
 import re
 import subprocess
+from contextlib import contextmanager
 
 from ruamel.yaml import YAML
 from docker.errors import DockerException
@@ -260,3 +261,14 @@ def get_host_proxy(proxy_name):
             host_proxy[name] = value
 
     return host_proxy
+
+
+@contextmanager
+def suppress_print():
+    try:
+        with open('/dev/null', 'w') as f:
+            original_stdout = sys.stdout
+            sys.stdout = f
+            yield
+    finally:
+        sys.stdout = original_stdout
