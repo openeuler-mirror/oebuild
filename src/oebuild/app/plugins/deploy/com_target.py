@@ -30,14 +30,16 @@ logger = logging.getLogger()
 TARGET_DIR_NAME = "target_dev"
 TARGET_SCRIPT_NAME = "oebuild_dev"
 
+
 class ComTarget:
     '''
     The class is used to deploy-target and undeploy-target, this is a main body, the deploy-target
     and undeploy-target is just a interface and finally go into ComTarget
     '''
+
     def __init__(self) -> None:
         self.configure = Configure()
-        self.client:DockerProxy = None
+        self.client: DockerProxy = None
         self.container_id = None
         self.work_dir = os.getcwd()
         self.old_bashrc = None
@@ -84,7 +86,7 @@ the container {self.container_id} failed to be destroyed, please run
 
         logger.info("Initializing environment, please wait ...")
         self.deal_env_container(oebuild_const.DEFAULT_DOCKER)
-        container:Container = self.client.get_container(self.container_id)
+        container: Container = self.client.get_container(self.container_id)
         self._make_and_copy_lib(container=container)
         self.bak_bash(container=container)
         self.init_bash(container=container)
@@ -143,7 +145,7 @@ the container {self.container_id} failed to be destroyed, please run
         '''
         return os.path.exists(self.configure.source_poky_dir())
 
-    def _make_and_copy_lib(self, container:Container):
+    def _make_and_copy_lib(self, container: Container):
         # everytime, we should make sure that script is updated, so we make a rm action before copy
         container.exec_run(f"rm -rf /home/openeuler/{TARGET_DIR_NAME}")
         # copy package lib to docker
@@ -155,7 +157,7 @@ the container {self.container_id} failed to be destroyed, please run
             to_path="/home/openeuler/")
         container.exec_run(f"chmod 755 /home/openeuler/{TARGET_DIR_NAME}/{TARGET_SCRIPT_NAME}")
 
-    def deal_env_container(self,docker_image:str):
+    def deal_env_container(self, docker_image: str):
         '''
         This operation realizes the processing of the container,
         controls how the container is processed by parsing the env
@@ -169,18 +171,18 @@ the container {self.container_id} failed to be destroyed, please run
         volumns.append("/dev/net/tun:/dev/net/tun")
         volumns.append(self.configure.source_dir() + ':' + oebuild_const.CONTAINER_SRC)
         volumns.append(os.path.join(self.configure.build_dir(), cwd_name)
-            + ':' +
-            os.path.join(oebuild_const.CONTAINER_BUILD, cwd_name))
+                       + ':' +
+                       os.path.join(oebuild_const.CONTAINER_BUILD, cwd_name))
 
         parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS
-        container:Container = self.client.create_container(
-        image=docker_image,
-        parameters=parameters,
-        volumes=volumns,
-        command="bash")
+        container: Container = self.client.create_container(
+            image=docker_image,
+            parameters=parameters,
+            volumes=volumns,
+            command="bash")
 
         self.container_id = container.short_id
-        container:Container = self.client.get_container(self.container_id) # type: ignore
+        container: Container = self.client.get_container(self.container_id)  # type: ignore
         if not self.client.is_container_running(container):
             self.client.start_container(container)
 
@@ -286,7 +288,7 @@ the container {self.container_id} failed to be destroyed, please run
         if res.exit_code != 0:
             raise ValueError("check docker user id faild")
 
-        res_cont:str = res.output.decode()
+        res_cont: str = res.output.decode()
 
         cuids = res_cont.split(' ')
         # get uid from container in default user

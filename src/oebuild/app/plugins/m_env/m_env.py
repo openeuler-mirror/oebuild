@@ -28,6 +28,7 @@ from oebuild.configure import Configure
 import oebuild.util as oebuild_util
 from oebuild.m_log import logger
 
+
 class Menv(OebuildCommand):
     '''
     the class is used to manager sdk environment, the sdk environment refers to openEuler
@@ -35,6 +36,7 @@ class Menv(OebuildCommand):
     Embedded system you built. for example, the sdk with qt image can be used to develop apps
     runned in qt system, the sdk with ros image can be used to develop apps runned in ros system
     '''
+
     def __init__(self):
         self.configure = Configure()
         self.oebuild_env_path = os.path.expanduser('~') + '/.local/oebuild_env/'

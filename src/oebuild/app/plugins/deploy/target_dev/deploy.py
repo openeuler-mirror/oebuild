@@ -22,6 +22,7 @@ logger = logging.getLogger('devtool')
 
 deploylist_path = '/.devtool'
 
+
 def _prepare_remote_script(deploy, verbose=False, dryrun=False, undeployall=False, nopreserve=False, nocheckspace=False):
     """
     Prepare a shell script for running on the target to
@@ -79,11 +80,13 @@ def _prepare_remote_script(deploy, verbose=False, dryrun=False, undeployall=Fals
             lines.append('do')
             lines.append('    checkpath=`dirname "$checkpath"`')
             lines.append('done')
-            lines.append(r'freespace=$(df -P $checkpath | sed -nre "s/^(\S+\s+){3}([0-9]+).*/\2/p")')
+            lines.append(
+                r'freespace=$(df -P $checkpath | sed -nre "s/^(\S+\s+){3}([0-9]+).*/\2/p")')
             # First line of the file is the total space
             lines.append('total=`head -n1 $3`')
             lines.append('if [ $total -gt $freespace ] ; then')
-            lines.append('    echo "ERROR: insufficient space on target (available ${freespace}, needed ${total})"')
+            lines.append(
+                '    echo "ERROR: insufficient space on target (available ${freespace}, needed ${total})"')
             lines.append('    exit 1')
             lines.append('fi')
         if not nopreserve:
@@ -134,7 +137,6 @@ def _prepare_remote_script(deploy, verbose=False, dryrun=False, undeployall=Fals
     return '\n'.join(lines)
 
 
-
 def deploy(args, config, basepath, workspace):
     """Entry point for the devtool 'deploy' subcommand"""
     import math
@@ -158,12 +160,12 @@ def deploy(args, config, basepath, workspace):
             rd = tinfoil.parse_recipe(args.recipename)
         except Exception as e:
             raise DevtoolError('Exception parsing recipe %s: %s' %
-                            (args.recipename, e))
+                               (args.recipename, e))
         recipe_outdir = rd.getVar('D')
         if not os.path.exists(recipe_outdir) or not os.listdir(recipe_outdir):
             raise DevtoolError('No files to deploy - have you built the %s '
-                            'recipe? If so, the install step has not installed '
-                            'any files.' % args.recipename)
+                               'recipe? If so, the install step has not installed '
+                               'any files.' % args.recipename)
 
         if args.strip and not args.dry_run:
             # Fakeroot copy to new destination
@@ -171,10 +173,11 @@ def deploy(args, config, basepath, workspace):
             recipe_outdir = os.path.join(rd.getVar('WORKDIR'), 'devtool-deploy-target-stripped')
             if os.path.isdir(recipe_outdir):
                 exec_fakeroot(rd, "rm -rf %s" % recipe_outdir, shell=True)
-            exec_fakeroot(rd, "cp -af %s %s" % (os.path.join(srcdir, '.'), recipe_outdir), shell=True)
+            exec_fakeroot(rd, "cp -af %s %s" %
+                          (os.path.join(srcdir, '.'), recipe_outdir), shell=True)
             os.environ['PATH'] = ':'.join([os.environ['PATH'], rd.getVar('PATH') or ''])
             oe.package.strip_execs(args.recipename, recipe_outdir, rd.getVar('STRIP'), rd.getVar('libdir'),
-                        rd.getVar('base_libdir'), rd)
+                                   rd.getVar('base_libdir'), rd)
 
         filelist = []
         inodes = set({})
@@ -230,9 +233,9 @@ def deploy(args, config, basepath, workspace):
             tmpscript = '/tmp/devtool_deploy.sh'
             tmpfilelist = os.path.join(os.path.dirname(tmpscript), 'devtool_deploy.list')
             shellscript = _prepare_remote_script(deploy=True,
-                                                verbose=args.show_status,
-                                                nopreserve=args.no_preserve,
-                                                nocheckspace=args.no_check_space)
+                                                 verbose=args.show_status,
+                                                 nopreserve=args.no_preserve,
+                                                 nocheckspace=args.no_check_space)
             # Write out the script to a file
             with open(os.path.join(tmpdir, os.path.basename(tmpscript)), 'w') as f:
                 f.write(shellscript)
@@ -242,18 +245,20 @@ def deploy(args, config, basepath, workspace):
                 for fpath, fsize in filelist:
                     f.write('%s %d\n' % (fpath, fsize))
             # Copy them to the target
-            ret = subprocess.call("scp %s %s %s %s/* %s:%s" % (scp_sshexec, scp_port, extraoptions, tmpdir, args.target, os.path.dirname(tmpscript)), shell=True)
+            ret = subprocess.call("scp %s %s %s %s/* %s:%s" % (scp_sshexec, scp_port,
+                                  extraoptions, tmpdir, args.target, os.path.dirname(tmpscript)), shell=True)
             if ret != 0:
                 raise DevtoolError('Failed to copy script to %s - rerun with -s to '
-                                'get a complete error message' % args.target)
+                                   'get a complete error message' % args.target)
         finally:
             shutil.rmtree(tmpdir)
 
         # Now run the script
-        ret = exec_fakeroot(rd, 'tar cf - . | %s  %s %s %s \'sh %s %s %s %s\'' % (ssh_sshexec, ssh_port, extraoptions, args.target, tmpscript, args.recipename, destdir, tmpfilelist), cwd=recipe_outdir, shell=True)
+        ret = exec_fakeroot(rd, 'tar cf - . | %s  %s %s %s \'sh %s %s %s %s\'' % (ssh_sshexec, ssh_port, extraoptions,
+                            args.target, tmpscript, args.recipename, destdir, tmpfilelist), cwd=recipe_outdir, shell=True)
         if ret != 0:
             raise DevtoolError('Deploy failed - rerun with -s to get a complete '
-                            'error message')
+                               'error message')
 
         logger.info('Successfully deployed %s' % recipe_outdir)
 
@@ -267,12 +272,15 @@ def deploy(args, config, basepath, workspace):
 
     return 0
 
+
 def undeploy(args, config, basepath, workspace):
     """Entry point for the devtool 'undeploy' subcommand"""
     if args.all and args.recipename:
-        raise argparse_oe.ArgumentUsageError('Cannot specify -a/--all with a recipe name', 'undeploy-target')
+        raise argparse_oe.ArgumentUsageError(
+            'Cannot specify -a/--all with a recipe name', 'undeploy-target')
     elif not args.recipename and not args.all:
-        raise argparse_oe.ArgumentUsageError('If you don\'t specify a recipe, you must specify -a/--all', 'undeploy-target')
+        raise argparse_oe.ArgumentUsageError(
+            'If you don\'t specify a recipe, you must specify -a/--all', 'undeploy-target')
 
     extraoptions = ''
     if args.no_host_check:
@@ -296,20 +304,23 @@ def undeploy(args, config, basepath, workspace):
     tmpdir = tempfile.mkdtemp(prefix='devtool')
     try:
         tmpscript = '/tmp/devtool_undeploy.sh'
-        shellscript = _prepare_remote_script(deploy=False, dryrun=args.dry_run, undeployall=args.all)
+        shellscript = _prepare_remote_script(
+            deploy=False, dryrun=args.dry_run, undeployall=args.all)
         # Write out the script to a file
         with open(os.path.join(tmpdir, os.path.basename(tmpscript)), 'w') as f:
             f.write(shellscript)
         # Copy it to the target
-        ret = subprocess.call("scp %s %s %s %s/* %s:%s" % (scp_sshexec, scp_port, extraoptions, tmpdir, args.target, os.path.dirname(tmpscript)), shell=True)
+        ret = subprocess.call("scp %s %s %s %s/* %s:%s" % (scp_sshexec, scp_port,
+                              extraoptions, tmpdir, args.target, os.path.dirname(tmpscript)), shell=True)
         if ret != 0:
             raise DevtoolError('Failed to copy script to %s - rerun with -s to '
-                                'get a complete error message' % args.target)
+                               'get a complete error message' % args.target)
     finally:
         shutil.rmtree(tmpdir)
 
     # Now run the script
-    ret = subprocess.call('%s %s %s %s \'sh %s %s\'' % (ssh_sshexec, ssh_port, extraoptions, args.target, tmpscript, args.recipename), shell=True)
+    ret = subprocess.call('%s %s %s %s \'sh %s %s\'' % (ssh_sshexec, ssh_port,
+                          extraoptions, args.target, tmpscript, args.recipename), shell=True)
     if ret != 0:
         raise DevtoolError('Undeploy failed - rerun with -s to get a complete '
                            'error message')
@@ -327,24 +338,33 @@ def register_commands(subparsers, context):
                                           description='Deploys a recipe\'s build output (i.e. the output of the do_install task) to a live target machine over ssh. By default, any existing files will be preserved instead of being overwritten and will be restored if you run devtool undeploy-target. Note: this only deploys the recipe itself and not any runtime dependencies, so it is assumed that those have been installed on the target beforehand.',
                                           group='testbuild')
     parser_deploy.add_argument('recipename', help='Recipe to deploy')
-    parser_deploy.add_argument('target', help='Live target machine running an ssh server: user@hostname[:destdir]')
-    parser_deploy.add_argument('-c', '--no-host-check', help='Disable ssh host key checking', action='store_true')
-    parser_deploy.add_argument('-s', '--show-status', help='Show progress/status output', action='store_true')
-    parser_deploy.add_argument('-n', '--dry-run', help='List files to be deployed only', action='store_true')
-    parser_deploy.add_argument('-p', '--no-preserve', help='Do not preserve existing files', action='store_true')
-    parser_deploy.add_argument('--no-check-space', help='Do not check for available space before deploying', action='store_true')
+    parser_deploy.add_argument(
+        'target', help='Live target machine running an ssh server: user@hostname[:destdir]')
+    parser_deploy.add_argument('-c', '--no-host-check',
+                               help='Disable ssh host key checking', action='store_true')
+    parser_deploy.add_argument('-s', '--show-status',
+                               help='Show progress/status output', action='store_true')
+    parser_deploy.add_argument(
+        '-n', '--dry-run', help='List files to be deployed only', action='store_true')
+    parser_deploy.add_argument('-p', '--no-preserve',
+                               help='Do not preserve existing files', action='store_true')
+    parser_deploy.add_argument(
+        '--no-check-space', help='Do not check for available space before deploying', action='store_true')
     parser_deploy.add_argument('-e', '--ssh-exec', help='Executable to use in place of ssh')
-    parser_deploy.add_argument('-P', '--port', help='Specify port to use for connection to the target')
+    parser_deploy.add_argument(
+        '-P', '--port', help='Specify port to use for connection to the target')
     parser_deploy.add_argument('-I', '--key',
                                help='Specify ssh private key for connection to the target')
 
     strip_opts = parser_deploy.add_mutually_exclusive_group(required=False)
     strip_opts.add_argument('-S', '--strip',
-                               help='Strip executables prior to deploying (default: %(default)s). '
-                                    'The default value of this option can be controlled by setting the strip option in the [Deploy] section to True or False.',
-                               default=oe.types.boolean(context.config.get('Deploy', 'strip', default='0')),
-                               action='store_true')
-    strip_opts.add_argument('--no-strip', help='Do not strip executables prior to deploy', dest='strip', action='store_false')
+                            help='Strip executables prior to deploying (default: %(default)s). '
+                            'The default value of this option can be controlled by setting the strip option in the [Deploy] section to True or False.',
+                            default=oe.types.boolean(context.config.get(
+                                'Deploy', 'strip', default='0')),
+                            action='store_true')
+    strip_opts.add_argument(
+        '--no-strip', help='Do not strip executables prior to deploy', dest='strip', action='store_false')
 
     parser_deploy.set_defaults(func=deploy)
 
@@ -352,15 +372,22 @@ def register_commands(subparsers, context):
                                             help='Undeploy recipe output files in live target machine',
                                             description='Un-deploys recipe output files previously deployed to a live target machine by devtool deploy-target.',
                                             group='testbuild')
-    parser_undeploy.add_argument('recipename', help='Recipe to undeploy (if not using -a/--all)', nargs='?')
-    parser_undeploy.add_argument('target', help='Live target machine running an ssh server: user@hostname')
-    parser_undeploy.add_argument('-c', '--no-host-check', help='Disable ssh host key checking', action='store_true')
-    parser_undeploy.add_argument('-s', '--show-status', help='Show progress/status output', action='store_true')
-    parser_undeploy.add_argument('-a', '--all', help='Undeploy all recipes deployed on the target', action='store_true')
-    parser_undeploy.add_argument('-n', '--dry-run', help='List files to be undeployed only', action='store_true')
+    parser_undeploy.add_argument(
+        'recipename', help='Recipe to undeploy (if not using -a/--all)', nargs='?')
+    parser_undeploy.add_argument(
+        'target', help='Live target machine running an ssh server: user@hostname')
+    parser_undeploy.add_argument('-c', '--no-host-check',
+                                 help='Disable ssh host key checking', action='store_true')
+    parser_undeploy.add_argument(
+        '-s', '--show-status', help='Show progress/status output', action='store_true')
+    parser_undeploy.add_argument(
+        '-a', '--all', help='Undeploy all recipes deployed on the target', action='store_true')
+    parser_undeploy.add_argument(
+        '-n', '--dry-run', help='List files to be undeployed only', action='store_true')
     parser_undeploy.add_argument('-e', '--ssh-exec', help='Executable to use in place of ssh')
-    parser_undeploy.add_argument('-P', '--port', help='Specify port to use for connection to the target')
+    parser_undeploy.add_argument(
+        '-P', '--port', help='Specify port to use for connection to the target')
     parser_undeploy.add_argument('-I', '--key',
-                               help='Specify ssh private key for connection to the target')
+                                 help='Specify ssh private key for connection to the target')
 
     parser_undeploy.set_defaults(func=undeploy)

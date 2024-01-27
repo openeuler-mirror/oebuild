@@ -21,6 +21,7 @@ WRN_COLOR = colorama.Fore.LIGHTYELLOW_EX
 
 ERR_COLOR = colorama.Fore.LIGHTRED_EX
 
+
 class OebuildCommand(ABC):
     '''Abstract superclass for a oebuild command.'''
 
@@ -28,7 +29,7 @@ class OebuildCommand(ABC):
         self.name = name
         self.help_msg = help_msg
         self.description = description
-        self.parser:argparse.ArgumentParser = None
+        self.parser: argparse.ArgumentParser = None
 
     def run(self, args: argparse.ArgumentParser, unknown: List[str]):
         '''
@@ -58,13 +59,13 @@ class OebuildCommand(ABC):
         :param parser_adder: The return value of a call to
             ``argparse.ArgumentParser.add_subparsers()``
         '''
-        self.parser:argparse.ArgumentParser = self.do_add_parser(parser_adder)
+        self.parser: argparse.ArgumentParser = self.do_add_parser(parser_adder)
 
         if self.parser is None:
             raise ValueError('do_add_parser did not return a value')
 
         self.parser.add_argument('-h', '--help', dest="help", action="store_true",
-            help='get help for oebuild or a command')
+                                 help='get help for oebuild or a command')
 
         return self.parser
 

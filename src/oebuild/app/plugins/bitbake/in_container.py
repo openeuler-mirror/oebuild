@@ -13,7 +13,7 @@ import re
 import os
 import sys
 
-from docker.models.containers import Container,ExecResult
+from docker.models.containers import Container, ExecResult
 
 from oebuild.parse_env import ParseEnv, EnvContainer
 from oebuild.docker_proxy import DockerProxy
@@ -23,6 +23,7 @@ from oebuild.m_log import logger
 from oebuild.app.plugins.bitbake.base_build import BaseBuild
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
+
 
 class InContainer(BaseBuild):
     '''
@@ -40,7 +41,7 @@ class InContainer(BaseBuild):
         '''
         logger.info("Bitbake starting ...")
 
-        docker_param:DockerParam = None
+        docker_param: DockerParam = None
         if parse_compile.docker_param is not None:
             docker_param = parse_compile.docker_param
         else:
@@ -56,7 +57,7 @@ class InContainer(BaseBuild):
     `oebuild update docker`''')
             return
 
-        self.deal_env_container(env=parse_env,docker_param=docker_param)
+        self.deal_env_container(env=parse_env, docker_param=docker_param)
         self.exec_compile(parse_compile=parse_compile, command=command)
 
     def _trans_docker_param(self,
@@ -71,7 +72,7 @@ class InContainer(BaseBuild):
         volumns.append("/dev/net/tun:/dev/net/tun")
         volumns.append(self.configure.source_dir() + ':' + oebuild_const.CONTAINER_SRC)
         volumns.append(os.getcwd() + ':' +
-            os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(os.getcwd())))
+                       os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(os.getcwd())))
         if toolchain_dir is not None:
             volumns.append(toolchain_dir + ":" + oebuild_const.NATIVE_GCC_DIR)
         if sstate_cache is not None:
@@ -95,11 +96,11 @@ class InContainer(BaseBuild):
         directly enable the sleeping container
         '''
         if env.container is None \
-            or env.container.short_id is None \
-            or not self.client.is_container_exists(env.container.short_id):
+                or env.container.short_id is None \
+                or not self.client.is_container_exists(env.container.short_id):
             # judge which container
-            container:Container = self.client.create_container(
-                image = docker_param.image,
+            container: Container = self.client.create_container(
+                image=docker_param.image,
                 parameters=docker_param.parameters,
                 volumes=docker_param.volumns,
                 command=docker_param.command)
@@ -109,7 +110,7 @@ class InContainer(BaseBuild):
             env.export_env()
 
         self.container_id = env.container.short_id
-        container:Container = self.client.get_container(self.container_id) # type: ignore
+        container: Container = self.client.get_container(self.container_id)  # type: ignore
         if not self.client.is_container_running(container):
             self.client.start_container(container)
 
@@ -117,7 +118,7 @@ class InContainer(BaseBuild):
         '''
         execute compile task
         '''
-        container:Container = self.client.get_container(self.container_id) # type: ignore
+        container: Container = self.client.get_container(self.container_id)  # type: ignore
 
         self.init_bash(container=container,
                        build_dir_name=os.path.basename(os.getcwd()))
@@ -146,7 +147,7 @@ class InContainer(BaseBuild):
             content = self._get_bashrc_content(container=container)
             new_content = self._add_bashrc(content=content, line=command)
             self.update_bashrc(container=container, content=new_content)
-            res:ExecResult = self.client.container_exec_command(
+            res: ExecResult = self.client.container_exec_command(
                 container=container,
                 command="bash .bashrc",
                 user=oebuild_const.CONTAINER_USER,

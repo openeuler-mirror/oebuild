@@ -14,12 +14,14 @@ import os
 
 import oebuild.bb.utils as bb_utils
 
+
 class BBLayers:
     '''
     The BBlayer class implements the layer added in the
     container environment in the physical environment,
     and the add operation references bitbake-related code
     '''
+
     def __init__(self, bblayers_dir: str, base_dir: str):
         self._base_dir = base_dir
         self._bblayers_dir = bblayers_dir
@@ -62,7 +64,7 @@ class BBLayers:
 
         bb_utils.edit_bblayers_conf(self.bblayers_dir, add=bblayers, remove=None)
 
-    def check_layer_exist(self, layers:str or list):
+    def check_layer_exist(self, layers: str or list):
         '''
         To check if it is legitimate to add a layer,
         the main thing is to verify the existence of layer.conf

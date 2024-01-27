@@ -29,11 +29,13 @@ from oebuild.check_docker_tag import CheckDockerTag
 import oebuild.const as oebuild_const
 from oebuild.m_log import logger
 
+
 class Update(OebuildCommand):
     '''
     The update command will prepare the basic environment
     related to the build, such as container images, build base repositories, etc
     '''
+
     def __init__(self):
         self.configure = Configure()
 
@@ -66,11 +68,11 @@ class Update(OebuildCommand):
             usage='''
   %(prog)s [yocto docker layer] [-tag]
 ''')
-        parser.add_argument('-tag','--tag', dest='docker_tag',
-            help='''
+        parser.add_argument('-tag', '--tag', dest='docker_tag',
+                            help='''
             with platform will list support archs, with feature will list support features
             '''
-        )
+                            )
 
         parser.add_argument(
             'item', nargs='?', default=None,
@@ -78,7 +80,7 @@ class Update(OebuildCommand):
 
         return parser
 
-    def do_run(self, args: argparse.Namespace, unknown = None):
+    def do_run(self, args: argparse.Namespace, unknown=None):
         '''
         update action rely on directory which has initd, so check it first
         '''
@@ -109,7 +111,6 @@ class Update(OebuildCommand):
         else:
             logger.error('Please run oebuild update [yocto docker layer]')
             sys.exit(-1)
-
 
         if update_yocto:
             self.get_basic_repo()
@@ -147,17 +148,17 @@ class Update(OebuildCommand):
 
         if repos is None:
             return
-        for _ , item in repos.items():
+        for _, item in repos.items():
             if isinstance(item, OebuildRepo):
                 local_dir = os.path.join(self.configure.source_dir(), item.path)
-                key_repo = OGit(repo_dir = local_dir,
-                                remote_url = item.url,
-                                branch = item.refspec)
+                key_repo = OGit(repo_dir=local_dir,
+                                remote_url=item.url,
+                                branch=item.refspec)
             else:
                 local_dir = os.path.join(self.configure.source_dir(), item['path'])
-                key_repo = OGit(repo_dir = local_dir,
-                                remote_url = item['url'],
-                                branch = item['refspec'])
+                key_repo = OGit(repo_dir=local_dir,
+                                remote_url=item['url'],
+                                branch=item['refspec'])
             key_repo.clone_or_pull_repo()
 
     def get_basic_repo(self,):
@@ -171,7 +172,7 @@ class Update(OebuildCommand):
         embedded/src/yocto-meta-openeuler not exists, so just clone from config setting.
         '''
         oebuild_config = self.configure.parse_oebuild_config()
-        yocto_config:ConfigBasicRepo = oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
+        yocto_config: ConfigBasicRepo = oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
 
         local_dir = os.path.join(self.configure.source_dir(), yocto_config.path)
         yocto_repo = OGit(repo_dir=local_dir,
@@ -179,7 +180,7 @@ class Update(OebuildCommand):
                           branch=yocto_config.branch)
         yocto_repo.clone_or_pull_repo()
 
-    def docker_image_update(self, docker_tag = None):
+    def docker_image_update(self, docker_tag=None):
         '''
         The container update logic is to update the corresponding tag 
         container image if tag is specified, otherwise it is determined 
@@ -189,7 +190,7 @@ class Update(OebuildCommand):
         '''
         oebuild_config = self.configure.parse_oebuild_config()
         docker_config = oebuild_config.docker
-        check_docker_tag = CheckDockerTag(docker_tag=docker_tag,configure=self.configure)
+        check_docker_tag = CheckDockerTag(docker_tag=docker_tag, configure=self.configure)
         if docker_tag is not None:
             if check_docker_tag.get_tag() is None or check_docker_tag.get_tag() == "":
                 check_docker_tag.list_image_tag()

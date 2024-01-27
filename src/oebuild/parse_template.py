@@ -21,6 +21,7 @@ from ruamel.yaml.scalarstring import LiteralScalarString
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
 
+
 @dataclass
 class OebuildRepo:
     '''
@@ -40,6 +41,7 @@ class OebuildRepo:
 
     refspec: str
 
+
 @dataclass
 class Template:
     '''
@@ -51,6 +53,7 @@ class Template:
 
     local_conf: Optional[LiteralScalarString]
 
+
 @dataclass
 class PlatformTemplate(Template):
     '''
@@ -59,6 +62,7 @@ class PlatformTemplate(Template):
     machine: LiteralScalarString
 
     toolchain_type: LiteralScalarString
+
 
 @dataclass
 class FeatureTemplate(Template):
@@ -69,36 +73,43 @@ class FeatureTemplate(Template):
 
     support: list
 
+
 class BaseParseTemplate(ValueError):
     '''
     basic error about parse_template
     '''
+
 
 class ConfigPathNotExists(BaseParseTemplate):
     '''
     config path not exists
     '''
 
+
 class PlatformNotAdd(BaseParseTemplate):
     '''
     platform not add first
     '''
+
 
 class FeatureNotSupport(BaseParseTemplate):
     '''
     feature not support
     '''
 
+
 class CommonNotFound(BaseParseTemplate):
     '''
     common param not found
     '''
 
+
 class ParseTemplate:
     '''
     ParseTemplate is to add platform template and feature template and export compile.yaml finially
     '''
-    def __init__(self, yocto_dir:str):
+
+    def __init__(self, yocto_dir: str):
         self.yocto_dir = yocto_dir
         self.build_in = None
         self.platform_template = None
@@ -169,16 +180,16 @@ your arch is {self.platform}, the feature is not supported, please check your ap
             raise e_p
 
     def generate_compile_conf(self,
-                          nativesdk_dir = None,
-                          toolchain_dir = None,
-                          build_in: str = oebuild_const.BUILD_IN_DOCKER,
-                          sstate_cache = None,
-                          tmp_dir = None,
-                          datetime = None,
-                          is_disable_fetch = False,
-                          docker_image: str = None,
-                          src_dir: str = None,
-                          compile_dir: str = None):
+                              nativesdk_dir=None,
+                              toolchain_dir=None,
+                              build_in: str = oebuild_const.BUILD_IN_DOCKER,
+                              sstate_cache=None,
+                              tmp_dir=None,
+                              datetime=None,
+                              is_disable_fetch=False,
+                              docker_image: str = None,
+                              src_dir: str = None,
+                              compile_dir: str = None):
         '''
         first param common yaml
         '''
@@ -193,7 +204,7 @@ your arch is {self.platform}, the feature is not supported, please check your ap
         data = oebuild_util.read_yaml(common_yaml_dir)
 
         repos = {}
-        if 'repos' in data :
+        if 'repos' in data:
             repos.update(data['repos'])
         layers = []
         if 'layers' in data:
@@ -217,10 +228,10 @@ your arch is {self.platform}, the feature is not supported, please check your ap
             layers = self.platform_template.layers
 
         if self.platform_template.local_conf is not None:
-            local_conf = LiteralScalarString(self.platform_template.local_conf + local_conf )
+            local_conf = LiteralScalarString(self.platform_template.local_conf + local_conf)
 
         for feature in self.feature_template:
-            feature:FeatureTemplate = feature
+            feature: FeatureTemplate = feature
             if feature.repos is not None:
                 for repo_name, oebuild_repo in feature.repos.items():
                     if repo_name in repos:
@@ -270,7 +281,7 @@ your arch is {self.platform}, the feature is not supported, please check your ap
         volumns.append("/dev/net/tun:/dev/net/tun")
         volumns.append(src_dir + ':' + oebuild_const.CONTAINER_SRC)
         volumns.append(compile_dir + ':' +
-            os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(compile_dir)))
+                       os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(compile_dir)))
         if toolchain_dir is not None:
             volumns.append(toolchain_dir + ":" + oebuild_const.NATIVE_GCC_DIR)
         if sstate_cache is not None:

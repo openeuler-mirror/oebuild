@@ -22,10 +22,12 @@ from docker.models.containers import Container
 
 from oebuild.m_log import logger
 
+
 class DockerProxy:
     '''
     a object just be wrapper again to run docker command easily
     '''
+
     def __init__(self):
         self._docker = docker.from_env()
 
@@ -53,13 +55,13 @@ class DockerProxy:
         except NotFound:
             return False
 
-    def pull_image(self, image_name : str):
+    def pull_image(self, image_name: str):
         '''
         pull image like command 'docker pull'
         args:
             image_name (str): docker image name, if no tag, the default tag is latest
         '''
-        repository,tag = self._get_image_name_tag(image_name=image_name)
+        repository, tag = self._get_image_name_tag(image_name=image_name)
 
         self._docker.images.pull(repository=repository, tag=tag)
 
@@ -72,7 +74,7 @@ class DockerProxy:
     def _get_image_name_tag(self, image_name: str):
         repository = image_name.split(':')[0]
         tag = "latest"
-        if len(image_name.split(':'))==2:
+        if len(image_name.split(':')) == 2:
             tag = image_name.split(':')[1]
         return repository, tag
 
@@ -84,7 +86,6 @@ class DockerProxy:
         '''
         return self._docker.images.get(image_name)
 
-
     def get_container(self, container_id):
         '''
         get a docker container object
@@ -92,7 +93,6 @@ class DockerProxy:
             container_id (str): docker container short_id or id
         '''
         return self._docker.containers.get(container_id=container_id)
-
 
     def get_all_container(self):
         '''
@@ -112,13 +112,13 @@ class DockerProxy:
         container.stop()
 
     @staticmethod
-    def delete_container(container: Container, is_force:bool = False):
+    def delete_container(container: Container, is_force: bool = False):
         '''
         rm a container which not running like command 'docker rm'
         args:
             container (Container): container object
         '''
-        container.remove(force = is_force)
+        container.remove(force=is_force)
 
     @staticmethod
     def start_container(container: Container):
@@ -130,7 +130,7 @@ class DockerProxy:
         container.start()
 
     @staticmethod
-    def is_container_running(container : Container):
+    def is_container_running(container: Container):
         '''
         determize if a container in running state
         args:
@@ -147,10 +147,10 @@ class DockerProxy:
         args:
             path_dir (str): the directory that will added to a tar
         '''
-        if os.path.exists(path = path_dir):
+        if os.path.exists(path=path_dir):
             pw_tarstream = BytesIO()
             with tarfile.TarFile(fileobj=pw_tarstream, mode='w') as pw_tar:
-                pw_tar.add(name = path_dir, arcname=os.path.basename(path_dir))
+                pw_tar.add(name=path_dir, arcname=os.path.basename(path_dir))
             pw_tarstream.seek(0)
             return pw_tarstream
         return None
@@ -164,7 +164,7 @@ class DockerProxy:
             to_path (str): will copy to docker container path
         '''
         tar = self.add_tar(source_path)
-        return container.put_archive(path = to_path,data = tar)
+        return container.put_archive(path=to_path, data=tar)
 
     def copy_from_container(self, container: Container, from_path, dst_path):
         '''
@@ -179,17 +179,17 @@ class DockerProxy:
         for trunk in bits:
             pw_tarstream.write(trunk)
         pw_tarstream.seek(0)
-        with tarfile.open(fileobj = pw_tarstream) as tar:
-            res = tar.extractall(path = dst_path)
+        with tarfile.open(fileobj=pw_tarstream) as tar:
+            res = tar.extractall(path=dst_path)
         return res is None
 
     def container_exec_command(self,
                                container: Container,
                                command: str or list,
                                user: str = '',
-                               work_space = None,
-                               stream = True,
-                               demux = False):
+                               work_space=None,
+                               stream=True,
+                               demux=False):
         '''
         run command like 'docker run exec', other param
         will be default and just use a little params
@@ -208,10 +208,10 @@ class DockerProxy:
         return res
 
     def create_container(self,
-                         image:str,
-                         parameters:str,
-                         volumes:list[str],
-                         command:str) -> Container:
+                         image: str,
+                         parameters: str,
+                         volumes: list[str],
+                         command: str) -> Container:
         '''
         create a new container
         '''

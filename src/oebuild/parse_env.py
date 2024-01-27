@@ -18,12 +18,14 @@ import sys
 import oebuild.util as oebuild_util
 from oebuild.m_log import logger
 
+
 @dataclass
 class EnvContainer:
     '''
     the container object in env object
     '''
     short_id: Optional[str]
+
 
 @dataclass
 class Env:
@@ -32,14 +34,16 @@ class Env:
     '''
     container: Optional[EnvContainer]
 
+
 class ParseEnv:
     '''
     This class is used to parse env.yaml and
     update env.yaml
     '''
+
     def __init__(self, env_dir):
         self.env_dir = pathlib.Path(env_dir) if isinstance(env_dir, str) else env_dir
-        self.env:Env = Env(container=None)
+        self.env: Env = Env(container=None)
         self._parse_env()
 
     @property
@@ -60,7 +64,7 @@ class ParseEnv:
         if "container" in data:
             env_container = data['container']
             try:
-                self.env.container =  EnvContainer(
+                self.env.container = EnvContainer(
                     short_id=env_container['short_id']
                 )
             except KeyError:

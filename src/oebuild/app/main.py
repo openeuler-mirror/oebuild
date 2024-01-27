@@ -20,25 +20,27 @@ import colorama
 import oebuild.util as oebuild_util
 from oebuild.auto_completion import AutoCompletion
 from oebuild.version import __version__
-from oebuild.spec import get_spec,_ExtCommand
+from oebuild.spec import get_spec, _ExtCommand
 from oebuild.command import OebuildCommand
 from oebuild.m_log import logger
-from oebuild.oebuild_parser import OebuildArgumentParser,OebuildHelpAction
+from oebuild.oebuild_parser import OebuildArgumentParser, OebuildHelpAction
 
 APP = "app"
+
 
 class OebuildApp:
     '''
     The execution body of the oebuild tool, and all oebuild
     commands are resolved and executed by this body
     '''
+
     def __init__(self):
         self.base_oebuild_dir = oebuild_util.get_base_oebuild()
         self.oebuild_parser = None
         self.subparsers = {}
         self.cmd = None
         try:
-            plugins_dir = pathlib.Path(self.base_oebuild_dir,'app/conf','plugins.yaml')
+            plugins_dir = pathlib.Path(self.base_oebuild_dir, 'app/conf', 'plugins.yaml')
             self.oebuild_plugins_path = os.path.expanduser('~') + '/.local/oebuild_plugins/'
             self.append_plugins_dir = pathlib.Path(self.oebuild_plugins_path, 'append_plugins.yaml')
             self.command_ext = self.get_command_ext(oebuild_util.read_yaml(plugins_dir)['plugins'])
@@ -66,10 +68,8 @@ class OebuildApp:
                     path=app['path'])
         return command_ext
 
-
     def _load_extension_specs(self, ):
         self.command_spec = extension_commands(APP, self.command_ext)
-
 
     def _setup_parsers(self):
         # Set up and install command-line argument parsers.
@@ -109,17 +109,15 @@ class OebuildApp:
 
         return parser, subparser_gen
 
-
     def _check_command(self, args):
         if args.help or \
-            args.command is None or \
-            args.command not in self.command_ext or \
-            args.command == 'help':
+                args.command is None or \
+                args.command not in self.command_ext or \
+                args.command == 'help':
             self.help()
             return False
 
         return True
-
 
     def run_command(self, argv):
         '''
@@ -135,10 +133,10 @@ class OebuildApp:
         # Finally, run the command.
         self._run_extension(args.command, unknown)
 
-    def _run_extension(self, name:str, unknown):
+    def _run_extension(self, name: str, unknown):
         # Check a program invariant.
         spec = self.command_spec[name]
-        cmd:OebuildCommand = oebuild_util.get_instance(spec.factory)
+        cmd: OebuildCommand = oebuild_util.get_instance(spec.factory)
 
         parser = self.subparsers[name]
 
@@ -164,6 +162,7 @@ class OebuildApp:
         '''
         self.oebuild_parser.print_help()
 
+
 def check_user():
     '''
     check execute user must in normal user
@@ -173,7 +172,8 @@ def check_user():
         return False
     return True
 
-def extension_commands(pre_dir, commandlist:OrderedDict):
+
+def extension_commands(pre_dir, commandlist: OrderedDict):
     '''
     Get descriptions of available extension commands.
     The return value is an ordered map from project paths to lists of
@@ -187,6 +187,7 @@ def extension_commands(pre_dir, commandlist:OrderedDict):
 
     return specs
 
+
 def main(argv=None):
     '''
     oebuild main entrypoint
@@ -198,6 +199,7 @@ def main(argv=None):
     AutoCompletion().run()
     app = OebuildApp()
     app.run(argv or sys.argv[1:])
+
 
 if __name__ == "__main__":
     main()

@@ -22,6 +22,7 @@ from oebuild.configure import Configure, ConfigBasicRepo, Config
 from oebuild.m_log import logger
 import oebuild.const as oebuild_const
 
+
 class Init(OebuildCommand):
     '''
     Directory initialization directive, mainly used to initialize
@@ -50,7 +51,7 @@ class Init(OebuildCommand):
             consideration of the build configuration of OEbuild, and can be easily called by third
             parties
 '''
-        ))
+                            ))
 
     def do_add_parser(self, parser_adder):
         self._parser(
@@ -60,11 +61,11 @@ class Init(OebuildCommand):
   %(prog)s [directory] [-u yocto_remote_url] [-b branch]
 ''')
 
-        parser_adder.add_argument('-u','--yocto_remote_url', dest = 'yocto_remote_url',
-            help='''Specifies the remote of yocto-meta-openeuler''')
+        parser_adder.add_argument('-u', '--yocto_remote_url', dest='yocto_remote_url',
+                                  help='''Specifies the remote of yocto-meta-openeuler''')
 
-        parser_adder.add_argument('-b', '--branch', dest = 'branch',
-            help='''Specifies the branch of yocto-meta-openeuler''')
+        parser_adder.add_argument('-b', '--branch', dest='branch',
+                                  help='''Specifies the branch of yocto-meta-openeuler''')
 
         parser_adder.add_argument(
             'directory', nargs='?', default=None,
@@ -72,7 +73,7 @@ class Init(OebuildCommand):
 
         return parser_adder
 
-    def do_run(self, args: argparse.ArgumentParser, unknown = None):
+    def do_run(self, args: argparse.ArgumentParser, unknown=None):
         '''
         detach target dicrectory if finished init, if inited, just put out err msg and exit
         '''
@@ -100,9 +101,9 @@ class Init(OebuildCommand):
             return
 
         os.chdir(args.directory)
-        oebuild_config:Config = self.configure.parse_oebuild_config()
+        oebuild_config: Config = self.configure.parse_oebuild_config()
 
-        yocto_config:ConfigBasicRepo = oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
+        yocto_config: ConfigBasicRepo = oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
         if args.yocto_remote_url is not None:
             yocto_config.remote_url = args.yocto_remote_url
         if args.branch is not None:
@@ -111,7 +112,7 @@ class Init(OebuildCommand):
 
         self.configure.update_oebuild_config(oebuild_config)
 
-        logger.info("init %s successful",args.directory)
+        logger.info("init %s successful", args.directory)
         format_msg = f'''
 There is a build configuration example file under {args.directory}/.oebuild/compile.yaml.sample, 
 if you want to block complex generate instructions, you can directly copy a configuration file, 
@@ -139,7 +140,7 @@ please execute the follow commands next
         return True
 
     @staticmethod
-    def create_oebuild_directory(updir : str):
+    def create_oebuild_directory(updir: str):
         '''
         create oebuild config directory
         '''
@@ -152,7 +153,7 @@ please execute the follow commands next
             return ""
 
     @staticmethod
-    def create_src_directory(updir : str):
+    def create_src_directory(updir: str):
         '''
         this is desctiption
         '''
@@ -165,7 +166,7 @@ please execute the follow commands next
             return None
 
     @staticmethod
-    def copy_config_file(updir : str):
+    def copy_config_file(updir: str):
         '''
         copy oebuild config to some directory
         '''
@@ -176,7 +177,7 @@ please execute the follow commands next
             logger.error("mkdir config faild")
 
     @staticmethod
-    def copy_compile_file(updir : str):
+    def copy_compile_file(updir: str):
         '''
         copy oebuild compile.yaml.sample to some directory
         '''

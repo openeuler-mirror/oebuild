@@ -18,10 +18,12 @@ from git import GitCommandError, RemoteProgress
 
 from oebuild.m_log import logger
 
+
 class OGit:
     '''
     owner git to print progress in clone action
     '''
+
     def __init__(self, repo_dir, remote_url, branch) -> None:
         self._repo_dir = repo_dir
         self._remote_url = remote_url
@@ -99,14 +101,16 @@ class OGit:
         except TypeError:
             return "", ''
         except git.GitError:
-            return "",""
+            return "", ""
         except ValueError:
-            return "",""
+            return "", ""
+
 
 class CustomRemote(git.RemoteProgress):
     '''
     Rewrote RemoteProgress to show the process of code updates
     '''
+
     def update(self, op_code, cur_count, max_count=None, message=''):
         '''
         rewrote update function

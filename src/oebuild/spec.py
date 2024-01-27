@@ -15,10 +15,12 @@ import os
 from dataclasses import dataclass
 import sys
 
+
 class CommandError(RuntimeError):
     '''
     Indicates that a command failed.
     '''
+
     def __init__(self, returncode=1):
         super().__init__()
         self.returncode = returncode
@@ -32,10 +34,10 @@ class ExtensionCommandError(CommandError):
     '''Exception class indicating an extension command was badly
     defined and could not be created.'''
 
-
     def __init__(self, **kwargs):
         self.hint = kwargs.pop('hint', None)
         super(ExtensionCommandError, self).__init__(**kwargs)
+
 
 @dataclass
 class _CmdFactory:
@@ -90,6 +92,7 @@ class OebuildExtCommandSpec:
     # It may do some additional steps (like importing the definition of
     # the command) before constructing it, however.
     factory: _CmdFactory
+
 
 @dataclass
 class _ExtCommand:

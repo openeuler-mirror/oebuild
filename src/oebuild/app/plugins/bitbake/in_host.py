@@ -23,6 +23,7 @@ from oebuild.app.plugins.bitbake.base_build import BaseBuild
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
 
+
 class InHost(BaseBuild):
     '''
     bitbake command execute in host
@@ -67,13 +68,13 @@ initialization operations''')
             return
 
         if command is not None and command != "":
-            self._append_build_sh(str_list=[command], build_dir= os.getcwd())
+            self._append_build_sh(str_list=[command], build_dir=os.getcwd())
             with subprocess.Popen('bash build.sh',
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        encoding="utf-8",
-                        text=True) as s_p:
+                                  shell=True,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE,
+                                  encoding="utf-8",
+                                  text=True) as s_p:
                 if s_p.returncode is not None and s_p.returncode != 0:
                     err_msg = ''
                     if s_p.stderr is not None:
@@ -96,9 +97,9 @@ initialization operations''')
             for b_s in oebuild_const.BASH_BANNER.split('\n'):
                 b_s = f"echo {b_s}{oebuild_const.BASH_END_FLAG}"
                 banner_list.append(b_s)
-            self._append_build_sh(str_list=banner_list, build_dir= os.getcwd())
+            self._append_build_sh(str_list=banner_list, build_dir=os.getcwd())
             append_str = f"sed -i '/{oebuild_const.BASH_END_FLAG}/d' $HOME/.bashrc"
-            self._append_build_sh(str_list = [append_str], build_dir= os.getcwd())
+            self._append_build_sh(str_list=[append_str], build_dir=os.getcwd())
 
             build_sh_dir = os.path.join(os.getcwd(), 'build.sh')
             source_build_str = f"source {build_sh_dir}"
@@ -120,7 +121,7 @@ initialization operations''')
         ps1_command = 'PS1="\\u\\h:\\W> "'
 
         self._append_build_sh(
-            str_list= [init_sdk_command, set_template, init_oe_command, ps1_command],
+            str_list=[init_sdk_command, set_template, init_oe_command, ps1_command],
             build_dir=build_dir
         )
 
@@ -130,7 +131,7 @@ initialization operations''')
             os.remove(build_sh_dir)
         os.mknod(build_sh_dir)
 
-    def _append_build_sh(self, str_list:list, build_dir):
+    def _append_build_sh(self, str_list: list, build_dir):
         build_sh_dir = os.path.join(build_dir, 'build.sh')
         if not os.path.exists(build_sh_dir):
             raise ValueError("build.sh not exists")

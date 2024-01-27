@@ -19,20 +19,26 @@ import oebuild.util as oebuild_util
 from oebuild.m_log import logger
 import oebuild.const as oebuild_const
 
+
 class BaseLocalConf(ValueError):
     '''
     basic error about parse_template
     '''
+
+
 class NativesdkNotExist(BaseLocalConf):
     '''
     nativesdk directory not exist
     '''
+
+
 class NativesdkNotValid(BaseLocalConf):
     '''
     nativesdk directory not valid
     '''
 
-def get_nativesdk_sysroot(nativesdk_dir = oebuild_const.NATIVESDK_DIR):
+
+def get_nativesdk_sysroot(nativesdk_dir=oebuild_const.NATIVESDK_DIR):
     '''
     return environment initialization shell, if nativesdk directory is not exists
     or can not find any initialization shell, raise error
@@ -70,6 +76,7 @@ def match_and_add(new_str: str, content: str):
     content = content + '\n'
     return content
 
+
 def match_and_replace(pre: str, new_str: str, content: str):
     '''
     math line in content when the new_str exist and replace
@@ -85,6 +92,7 @@ def match_and_replace(pre: str, new_str: str, content: str):
     content = content + '\n'
     return content
 
+
 class LocalConf:
     '''
     LocalConf corresponds to the local.conf configuration
@@ -94,7 +102,7 @@ class LocalConf:
     def __init__(self, local_conf_dir: str):
         self.local_dir = local_conf_dir
 
-    def update(self, parse_compile: ParseCompile, src_dir = None):
+    def update(self, parse_compile: ParseCompile, src_dir=None):
         '''
         update local.conf by ParseCompile
         '''
@@ -143,40 +151,40 @@ class LocalConf:
 
             content = match_and_replace(
                 pre=oebuild_const.OPENEULER_SP_DIR,
-                new_str= f"{oebuild_const.OPENEULER_SP_DIR} = '{src_dir}'",
+                new_str=f"{oebuild_const.OPENEULER_SP_DIR} = '{src_dir}'",
                 content=content
             )
 
         # replace sstate_cache
         if parse_compile.sstate_cache is not None:
             if os.path.islink(parse_compile.sstate_cache):
-                new_str= f"file://.* {parse_compile.sstate_cache}/PATH;downloadfilename=PATH"
+                new_str = f"file://.* {parse_compile.sstate_cache}/PATH;downloadfilename=PATH"
             else:
                 if parse_compile.build_in == oebuild_const.BUILD_IN_DOCKER:
-                    new_str= f"file://.* file://{oebuild_const.SSTATE_CACHE}/PATH"
+                    new_str = f"file://.* file://{oebuild_const.SSTATE_CACHE}/PATH"
                 else:
-                    new_str= f"file://.* file://{parse_compile.sstate_cache}/PATH"
+                    new_str = f"file://.* file://{parse_compile.sstate_cache}/PATH"
             content = match_and_replace(
-                    pre=oebuild_const.SSTATE_MIRRORS,
-                    new_str = f'{oebuild_const.SSTATE_MIRRORS} = "{new_str}"',
-                    content=content
-                )
+                pre=oebuild_const.SSTATE_MIRRORS,
+                new_str=f'{oebuild_const.SSTATE_MIRRORS} = "{new_str}"',
+                content=content
+            )
 
         # replace sstate_dir
         if parse_compile.sstate_dir is not None:
             content = match_and_replace(
-                    pre=oebuild_const.SSTATE_DIR,
-                    new_str = f'{oebuild_const.SSTATE_DIR} = "{parse_compile.sstate_dir}"',
-                    content=content
-                )
+                pre=oebuild_const.SSTATE_DIR,
+                new_str=f'{oebuild_const.SSTATE_DIR} = "{parse_compile.sstate_dir}"',
+                content=content
+            )
 
         # replace tmpdir
         if parse_compile.tmp_dir is not None:
             content = match_and_replace(
-                    pre=oebuild_const.TMP_DIR,
-                    new_str = f'{oebuild_const.TMP_DIR} = "{parse_compile.tmp_dir}"',
-                    content=content
-                )
+                pre=oebuild_const.TMP_DIR,
+                new_str=f'{oebuild_const.TMP_DIR} = "{parse_compile.tmp_dir}"',
+                content=content
+            )
 
         content = self.match_lib_param(content=content)
 
@@ -201,12 +209,12 @@ class LocalConf:
 
         for key, value in lib_param_list.items():
             content = match_and_replace(
-                pre = key,
-                new_str = f'{key} = "{value}"',
-                content = content)
+                pre=key,
+                new_str=f'{key} = "{value}"',
+                content=content)
         return content
 
-    def replace_param(self, parse_compile: ParseCompile, content:str):
+    def replace_param(self, parse_compile: ParseCompile, content: str):
         '''
         match and replace param by ParseCompile.local_conf
         '''
@@ -249,4 +257,3 @@ class LocalConf:
                 if not oecore_sysroot_dir.startswith(nativesdk_dir):
                     raise NativesdkNotValid(f"nativesdk directory: {nativesdk_dir} are not valid")
                 return
-            

@@ -18,7 +18,7 @@ import pathlib
 import multiprocessing
 from queue import Queue
 from threading import Thread
-from concurrent.futures import ThreadPoolExecutor,wait,ALL_COMPLETED
+from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
 
 import git
 from git.repo import Repo
@@ -28,6 +28,7 @@ from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
 import oebuild.util as oebuild_util
 from oebuild.m_log import logger
+
 
 class Manifest(OebuildCommand):
     '''
@@ -47,7 +48,7 @@ class Manifest(OebuildCommand):
     source repositories in the build working directory, and can restore
     relevant source repositories based on the manifest file
 '''
-        ))
+                            ))
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
         parser = self._parser(
@@ -64,11 +65,11 @@ class Manifest(OebuildCommand):
                             help='''
             specify a manifest path to perform the create or restore operation
             '''
-        )
+                            )
 
         return parser
 
-    def do_run(self, args: argparse.Namespace, unknown = None):
+    def do_run(self, args: argparse.Namespace, unknown=None):
         if not self.configure.is_oebuild_dir():
             logger.error('Your current directory had not finished init')
             sys.exit(-1)
@@ -117,11 +118,11 @@ class Manifest(OebuildCommand):
             print(f"Expose progress: {progress}%: ", "▋" * (progress // 2), end="")
             sys.stdout.flush()
         print()
-        manifest_list = dict(sorted(manifest_list.items(),key=lambda s:s[0]))
+        manifest_list = dict(sorted(manifest_list.items(), key=lambda s: s[0]))
         oebuild_util.write_yaml(
             yaml_dir=pathlib.Path(manifest_dir),
             data={'manifest_list': manifest_list})
-        self._add_manifest_banner(manifest_dir = os.path.abspath(manifest_dir))
+        self._add_manifest_banner(manifest_dir=os.path.abspath(manifest_dir))
 
         print(f"expose successful, the directory is {os.path.abspath(manifest_dir)}")
 
@@ -161,15 +162,15 @@ class Manifest(OebuildCommand):
         dserver.start()
 
         cpu_count = multiprocessing.cpu_count()
-        with ThreadPoolExecutor(max_workers = cpu_count) as t_p:
+        with ThreadPoolExecutor(max_workers=cpu_count) as t_p:
             src_dir = self.configure.source_dir()
             all_task = []
             for key, value in manifest_list.items():
                 all_task.append(t_p.submit(self._download_repo, q_e, src_dir, key, value))
-            wait(all_task, return_when = ALL_COMPLETED)
+            wait(all_task, return_when=ALL_COMPLETED)
         q_e.put("over")
 
-    def _download_repo(self, out_q: Queue ,src_dir, key, value):
+    def _download_repo(self, out_q: Queue, src_dir, key, value):
         repo_dir = os.path.join(src_dir, key)
         repo = Repo.init(repo_dir)
         remote = None
@@ -180,10 +181,10 @@ class Manifest(OebuildCommand):
                 continue
         if remote is None:
             remote_name = "upstream"
-            remote = git.Remote.add(repo = repo, name = remote_name, url = value['remote_url'])
+            remote = git.Remote.add(repo=repo, name=remote_name, url=value['remote_url'])
         try:
             repo.git.checkout(value['version'])
         except GitCommandError:
-            remote.fetch(value['version'], depth = 1)
+            remote.fetch(value['version'], depth=1)
             repo.git.checkout(value['version'])
         out_q.put('ok')

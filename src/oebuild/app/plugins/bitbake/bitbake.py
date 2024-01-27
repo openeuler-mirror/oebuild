@@ -26,12 +26,14 @@ from oebuild.app.plugins.bitbake.in_host import InHost
 from oebuild.m_log import logger
 import oebuild.const as oebuild_const
 
+
 class Bitbake(OebuildCommand):
     '''
     Bitbake instructions can enter the build interactive environment
     and then directly run bitbake-related instructions,or run bitbake
     command directly, for example: `oebuild bitbake busybox`
     '''
+
     def __init__(self):
         self.compile_conf_dir = os.path.join(os.getcwd(), 'compile.yaml')
         self.configure = Configure()
@@ -61,7 +63,7 @@ class Bitbake(OebuildCommand):
 
         return parser
 
-    def do_run(self, args: argparse.ArgumentParser, unknown = None):
+    def do_run(self, args: argparse.ArgumentParser, unknown=None):
         '''
         The BitBake execution logic is:
         the first step is to prepare the code that initializes

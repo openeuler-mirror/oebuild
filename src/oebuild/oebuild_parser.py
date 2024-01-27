@@ -16,10 +16,12 @@ import shutil
 from io import StringIO
 import textwrap
 
+
 class OebuildHelpAction(argparse.Action):
     '''
     set argparse help is true
     '''
+
     def __call__(self, parser, namespace, values, option_string=None):
         # Just mark that help was requested.
         namespace.help = True
@@ -61,7 +63,7 @@ class OebuildArgumentParser(argparse.ArgumentParser):
         # one of the subcommand parsers, and we delegate to super.
 
         # if not top_level:
-            # return super(OebuildArgumentParser, self).format_help()
+        # return super(OebuildArgumentParser, self).format_help()
 
         # Format the help to be at most 75 columns wide, the maximum
         # generally recommended by typographers for readability.
@@ -87,7 +89,7 @@ class OebuildArgumentParser(argparse.ArgumentParser):
 
             if self.oebuild_app is not None:
                 append('')
-                for _,command in self.oebuild_app.command_spec.items():
+                for _, command in self.oebuild_app.command_spec.items():
                     self._format_command(append, command, width)
 
             if self.epilog:

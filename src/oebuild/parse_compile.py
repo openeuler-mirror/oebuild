@@ -22,6 +22,7 @@ from oebuild.parse_template import PlatformTemplate, ParseTemplate
 import oebuild.const as oebuild_const
 from oebuild.m_log import logger
 
+
 @dataclass
 class DockerParam:
     '''
@@ -60,21 +61,25 @@ class Compile(PlatformTemplate):
 
     docker_param: Optional[DockerParam]
 
+
 class BaseParseCompileError(ValueError):
     '''
     parse compile basic error
     '''
+
 
 class CheckCompileError(BaseParseCompileError):
     '''
     compile.yaml parse check faild error
     '''
 
+
 class ParseCompile:
     '''
     This class is used to parse compile.yaml and
     download the relevant code repository
     '''
+
     def __init__(self, compile_conf_dir):
         '''
         The initialization operation is used to parse the compile.yaml
@@ -91,7 +96,7 @@ class ParseCompile:
         except Exception as e_p:
             raise e_p
 
-        docker_param:DockerParam = None
+        docker_param: DockerParam = None
         if "docker_param" in data and data['docker_param'] is not None:
             try:
                 dparam = data['docker_param']
@@ -253,7 +258,7 @@ class ParseCompile:
         keys = {
             "machine": "the key machine is None",
             "toolchain_type": "the key toolchain_type is None"
-            }
+        }
 
         for key, value in keys.items():
             if key not in data:
@@ -266,10 +271,9 @@ class ParseCompile:
         if "repos" in data:
             for _, repo in data['repos'].items():
                 required_keys = {
-                    "url": "the key url is None", 
-                    "path": "the key path is None", 
+                    "url": "the key url is None",
+                    "path": "the key path is None",
                     "refspec": "the key refspec is None"}
                 for key, value in required_keys.items():
                     if key not in repo:
                         raise CheckCompileError(value)
-                    

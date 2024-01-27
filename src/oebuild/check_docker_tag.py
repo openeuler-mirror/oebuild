@@ -18,6 +18,7 @@ from git import Repo
 from oebuild.configure import Configure
 import oebuild.util as oebuild_util
 
+
 class CheckDockerTag:
     '''
     This class is used to synthesize the build environment
@@ -27,6 +28,7 @@ class CheckDockerTag:
     configuration file, the yocto branch name, etc. Judge down
     in turn, and finally return a suitable docker image version
     '''
+
     def __init__(self, docker_tag: str, configure: Configure):
         self.docker_tag = docker_tag
         self.configure = configure
@@ -68,7 +70,7 @@ the openeuler embedded docker tag can be selected list:
                 return str(self.docker_tag)
 
         yocto_dir = self.configure.source_yocto_dir()
-        env_path = os.path.join(yocto_dir,".oebuild/env.yaml")
+        env_path = os.path.join(yocto_dir, ".oebuild/env.yaml")
         if os.path.exists(env_path):
             env_parse = oebuild_util.read_yaml(pathlib.Path(env_path))
             return str(env_parse['docker_tag'])

@@ -16,10 +16,12 @@ from oebuild.local_conf import LocalConf
 from oebuild.bblayers import BBLayers
 import oebuild.const as oebuild_const
 
+
 class BaseBuild:
     '''
     The class provides the basic methods that the build class inherits
     '''
+
     def _set_tmpfile_content(self, content: str):
         while True:
             tmp_file = oebuild_util.generate_random_str(6)
@@ -30,7 +32,7 @@ class BaseBuild:
             break
         return tmp_file
 
-    def replace_local_conf(self, parse_compile, local_dir, src_dir = None):
+    def replace_local_conf(self, parse_compile, local_dir, src_dir=None):
         '''
         replace some param in local.conf, the LocalConf will be instantiated
         and exec update

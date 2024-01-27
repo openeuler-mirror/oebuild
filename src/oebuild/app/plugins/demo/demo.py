@@ -8,6 +8,7 @@ from oebuild.configure import Configure
 
 logger = logging.getLogger()
 
+
 class Demo(OebuildCommand):
 
     def __init__(self):
@@ -18,7 +19,7 @@ class Demo(OebuildCommand):
             description=textwrap.dedent('''\
             this is your description message
 '''
-        ))
+                                        ))
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
         parser = self._parser(
@@ -31,6 +32,6 @@ class Demo(OebuildCommand):
 
         return parser
 
-    def do_run(self, args: argparse.Namespace, unknown = None):
+    def do_run(self, args: argparse.Namespace, unknown=None):
         args = args.parse_args(unknown)
         pass

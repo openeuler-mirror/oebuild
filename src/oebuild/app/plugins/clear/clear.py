@@ -23,6 +23,7 @@ from oebuild.configure import Configure
 from oebuild.docker_proxy import DockerProxy
 from oebuild.m_log import logger
 
+
 class Clear(OebuildCommand):
     '''
     for some clear task
@@ -39,7 +40,7 @@ class Clear(OebuildCommand):
             will be generated, such as containers,so this command can remove unimportant
             products, such as containers
 '''
-        ))
+                            ))
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
         parser = self._parser(
@@ -55,7 +56,7 @@ class Clear(OebuildCommand):
 
         return parser
 
-    def do_run(self, args: argparse.Namespace, unknown = None):
+    def do_run(self, args: argparse.Namespace, unknown=None):
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
             return
@@ -80,8 +81,8 @@ class Clear(OebuildCommand):
         build_list = os.listdir(self.configure.build_dir())
         for build_dir in build_list:
             build_dir = os.path.join(self.configure.build_dir(), build_dir)
-            if os.path.exists(os.path.join(build_dir,".env")):
-                env_list.append(os.path.join(build_dir,".env"))
+            if os.path.exists(os.path.join(build_dir, ".env")):
+                env_list.append(os.path.join(build_dir, ".env"))
 
         # traversal every env file and get container_id, and then try to stop it and rm it
         for env in env_list:
@@ -91,7 +92,7 @@ class Clear(OebuildCommand):
                 container = self.client.get_container(container_id=container_id)
                 DockerProxy().stop_container(container=container)
                 DockerProxy().delete_container(container=container)
-                logger.info("Delete container: %s successful",container.short_id)
+                logger.info("Delete container: %s successful", container.short_id)
             except DockerException:
                 continue
             except KeyError:

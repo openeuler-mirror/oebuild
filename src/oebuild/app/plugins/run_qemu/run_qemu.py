@@ -25,10 +25,12 @@ from oebuild.configure import Configure
 from oebuild.m_log import logger
 import oebuild.const as oebuild_const
 
+
 class RunQemu(OebuildCommand):
     '''
     The command for run in qemu platform.
     '''
+
     def __init__(self):
         self.configure = Configure()
         self.client = None
@@ -92,7 +94,7 @@ the container {self.container_id} failed to be destroyed, please run
         '''
         exec qemu
         '''
-        container:Container = self.client.get_container(self.container_id) # type: ignore
+        container: Container = self.client.get_container(self.container_id)  # type: ignore
         self.bak_bash(container=container)
         self.init_bash(container=container)
         content = self._get_bashrc_content(container=container)
@@ -145,7 +147,7 @@ now, you can continue run `oebuild runqemu` in compile directory
             sys.exit(0)
         return
 
-    def deal_env_container(self,docker_image):
+    def deal_env_container(self, docker_image):
         '''
         This operation realizes the processing of the container,
         controls how the container is processed by parsing the env
@@ -161,14 +163,14 @@ now, you can continue run `oebuild runqemu` in compile directory
         volumns.append(self.configure.source_dir() + ':' + oebuild_const.CONTAINER_SRC)
 
         parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS + " --privileged"
-        container:Container = self.client.create_container(
+        container: Container = self.client.create_container(
             image=docker_image,
             parameters=parameters,
             volumes=volumns,
             command="bash")
 
         self.container_id = container.short_id
-        container:Container = self.client.get_container(self.container_id)
+        container: Container = self.client.get_container(self.container_id)
         if not self.client.is_container_running(container):
             self.client.start_container(container)
 

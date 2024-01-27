@@ -54,7 +54,7 @@ def get_nativesdk_environment(nativesdk_dir=oebuild_const.NATIVESDK_DIR,
             sys.exit(res.exit_code)
         list_items = res.output.decode("utf-8").split("\n")
         for item in list_items:
-            item:str = item
+            item: str = item
             # notice: the item is like format with
             # "drwxr-xr-x 3 openeuler openeuler 4096 Nov  8 08:10 ."
             # so we must get the last clip from split with space
@@ -68,7 +68,8 @@ def get_nativesdk_environment(nativesdk_dir=oebuild_const.NATIVESDK_DIR,
     logger.error("can not find any nativesdk environment initialization shell")
     sys.exit(1)
 
-def read_yaml(yaml_dir : pathlib.Path):
+
+def read_yaml(yaml_dir: pathlib.Path):
     '''
     read yaml file and parse it to object
     '''
@@ -84,7 +85,7 @@ def read_yaml(yaml_dir : pathlib.Path):
         raise e_p
 
 
-def write_yaml(yaml_dir : pathlib.Path, data):
+def write_yaml(yaml_dir: pathlib.Path, data):
     '''
     write data to yaml file
     '''
@@ -97,14 +98,16 @@ def write_yaml(yaml_dir : pathlib.Path, data):
         yaml = YAML()
         yaml.dump(data, w_f)
 
-def get_git_repo_name(remote_url : str):
+
+def get_git_repo_name(remote_url: str):
     '''
     return repo name
     '''
-    url = remote_url.replace(".git","")
+    url = remote_url.replace(".git", "")
     return os.path.basename(url)
 
-def add_git_suffix(remote : str):
+
+def add_git_suffix(remote: str):
     '''
     add .git suffix to remote if needed
     '''
@@ -113,11 +116,13 @@ def add_git_suffix(remote : str):
 
     return remote + ".git"
 
+
 def get_base_oebuild():
     '''
     return oebuild base dir
     '''
     return os.path.abspath(os.path.dirname(__file__))
+
 
 def get_config_yaml_dir():
     '''
@@ -125,11 +130,13 @@ def get_config_yaml_dir():
     '''
     return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.CONFIG_YAML)
 
+
 def get_plugins_yaml_path():
     '''
     return plugin yaml path
     '''
     return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.PLUGINS_YAML)
+
 
 def get_compile_yaml_dir():
     '''
@@ -137,11 +144,13 @@ def get_compile_yaml_dir():
     '''
     return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.COMPILE_YAML)
 
+
 def get_upgrade_yaml_dir():
     '''
     return upgrade yaml dir
     '''
     return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.UPGRADE_YAML)
+
 
 def generate_random_str(randomlength=16):
     '''
@@ -154,17 +163,20 @@ def generate_random_str(randomlength=16):
         random_str += base_str[random.randint(0, length)]
     return random_str
 
+
 def get_time_stamp():
     '''
     get current timestamp
     '''
     return time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
 
+
 def get_oebuild_version():
     '''
     return oebuild version
     '''
     return __version__
+
 
 def check_docker():
     '''
@@ -181,11 +193,13 @@ please install docker first, and run follow commands in root:
 4, chmod o+rw /var/run/docker.sock
 ''') from exc
 
+
 def get_instance(factory):
     '''
     Instantiate a class
     '''
     return factory()
+
 
 def restore_bashrc_content(old_content):
     '''
@@ -199,6 +213,7 @@ def restore_bashrc_content(old_content):
         new_content = new_content + line + '\n'
     return new_content
 
+
 def init_bashrc_content(old_content, init_command: list):
     '''
     init bashrc
@@ -210,6 +225,7 @@ def init_bashrc_content(old_content, init_command: list):
 
     return new_content
 
+
 def add_bashrc(content: str, line: str):
     '''
     add command line to bashrc
@@ -219,6 +235,7 @@ def add_bashrc(content: str, line: str):
     content = content + line + oebuild_const.BASH_END_FLAG + '\n'
 
     return content
+
 
 def get_host_proxy(proxy_name):
     '''

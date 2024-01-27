@@ -31,6 +31,7 @@ class MPlugin(OebuildCommand):
     manager it, the plugin must be in oebuild plugin standard, when you install the plugin you
     developped, you can use it through oebuild.
     """
+
     def __init__(self):
         self.configure = Configure()
         self.oebuild_plugin_commands = ['install', 'list', 'enable', 'disable', 'remove']
@@ -148,10 +149,10 @@ class MPlugin(OebuildCommand):
                 append_command_ext = {}
 
             if args.plugin_name in self.command_ext.keys() \
-                  or args.plugin_name in append_command_ext.keys():
+                    or args.plugin_name in append_command_ext.keys():
                 while True:
                     user_input = input(
-f'Do you want to overwrite the existing plugin ({args.plugin_name}) in oebuild(Y/N)')
+                        f'Do you want to overwrite the existing plugin ({args.plugin_name}) in oebuild(Y/N)')
                     if user_input.lower() == 'y':
                         break
                     if user_input.lower() == 'n':
@@ -293,7 +294,7 @@ f'Do you want to overwrite the existing plugin ({args.plugin_name}) in oebuild(Y
                         def_name += ","
                 if file_line.startswith('class') or file_line.startswith('    class'):
                     if re.search(r'((?<=class)\s+\w+\(OebuildCommand\))', file_line) and \
-                        not class_name:
+                            not class_name:
                         class_name = re.search(r'(?<=class)\s+\w+', file_line).group().strip()
         return def_name, class_name
 

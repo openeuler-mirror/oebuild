@@ -20,10 +20,12 @@ from oebuild.app.plugins.deploy.com_target import ComTarget
 
 logger = logging.getLogger()
 
+
 class DeployTarget(OebuildCommand):
     '''
     we use package in a 
     '''
+
     def __init__(self) -> None:
         super().__init__(
             '{}',
@@ -33,7 +35,7 @@ Deploys a recipe's build output (i.e. the output of the do_install task) to a li
 overwritten and will be restored if you run devtool undeploy-target. Note: this only deploys the recipe itself and not any runtime dependencies, so it is assumed that those have
 been installed on the target beforehand.
 '''
-        ))
+                            ))
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
         parser = self._parser(
@@ -44,7 +46,7 @@ oebuild deploy-target [-h] [-c] [-s] [-n] [-p] [--no-check-space] [-e SSH_EXEC] 
 
         return parser
 
-    def do_run(self, args: argparse.Namespace, unknown = None):
+    def do_run(self, args: argparse.Namespace, unknown=None):
         if '-h' in unknown or '--help' in unknown:
             self.print_help_msg()
             return
@@ -80,10 +82,12 @@ options:
   --no-strip            Do not strip executables prior to deploy
 """)
 
+
 class UnDeployTarget(OebuildCommand):
     '''
     we use package in a 
     '''
+
     def __init__(self) -> None:
         super().__init__(
             '{}',
@@ -91,7 +95,7 @@ class UnDeployTarget(OebuildCommand):
             textwrap.dedent('''\
 Un-deploys recipe output files previously deployed to a live target machine by devtool deploy-target.
 '''
-        ))
+                            ))
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
         parser = self._parser(
@@ -102,7 +106,7 @@ oebuild undeploy-target [-h] [-c] [-s] [-a] [-n] [-e SSH_EXEC] [-P PORT] [-I KEY
 
         return parser
 
-    def do_run(self, args: argparse.Namespace, unknown = None):
+    def do_run(self, args: argparse.Namespace, unknown=None):
         if '-h' in unknown or '--help' in unknown:
             self.print_help_msg()
             return

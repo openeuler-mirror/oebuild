@@ -20,8 +20,10 @@ import oebuild.const as oebuild_const
 
 PathType = Union[str, os.PathLike]
 
+
 class OebuildNotFound(RuntimeError):
     '''Neither the current directory nor any parent has a oebuild workspace.'''
+
 
 @dataclass
 class ConfigContainer:
@@ -33,6 +35,7 @@ class ConfigContainer:
 
     # tag_mag is for branch to container tag map
     tag_map: Dict
+
 
 @dataclass
 class ConfigBasicRepo:
@@ -48,6 +51,7 @@ class ConfigBasicRepo:
     # branch is for repo's branch
     branch: str
 
+
 @dataclass
 class Config:
     '''
@@ -57,6 +61,7 @@ class Config:
 
     basic_repo: dict
 
+
 class Configure:
     '''
     Configure object is to contain some generally param or function about oebuild
@@ -64,7 +69,7 @@ class Configure:
 
     @staticmethod
     def oebuild_topdir(start: Optional[PathType] = None,
-                fall_back: bool = True):
+                       fall_back: bool = True):
         '''
         Like oebuild_dir(), but returns the path to the parent directory of the .oebuild/
         directory instead, where project repositories are stored
@@ -82,7 +87,7 @@ class Configure:
                     return Configure.oebuild_topdir(fall_back=False)
 
                 raise OebuildNotFound('Could not find a oebuild workspace '
-                                'in this or any parent directory')
+                                      'in this or any parent directory')
             cur_dir = parent_dir
 
     @staticmethod
@@ -123,7 +128,7 @@ class Configure:
         '''
         config = Configure.parse_oebuild_config()
         basic_config = config.basic_repo
-        yocto_config:ConfigBasicRepo = basic_config[oebuild_const.YOCTO_META_OPENEULER]
+        yocto_config: ConfigBasicRepo = basic_config[oebuild_const.YOCTO_META_OPENEULER]
         yocto_dir = yocto_config.path
         return os.path.join(Configure.source_dir(), yocto_dir)
 
@@ -164,7 +169,7 @@ class Configure:
         '''
 
         config = oebuild_util.read_yaml(
-            yaml_dir = pathlib.Path(Configure.oebuild_dir(), oebuild_const.CONFIG))
+            yaml_dir=pathlib.Path(Configure.oebuild_dir(), oebuild_const.CONFIG))
 
         tag_map = {}
         for key, value in config['docker']['tag_map'].items():
@@ -199,18 +204,19 @@ class Configure:
         basic_config = config.basic_repo
         data['basic_repo'] = {}
         for key, repo in basic_config.items():
-            repo:ConfigBasicRepo = repo
+            repo: ConfigBasicRepo = repo
             data['basic_repo'][key] = {'path': repo.path,
                                        'remote_url': repo.remote_url,
                                        'branch': repo.branch}
 
         try:
             oebuild_util.write_yaml(
-                yaml_dir = pathlib.Path(Configure.oebuild_dir(), oebuild_const.CONFIG),
+                yaml_dir=pathlib.Path(Configure.oebuild_dir(), oebuild_const.CONFIG),
                 data=data)
             return True
         except TypeError:
             return False
+
 
 class YoctoEnv:
     '''
@@ -224,7 +230,7 @@ class YoctoEnv:
         if not os.path.exists(yocto_dir):
             raise ValueError("the yocto direction is not exists")
 
-        env_path = os.path.join(yocto_dir,".oebuild/env.yaml")
+        env_path = os.path.join(yocto_dir, ".oebuild/env.yaml")
         if not os.path.exists(env_path):
             return None
 

@@ -6,6 +6,7 @@
 import os
 import re
 
+
 def preserved_envvars_exported():
     """Variables which are taken from the environment and placed in and exported
     from the metadata"""
@@ -21,6 +22,7 @@ def preserved_envvars_exported():
         'BBSERVER',
     ]
 
+
 def preserved_envvars():
     """Variables which are taken from the environment and placed in the metadata"""
     v = [
@@ -30,6 +32,7 @@ def preserved_envvars():
         'BB_ENV_EXTRAWHITE',
     ]
     return v + preserved_envvars_exported()
+
 
 def approved_variables():
     """
@@ -49,6 +52,7 @@ def approved_variables():
         if 'BB_ENV_EXTRAWHITE' not in approved:
             approved.extend(['BB_ENV_EXTRAWHITE'])
     return approved
+
 
 def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
     """Edit lines from a recipe or config file and modify one or more
@@ -105,9 +109,11 @@ def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
         override_re = ''
     for var in variables:
         if var.endswith('()'):
-            var_res[var] = re.compile(r'^(%s%s)[ \\t]*\([ \\t]*\)[ \\t]*{' % (var[:-2].rstrip(), override_re))
+            var_res[var] = re.compile(
+                r'^(%s%s)[ \\t]*\([ \\t]*\)[ \\t]*{' % (var[:-2].rstrip(), override_re))
         else:
-            var_res[var] = re.compile(r'^(%s%s)[ \\t]*[?+:.]*=[+.]*[ \\t]*(["\'])' % (var, override_re))
+            var_res[var] = re.compile(
+                r'^(%s%s)[ \\t]*[?+:.]*=[+.]*[ \\t]*(["\'])' % (var, override_re))
 
     updated = False
     varset_start = ''
@@ -143,7 +149,8 @@ def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
             if in_var.endswith('()'):
                 # A function definition
                 if isinstance(newvalue, list):
-                    newlines.append('%s {\n%s%s\n}\n' % (varset_new, indentspc, ('\n%s' % indentspc).join(newvalue)))
+                    newlines.append('%s {\n%s%s\n}\n' % (varset_new, indentspc,
+                                    ('\n%s' % indentspc).join(newvalue)))
                 else:
                     if not newvalue.startswith('\n'):
                         newvalue = '\n' + newvalue
@@ -237,6 +244,7 @@ def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
                 newlines.append(line)
     return (updated, newlines)
 
+
 def edit_bblayers_conf(bblayers_conf, add, remove, edit_cb=None):
     """Edit bblayers.conf, adding and/or removing layers
     Parameters:
@@ -262,6 +270,7 @@ def edit_bblayers_conf(bblayers_conf, add, remove, edit_cb=None):
         return pth
 
     approved = approved_variables()
+
     def canonicalise_path(pth):
         pth = remove_trailing_sep(pth)
         if 'HOME' in approved and '~' in pth:
