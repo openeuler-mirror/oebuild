@@ -190,6 +190,11 @@ class LocalConf:
 
         user_content_flag = "#===========the content is user added=================="
         if user_content_flag not in content and parse_compile.local_conf != "":
+            # check if exists remark sysmbol, if exists and replace it
+            for line in parse_compile.local_conf.split('\n'):
+                if line.startswith("#"):
+                    r_line = line.lstrip("#").strip(" ")
+                    content = content.replace(r_line, line)
             content += f"\n{user_content_flag}\n"
             content += parse_compile.local_conf
 
