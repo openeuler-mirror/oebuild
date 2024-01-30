@@ -1,0 +1,157 @@
+def downloadEmbeddedCI(){
+    sh 'rm -rf embedded-ci'
+    sh "git clone ${embeddedRemote} -b ${embeddedBranch} -v embedded-ci --depth=1"
+}
+
+def downloadOebuildWithPr(String workspace, String namespace, String repo, Integer prnum, Integer deepth){
+    sh """
+        python3 main.py clone_repo \
+        -w ${workspace} \
+        -r https://gitee.com/${namespace}/${repo} \
+        -p ${repo} \
+        -pr ${prnum} \
+        -dp ${deepth}
+    """
+}
+
+def formatRes(String name, String action, String check_res, String log_path){
+    return sh (script: """
+        python3 main.py serial \
+            -c name=$name \
+            -c action=$action \
+            -c result=$check_res \
+            -c log_path=$log_path
+    """, returnStdout: true).trim()
+}
+
+def getRandomStr(){
+    return sh(script: """
+        cat /proc/sys/kernel/random/uuid
+    """, returnStdout: true).trim()
+}
+
+def mkdirOpeneulerLog(){
+    def logdir = "openeuler/log"
+    sh "mkdir -p $logdir"
+    return logdir
+}
+
+def STAGES_RES = []
+
+pipeline {
+    agent { node "${node}" }
+    environment {
+        PATH = "/home/jenkins/.local/bin:${env.PATH}"
+    }
+    stages {
+        stage("clone embedded-ci"){
+            steps{
+                dir('/home/jenkins/agent'){
+                    script{
+                        downloadEmbeddedCI()
+                    }
+                }
+            }
+        }
+        stage("code check"){
+            steps {
+                dir('/home/jenkins/agent/embedded-ci'){
+                    script{
+                        withCredentials([string(credentialsId: "${giteeId}", variable: 'GITEETOKEN')]){
+                                // 下载oebuild源码
+                                downloadOebuildWithPr("/home/jenkins/agent", giteeTargetNamespace, giteeRepoName, Integer.parseInt(giteePullRequestid), Integer.parseInt(commitCount))
+                                def randomStr = getRandomStr()
+                                def logDir = mkdirOpeneulerLog()
+                                // 执行commit检查
+                                def task_res_code = sh (script: """
+                                    python3 main.py codecheck \
+                                    -c /home/jenkins/agent/$giteeRepoName \
+                                    -target commit_msg \
+                                    -o $giteeTargetNamespace \
+                                    -p $giteeRepoName \
+                                    -gt $GITEETOKEN \
+                                    -pr $giteePullRequestid > ${logDir}/${randomStr}.log
+                                """, returnStatus: true)
+                                def check_res = ""
+                                if (task_res_code == 0){
+                                    check_res = "success"
+                                }else{
+                                    check_res = "failed"
+                                    env.code_check_result = "failed"
+                                }
+                                // 对检查赋值
+                                // env.task_check_commit = formatRes("check", "commit_check", check_res, "xxx")
+                                archiveArtifacts "${logDir}/*.log"
+                                STAGES_RES.push(formatRes("check", "commit_check", check_res, "artifact/${logDir}/${randomStr}.log"))
+                            }
+                    }
+                }
+                dir('/home/jenkins/agent/embedded-ci'){
+                    script{
+                        withCredentials([string(credentialsId: "${giteeId}", variable: 'GITEETOKEN')]){
+                                // 获取修改的文件列表
+                                def diff_files = sh (script: """
+                                    python main.py diff_files \
+                                    -r /home/jenkins/agent/$giteeRepoName \
+                                    --remote_name origin \
+                                    --pre_branch pr_$giteePullRequestid \
+                                    --diff_branch master
+                                """, returnStdout: true).trim()
+                                sh """echo $diff_files"""
+                                // 执行scope检查
+                                def randomStr = getRandomStr()
+                                def logDir = mkdirOpeneulerLog()
+                                // 执行commit检查
+                                def task_res_code = sh (script: """
+                                    python3 main.py codecheck \
+                                    -target code_check \
+                                    --diff_files "$diff_files" > ${logDir}/${randomStr}.log
+                                """, returnStatus: true)
+                                def check_res = ""
+                                if (task_res_code == 0){
+                                    check_res = "success"
+                                }else{
+                                    check_res = "failed"
+                                    env.code_check_result = "failed"
+                                }
+                                // 对检查赋值
+                                // env.task_check_scope = formatRes("check", "scope_check", check_res, "xxx")
+                                archiveArtifacts "${logDir}/*.log"
+                                STAGES_RES.push(formatRes("check", "code_check", check_res, "artifact/${logDir}/${randomStr}.log"))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            dir('/home/jenkins/agent/embedded-ci'){
+                script{
+                    withCredentials([
+                        string(credentialsId: "${giteeId}", variable: 'GITEETOKEN'),
+                        usernamePassword(credentialsId: "${jenkinsId}", usernameVariable: 'JUSER',passwordVariable: 'JPASSWD')]){
+                            if (currentBuild.result != 'ABORTED') {
+                                def chks = ""
+                                for (int i = 0; i < STAGES_RES.size(); ++i) {
+                                    chks = "${chks} -chk ${STAGES_RES[i]}"
+                                }
+
+                                def duration_time = System.currentTimeMillis() - currentBuild.startTimeInMillis
+                                sh """
+                                python3 main.py comment \
+                                     -m gate \
+                                     -o $giteeTargetNamespace \
+                                     -p $giteeRepoName \
+                                     -pr $giteePullRequestid \
+                                     -gt $GITEETOKEN \
+                                     -dt $duration_time \
+                                     $chks
+                                """
+                            }
+                    }
+                }
+            }
+        }
+    }
+}
