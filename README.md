@@ -181,6 +181,7 @@ basic_repo:
 ```
 oebuild generate [-p platform] [-f features] [-t toolchain_dir] [-d build_directory] [-l list] [-b_in build_in]
 ```
+当命令行只输入oebuild generate不带其他参数时，会进入菜单选择模式，通过菜单选择来进行下面介绍参数的填充，选择完成且进行保存之后，就会生成对应的compile.yaml文件。
 
 -p：单板名称，全称`platform`，生成配置文件需要的一个参数，默认为qemu-aarch64
 
