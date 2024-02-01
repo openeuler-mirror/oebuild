@@ -1,0 +1,184 @@
+def downloadEmbeddedCI(){
+    sh 'rm -rf embedded-ci'
+    sh "git clone ${embeddedRemote} -b ${embeddedBranch} -v embedded-ci --depth=1"
+}
+
+def downloadOebuildWithPr(String workspace, String namespace, String repo, Integer prnum, Integer deepth){
+    sh """
+        python3 main.py clone_repo \
+        -w ${workspace} \
+        -r https://gitee.com/${namespace}/${repo} \
+        -p ${repo} \
+        -pr ${prnum} \
+        -dp ${deepth} \
+        -pt "head"
+    """
+}
+
+def formatRes(String name, String action, String check_res, String log_path){
+    return sh (script: """
+        python3 main.py serial \
+            -c name=$name \
+            -c action=$action \
+            -c result=$check_res \
+            -c log_path=$log_path
+    """, returnStdout: true).trim()
+}
+
+def getRandomStr(){
+    return sh(script: """
+        cat /proc/sys/kernel/random/uuid
+    """, returnStdout: true).trim()
+}
+
+def mkdirOpeneulerLog(){
+    def logdir = "openeuler/log"
+    sh "mkdir -p $logdir"
+    return logdir
+}
+
+def getWheelFromOebuild(String oebuild_dir){
+    return sh (script: """
+        ls $oebuild_dir/dist/oebuild-*.whl
+    """, returnStdout: true).trim()
+}
+
+def STAGES_RES = []
+
+pipeline {
+    agent { node "${node}" }
+    environment {
+        PATH = "/home/jenkins/.local/bin:${env.PATH}"
+    }
+    stages {
+        stage("check release"){
+            steps{
+                script{
+                    // 检查是否版本发布pr，并且是否是指定人
+                    def ptitle = "$pr_title"
+                    if (ptitle.contains("版本升级到")){
+                        env.is_release = "true"
+                    }else{
+                        env.is_release = "failed"
+                    }
+                }
+            }
+        }
+        stage("clone repos"){
+            when {
+                expression {
+                    return env.is_release == "true"
+                }
+            }
+            steps{
+                dir('/home/jenkins/agent'){
+                    script{
+                        downloadEmbeddedCI()
+                    }
+                }
+                dir('/home/jenkins/agent/embedded-ci'){
+                    script{
+                        downloadOebuildWithPr("/home/jenkins/agent", giteeTargetNamespace, giteeRepoName, Integer.parseInt(giteePullRequestid), Integer.parseInt(commitCount))
+                    }
+                }
+            }
+        }
+        stage("oebuild build"){
+            when {
+                expression {
+                    return env.is_release == "true"
+                }
+            }
+            steps {
+                dir('/home/jenkins/agent/embedded-ci'){
+                    script{
+                        // 下载oebuild源码
+                        downloadOebuildWithPr("/home/jenkins/agent", giteeTargetNamespace, giteeRepoName, Integer.parseInt(giteePullRequestid), Integer.parseInt(commitCount))
+                        def randomStr = getRandomStr()
+                        def logDir = mkdirOpeneulerLog()
+                        // 执行oebuild构建
+                        def task_res_code = sh (script: """
+                            python3 main.py build \
+                            -c /home/jenkins/agent/$giteeRepoName \
+                            -target oebuild_wheel > ${logDir}/${randomStr}.log
+                        """, returnStatus: true)
+                        def check_res = ""
+                        if (task_res_code == 0){
+                            check_res = "success"
+                        }else{
+                            check_res = "failed"
+                            env.code_check_result = "failed"
+                        }
+                        // 对检查赋值
+                        // env.task_check_commit = formatRes("check", "commit_check", check_res, "xxx")
+                        archiveArtifacts "${logDir}/*.log"
+                        STAGES_RES.push(formatRes("build", "oebuild_build", check_res, "artifact/${logDir}/${randomStr}.log"))
+                    }
+                }
+            }
+        }
+        stage("oebuild release"){
+            when {
+                expression {
+                    return env.is_release == "true"
+                }
+            }
+            steps {
+                dir('/home/jenkins/agent/embedded-ci'){
+                    script{
+                        withCredentials([
+                            usernamePassword(credentialsId: "${pypi_token_id}", usernameVariable: 'pypi_username', passwordVariable: 'pypi_token')]){
+                            def whl_path = getWheelFromOebuild("/home/jenkins/agent/$giteeRepoName")
+                            def randomStr = getRandomStr()
+                            def logDir = mkdirOpeneulerLog()
+                            // 执行oebuild上传
+                            def task_res_code = sh (script: """
+                                python3 main.py put_to_dst \
+                                -t 2 \
+                                -ld $whl_path \
+                                -pserver $pypi_server_name \
+                                -ptoken $pypi_token > ${logDir}/${randomStr}.log
+                            """, returnStatus: true)
+                            def check_res = ""
+                            if (task_res_code == 0){
+                                check_res = "success"
+                            }else{
+                                check_res = "failed"
+                                env.code_check_result = "failed"
+                            }
+                            // 对检查赋值
+                            // env.task_check_commit = formatRes("check", "commit_check", check_res, "xxx")
+                            archiveArtifacts "${logDir}/*.log"
+                            STAGES_RES.push(formatRes("release", "oebuild_release", check_res, "artifact/${logDir}/${randomStr}.log"))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            dir('/home/jenkins/agent/embedded-ci'){
+                script{
+                    if (env.is_release == "true"){
+                        withCredentials([string(credentialsId: "${giteeId}", variable: 'GITEETOKEN')]){
+                        def chks = ""
+                        for (int i = 0; i < STAGES_RES.size(); ++i) {
+                            chks = "${chks} -chk ${STAGES_RES[i]}"
+                        }
+                        sh """
+                            python3 main.py comment \
+                                    -m release \
+                                    -o $giteeTargetNamespace \
+                                    -p $giteeRepoName \
+                                    -pr $giteePullRequestid \
+                                    -gt $GITEETOKEN \
+                                    $chks
+                            """
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
