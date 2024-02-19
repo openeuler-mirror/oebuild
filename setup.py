@@ -22,6 +22,7 @@ with open('README.md', 'r', encoding="utf-8") as f:
 
 with open('src/oebuild/version.py', 'r', encoding="utf-8") as f:
     __version__ = None
+    # pylint: disable=W0122
     exec(f.read())
     assert __version__ is not None
 
@@ -55,7 +56,8 @@ setuptools.setup(
         'ruamel.yaml',
         'dataclasses',
         'reprint',
-        'prettytable'
+        'prettytable',
+        'kconfiglib'
     ],
     python_requires='>=3.8',
     entry_points={'console_scripts': ('oebuild = oebuild.app.main:main',)},
