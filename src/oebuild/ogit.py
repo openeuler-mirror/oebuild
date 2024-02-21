@@ -28,7 +28,6 @@ class OGit:
         self._repo_dir = repo_dir
         self._remote_url = remote_url
         self._branch = branch
-        self._last_code = 0
         try:
             _, self._screen_width = os.popen('stty size', 'r').read().split()
         except ValueError as v_e:
@@ -59,7 +58,7 @@ class OGit:
         '''
         check out version
         '''
-        self._fetch_upstream(version=version)
+        return self._fetch_upstream(version=version)
 
     def clone_or_pull_repo(self):
         '''
@@ -71,7 +70,7 @@ class OGit:
         repo = Repo.init(self._repo_dir)
         remote = None
         for item in repo.remotes:
-            if self._remote_url == item.url:
+            if self._remote_url.rstrip(".git") == item.url.rstrip(".git"):
                 remote = item
             else:
                 continue
@@ -79,7 +78,21 @@ class OGit:
             remote_name = "upstream"
             remote = git.Remote.add(repo=repo, name=remote_name, url=self._remote_url)
         logger.info("Fetching into %s ...", self._repo_dir)
-        remote.fetch(progress=CustomRemote())
+        try:
+            if version is None:
+                remote.fetch(self._branch, progress=CustomRemote(), depth=1)
+            else:
+                repo.commit(version)
+        except ValueError:
+            try:
+                remote.fetch(version, progress=CustomRemote(), depth=1)
+            except GitCommandError:
+                logger.error("fetch failed")
+                return False
+        except GitCommandError:
+            logger.error("fetch failed")
+            return False
+
         try:
             if version is None:
                 repo.git.checkout(self._branch)
@@ -87,6 +100,8 @@ class OGit:
                 repo.git.checkout(version)
         except GitCommandError:
             logger.error("update faild")
+            return False
+        return True
 
     @staticmethod
     def get_repo_info(repo_dir: str):

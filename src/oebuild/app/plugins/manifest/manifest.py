@@ -15,19 +15,15 @@ import textwrap
 import sys
 import os
 import pathlib
-import multiprocessing
-from queue import Queue
-from threading import Thread
-from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
 
 import git
 from git.repo import Repo
-from git.exc import GitCommandError
 
 from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
 import oebuild.util as oebuild_util
 from oebuild.m_log import logger
+from oebuild.ogit import OGit
 
 
 class Manifest(OebuildCommand):
@@ -85,8 +81,8 @@ class Manifest(OebuildCommand):
             return
 
         args = args.parse_args(unknown)
-        manifest_dir = args.manifest_dir if args.manifest_dir else (self.configure.source_yocto_dir()
-                                                                    + '/.oebuild/manifest.yaml')
+        manifest_dir = args.manifest_dir if args.manifest_dir else \
+            (self.configure.source_yocto_dir() + '/.oebuild/manifest.yaml')
         if command == 'create':
             self._create_manifest(manifest_dir)
         elif command == 'download':
@@ -142,49 +138,28 @@ class Manifest(OebuildCommand):
     def _restore_manifest(self, manifest_dir):
         manifest_data = oebuild_util.read_yaml(pathlib.Path(manifest_dir))
         manifest_list = manifest_data.get('manifest_list', {})
+        src_dir = self.configure.source_dir()
+        final_res = []
+        for key, value in manifest_list.items():
+            if not self._download_repo(src_dir, key, value):
+                final_res.append(key)
+        if len(final_res) > 0:
+            print("")
+            print("the list package download failed:")
+            for item in final_res:
+                remote_url = manifest_list[item]['remote_url']
+                version = manifest_list[item]['version']
+                print(f"{item}: {remote_url}, {version}")
+            print("you can manually download them!!!")
+        else:
+            print("""
+    all package download successful!!!""")
 
-        def print_progress(in_q: Queue, length: int):
-            index = 0
-            while True:
-                data = in_q.get()
-                if data == "over":
-                    break
-                index = index + 1
-                print("\r", end="")
-                progress = int((index + 1) / length * 100)
-                print(f"restore progress: {progress}%: ", "▋" * (progress // 2), end="")
-                sys.stdout.flush()
-            print()
-            print(f"restore successful, the source directory is {os.path.abspath(src_dir)}")
-
-        q_e = Queue()
-        dserver = Thread(target=print_progress, args=(q_e, len(manifest_list)))
-        dserver.start()
-
-        cpu_count = multiprocessing.cpu_count()
-        with ThreadPoolExecutor(max_workers=cpu_count) as t_p:
-            src_dir = self.configure.source_dir()
-            all_task = []
-            for key, value in manifest_list.items():
-                all_task.append(t_p.submit(self._download_repo, q_e, src_dir, key, value))
-            wait(all_task, return_when=ALL_COMPLETED)
-        q_e.put("over")
-
-    def _download_repo(self, out_q: Queue, src_dir, key, value):
-        repo_dir = os.path.join(src_dir, key)
-        repo = Repo.init(repo_dir)
-        remote = None
-        for item in repo.remotes:
-            if value['remote_url'] == item.url:
-                remote = item
-            else:
-                continue
-        if remote is None:
-            remote_name = "upstream"
-            remote = git.Remote.add(repo=repo, name=remote_name, url=value['remote_url'])
-        try:
-            repo.git.checkout(value['version'])
-        except GitCommandError:
-            remote.fetch(value['version'], depth=1)
-            repo.git.checkout(value['version'])
-        out_q.put('ok')
+    def _download_repo(self, src_dir, key, value):
+        logger.info("====================download %s=====================", key)
+        repo_git = OGit(os.path.join(src_dir, key), remote_url=value['remote_url'], branch=None)
+        if repo_git.check_out_version(version=value['version']):
+            logger.info("====================download %s successful=====================", key)
+            return True
+        logger.warning("====================download %s failed=====================", key)
+        return False
