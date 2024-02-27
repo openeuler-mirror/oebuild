@@ -151,6 +151,7 @@ class Generate(OebuildCommand):
 
         return parser
 
+    # pylint:disable=[R0914,R0911,R0912,R0915]
     def do_run(self, args: argparse.Namespace, unknown=None):
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
@@ -550,7 +551,7 @@ def basic_config():
     is_disable_fetch_help = ("(this param is set openeuler_fetch in local.conf, "
                              "the default value is enable, if set -df, the OPENEULER_FETCH"
                              "will set to 'disable')")
-    basic_str = textwrap.dedent("""
+    basic_str = textwrap.dedent(f"""
     comment "                           THIS IS BASIC CONFIG                               "
     config BASIC-SSTATE_CACHE--S
         string "sstate_cache     (this param is for SSTATE_MIRRORS)"
@@ -563,7 +564,7 @@ def basic_config():
         default "None"
     config BASIC-DIRECTORY--D
         string "directory     (this param is build directory, the default is same to platform)"
-        default "qemu-aarch64"
+        default "None"
     config BASIC-TOOLCHAIN_DIR--T
         string "toolchain_dir     {toolchain_help}"
         default "None"
@@ -588,7 +589,5 @@ def basic_config():
         config BUILD-B_IN--HOST
             bool "build_in_host"
     endchoice
-    """.format(toolchain_help=toolchain_help,
-               nativesdk_help=nativesdk_help,
-               is_disable_fetch_help=is_disable_fetch_help))
+    """)
     return basic_str
