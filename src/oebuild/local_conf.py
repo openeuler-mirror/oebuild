@@ -123,6 +123,26 @@ class LocalConf:
             new_str=f'MACHINE = "{parse_compile.machine}"',
             content=content)
 
+        if parse_compile.machine == 'sdk':
+            build_dir = re.search('.*(?=build)', self.local_dir)
+            if not build_dir:
+                logger.error('build_dir is not exists !')
+                sys.exit(-1)
+            change_conf = (build_dir.group() +
+                           '/src/yocto-meta-openeuler/.oebuild/nativesdk/local.conf')
+            if not os.path.exists(change_conf):
+                logger.error('local.conf is not exists !')
+                sys.exit(-1)
+
+            with open(change_conf, 'r', encoding='utf-8') as change_conf:
+                change_lines = change_conf.readlines()
+            for change_line in change_lines:
+                pre = change_line.replace('#', '').strip() if '#' in change_line else change_line
+                content = match_and_replace(
+                    pre=pre,
+                    new_str=change_line,
+                    content=content)
+
         # replace toolchain
         if parse_compile.toolchain_dir is not None:
             if parse_compile.build_in == oebuild_const.BUILD_IN_DOCKER:

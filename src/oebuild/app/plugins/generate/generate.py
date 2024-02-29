@@ -169,9 +169,33 @@ class Generate(OebuildCommand):
             This parameter marks the mode at build time, and is built in the container by docker
             ''')
 
+        parser.add_argument('-sdk',
+                            '--sdk',
+                            dest='sdk',
+                            action="store_true",
+                            help='''
+                    This parameter is used to indicate whether to build an SDK
+                    ''')
+
+        parser.add_argument('-toolchain',
+                            '--toolchain',
+                            dest='toolchain',
+                            action="store_true",
+                            help='''
+                            This parameter is used to indicate whether to build an toolchain
+                            ''')
+
+        parser.add_argument('-tn',
+                            '--toolchain_name',
+                            dest='toolchain_name',
+                            action='append',
+                            help='''
+                            This parameter is used to toolchain name
+                            ''')
+
         return parser
 
-    # pylint:disable=[R0914,R0911,R0912,R0915]
+    # pylint:disable=[R0914,R0911,R0912,R0915,W1203]
     def do_run(self, args: argparse.Namespace, unknown=None):
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
@@ -197,8 +221,16 @@ class Generate(OebuildCommand):
             args = args.parse_args(generate_command)
         else:
             args = args.parse_args(unknown)
+        build_in = args.build_in
+        if args.sdk:
+            self.build_sdk(args.build_in, args.directory, args.toolchain_dir, args.nativesdk_dir)
+            return
 
-        build_in = oebuild_const.BUILD_IN_DOCKER
+        if args.toolchain:
+            toolchain_name_list = args.toolchain_name if args.toolchain_name else []
+            self.tool_chain(toolchain_name_list)
+            return
+
         if args.build_in == oebuild_const.BUILD_IN_HOST:
             try:
                 self._check_param_in_host(args=args)
@@ -459,10 +491,34 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
             os.makedirs(pathlib.Path(self.oebuild_kconfig_path).absolute())
         kconfig_path = pathlib.Path(self.oebuild_kconfig_path,
                                     str(int(time.time())))
+        info = textwrap.dedent("""
+        config TOOLCHAIN
+            bool "Build Toolchain"
+        if TOOLCHAIN
+            config TOOLCHAINS_CONFIG_AARCH64
+            bool "AARCH64"
+            config TOOLCHAINS_CONFIG_ARM32
+            bool "ARM32"
+            config TOOLCHAINS_CONFIG_X86-64
+            bool "X86-64"
+            config TOOLCHAINS_CONFIG_RISCV64
+            bool "RISCV64"
+        endif
+        config NATIVE-SDK
+            bool "Build Nativesdk"
+            depends on !TOOLCHAIN
+        config IMAGE
+            bool "Build OS"
+            depends on !NATIVE-SDK && !TOOLCHAIN
+            default y
+        if IMAGE
+        """)
+        write_data = info + platform_data + feature_data + basic_data + "\nendif"
         with open(kconfig_path, 'w', encoding='utf-8') as kconfig_file:
-            kconfig_file.write(platform_data + feature_data + basic_data)
+            kconfig_file.write(write_data)
 
         kconf = Kconfig(filename=kconfig_path)
+        os.environ["MENUCONFIG_STYLE"] = "aquatic selection=fg:white,bg:blue"
         with oebuild_util.suppress_print():
             menuconfig(kconf)
         subprocess.check_output(f'rm -rf {kconfig_path}', shell=True)
@@ -547,14 +603,17 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
             content = config_file.read()
         content = re.sub('#.*|.*None.*', "", content)
         basic_list = re.findall('(?<=CONFIG_BASIC).*', content)
-        platform_search = re.search(r"(?<=CONFIG_PLATFORM_).*(?=\=y)", content)
-        feature_list = re.findall(r"(?<=CONFIG_FEATURE_).*(?=\=y)", content)
-        build_in = re.search(r"(?<=CONFIG_BUILD).*(?=\=y)", content)
+        platform_search = re.search(r"(?<=CONFIG_PLATFORM_).*(?==y)", content)
+        feature_list = re.findall(r"(?<=CONFIG_FEATURE_).*(?==y)", content)
+        build_in = re.search(r"(?<=CONFIG_BUILD).*(?==y)", content)
+        native_sdk = re.search("(?<=NATIVE-SDK).*", content)
+        tool_chain = re.search("(?<=TOOLCHAIN).*", content)
+        toolchain_list = re.findall("(?<=TOOLCHAINS_).*(?==y)", content)
         generate_command = []
         for basic in basic_list:
             basic_info = basic.lower().replace("\"", "").split('=')
-            if re.search(r"(?<=--).*(?=\=)", basic):
-                basic_info[0] = '-' + re.search(r"(?<=--).*(?=\=)",
+            if re.search(r"(?<=--).*(?==)", basic):
+                basic_info[0] = '-' + re.search(r"(?<=--).*(?==)",
                                                 basic).group().lower()
                 if re.search('-DF', basic):
                     generate_command += ['-df']
@@ -573,7 +632,77 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
         for feature in feature_list:
             generate_command += ['-f', feature.lower()]
 
+        if native_sdk:
+            generate_command = ['-sdk']
+
+        if tool_chain:
+            generate_command = ['-toolchain']
+
+            if toolchain_list:
+                for toolchain_info in toolchain_list:
+                    generate_command += ['-tn', toolchain_info.lower()]
+
         return generate_command
+
+    def build_sdk(self, build_in, directory, toolchain_dir, nativesdk_dir):
+        """
+
+        Args:
+            build_in: host or docker
+            directory: build dir
+            toolchain_dir: toolchain dir
+            nativesdk_dir: nativesdk dir
+
+        Returns:
+
+        """
+        args_dir = directory if directory else "nativeSDK"
+        subprocess.run(f'rm -rf {args_dir}', shell=True, check=False)
+        subprocess.run(f'oebuild generate -d {args_dir}', shell=True, check=False)
+        build_dir = os.path.join(self.configure.build_dir(), args_dir)
+        yaml_path = pathlib.Path(f"{build_dir}/compile.yaml")
+        if os.path.exists(yaml_path):
+            info = oebuild_util.read_yaml(yaml_path)
+            info['machine'] = 'sdk'
+            if build_in == 'host':
+                info['build_in'] = 'host'
+                del info['docker_param']
+                info['nativesdk_dir'] = os.path.abspath(nativesdk_dir)
+                info['toolchain_dir'] = os.path.abspath(toolchain_dir)
+            oebuild_util.write_yaml(yaml_path, info)
+        os.chdir(build_dir)
+        subprocess.run('oebuild bitbake buildtools-extended-tarball', shell=True, check=False)
+
+    def tool_chain(self, toolchain_name_list):
+        """
+
+        Args:
+            toolchain_name_list: choose toolchain
+
+        Returns:
+
+        """
+        cross_path = os.path.join(self.configure.source_yocto_dir(), ".oebuild/cross-tools")
+        if not os.path.exists(cross_path):
+            logger.error('Build dependency not downloaded, not supported for build. Please '
+                         'download the latest yocto meta openeuler repository')
+            sys.exit(-1)
+        toolchain_list = os.listdir(os.path.join(cross_path, 'configs'))
+        for config in toolchain_list:
+            if re.search('[.-]', config):
+                toolchain_list.remove(config)
+        if toolchain_name_list and not set(toolchain_name_list).issubset(toolchain_list):
+            logger.error(f'toolchain name not exists, toolchain list is {toolchain_list}')
+            sys.exit(-1)
+        build_dir = os.path.join(self.configure.build_dir(), 'toolchain')
+        subprocess.run(f'rm -rf {build_dir}', shell=True, check=False)
+        subprocess.run('oebuild generate -d toolchain', shell=True, check=False)
+        subprocess.check_output(f'cp -r {cross_path} {build_dir}', shell=True)
+        os.chdir(build_dir)
+        subprocess.check_output('./cross-tools/prepare.sh ../toolchain/', shell=True)
+        logger.info('build toolchain...')
+        toolchain_name = ' ' + ' '.join(toolchain_name_list) if toolchain_name_list else ''
+        subprocess.run(f'oebuild bitbake toolchain{toolchain_name}', shell=True, check=False)
 
 
 def basic_config():

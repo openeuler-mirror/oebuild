@@ -25,6 +25,30 @@ import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
 
 
+def split_command(generate_command):
+    """
+
+    Args:
+        generate_command: generate command
+
+    Returns:
+
+    """
+    if generate_command.split(' ')[-1] == 'toolchain':
+        command = """
+        ./cross-tools/update.sh  ###!!!###\n
+        cp config_aarch64 .config && ct-ng build  ###!!!###\n
+        cp config_arm32 .config && ct-ng build  ###!!!###\n
+        cp config_x86_64 .config && ct-ng build  ###!!!###\n
+        cp config_riscv64 .config && ct-ng build  ###!!!###\n"""
+    else:
+        command = "./cross-tools/update.sh  ###!!!###\n"
+        for command_info in generate_command.split(' ')[2:]:
+            command = f"{command}cp {command_info} .config && ct-ng build  ###!!!###\n"
+
+    return command
+
+
 class InContainer(BaseBuild):
     '''
     bitbake command execute in container
@@ -145,6 +169,8 @@ class InContainer(BaseBuild):
         # add auto execute command for example: bitbake busybox
         if command is not None and command != "":
             content = self._get_bashrc_content(container=container)
+            if "bitbake toolchain" in command:
+                command = split_command(command)
             new_content = self._add_bashrc(content=content, line=command)
             self.update_bashrc(container=container, content=new_content)
             res: ExecResult = self.client.container_exec_command(
