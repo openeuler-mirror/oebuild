@@ -42,9 +42,9 @@ class Bitbake(OebuildCommand):
             'bitbake',
             'execute bitbake command',
             textwrap.dedent('''
-            The bitbake command performs the build operation, and for the build environment, 
-            there are two types, one is to build in docker and the other is to build in the 
-            host. There are also two construction methods, one is to build directly, and the 
+            The bitbake command performs the build operation, and for the build environment,
+            there are two types, one is to build in docker and the other is to build in the
+            host. There are also two construction methods, one is to build directly, and the
             other is to call up the build environment to be operated freely by the user
             ''')
         )

@@ -40,10 +40,10 @@ class OebuildCommand(ABC):
 
     def pre_parse_help(self, args: argparse.ArgumentParser, unknown: List[str]):
         '''
-        Whether to parse the help command in advance, designed to adapt to some extended 
-        scenarios that do not require command resolution, generally the function is placed 
-        in the front of the do_run to execute, if it returns true, it means that it is a 
-        help command, then there is no need to continue to execute, otherwise the specific 
+        Whether to parse the help command in advance, designed to adapt to some extended
+        scenarios that do not require command resolution, generally the function is placed
+        in the front of the do_run to execute, if it returns true, it means that it is a
+        help command, then there is no need to continue to execute, otherwise the specific
         function content is executed
         '''
         pars = args.parse_args(unknown)

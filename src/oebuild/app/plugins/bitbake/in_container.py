@@ -151,8 +151,10 @@ class InContainer(BaseBuild):
                 container=container,
                 command="bash .bashrc",
                 user=oebuild_const.CONTAINER_USER,
-                work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-                demux=True)
+                params={
+                    "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
+                    "demux": True
+                })
             exit_code = 0
             for line in res.output:
                 if line[1] is not None:
@@ -185,8 +187,10 @@ class InContainer(BaseBuild):
             container=container,
             command=f"bash /home/{oebuild_const.CONTAINER_USER}/.bashrc",
             user=oebuild_const.CONTAINER_USER,
-            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-            stream=False)
+            params={
+                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
+                "stream": False
+            })
         if res.exit_code != 0:
             raise ValueError(res.output.decode())
             # raise ValueError("bitbake init faild")
@@ -196,8 +200,11 @@ class InContainer(BaseBuild):
             container=container,
             user='root',
             command=f"id {oebuild_const.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-            stream=False)
+            params={
+                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
+                "stream": False
+            })
+
         if res.exit_code != 0:
             raise ValueError("check docker user id faild")
 
@@ -231,16 +238,20 @@ class InContainer(BaseBuild):
             container=container,
             user='root',
             command=f"usermod -u {uid} {oebuild_const.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-            stream=False)
+            params={
+                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
+                "stream": False
+            })
 
     def _change_container_gid(self, container: Container, gid: int):
         self.client.container_exec_command(
             container=container,
             user='root',
             command=f"groupmod -g {gid} {oebuild_const.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-            stream=False)
+            params={
+                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
+                "stream": False
+            })
 
     def _install_sudo(self, container: Container):
         self._replace_yum_mirror(container=container)
@@ -249,9 +260,10 @@ class InContainer(BaseBuild):
             container=container,
             user='root',
             command="which sudo",
-            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-            stream=False
-        )
+            params={
+                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
+                "stream": False
+            })
         if resp.exit_code != 0:
             logger.info(
                 "=========================install sudo===============================")
@@ -271,20 +283,22 @@ class InContainer(BaseBuild):
             container=container,
             user='root',
             command=r"""
-            sed -i 's/repo.openeuler.org/mirrors.huaweicloud.com\/openeuler/g' /etc/yum.repos.d/openEuler.repo
+sed -i 's/repo.openeuler.org/mirrors.huaweicloud.com\/openeuler/g' /etc/yum.repos.d/openEuler.repo
             """,
-            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-            stream=False
-        )
+            params={
+                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
+                "stream": False
+            })
 
     def _install_software(self, container: Container, software: str):
         resp = self.client.container_exec_command(
             container=container,
             user='root',
             command=f"yum install {software} -y",
-            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-            stream=True
-        )
+            params={
+                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
+                "stream": True
+            })
         for line in resp.output:
             logger.info(line.decode().strip('\n'))
 
@@ -298,12 +312,8 @@ class InContainer(BaseBuild):
         content = self._get_bashrc_content(container=container)
 
         # get host proxy information and set in container
-        init_proxy_command = ""
         host_proxy = oebuild_util.get_host_proxy(oebuild_const.PROXY_LIST)
-        for key, value in host_proxy.items():
-            key_git = key.replace('_', '.')
-            command = f'export {key}={value}; git config --global {key_git} {value};'
-            init_proxy_command = f'{init_proxy_command} {command}'
+        init_proxy_command = self._set_container_proxy(host_proxy=host_proxy)
 
         # get nativesdk environment path automatic for next step
         sdk_env_path = oebuild_util.get_nativesdk_environment(container=container)
@@ -319,6 +329,14 @@ class InContainer(BaseBuild):
 
         self.update_bashrc(container=container, content=new_content)
 
+    def _set_container_proxy(self, host_proxy):
+        init_proxy_command = ""
+        for key, value in host_proxy.items():
+            key_git = key.replace('_', '.')
+            command = f'export {key}={value}; git config --global {key_git} {value};'
+            init_proxy_command = f'{init_proxy_command} {command}'
+        return init_proxy_command
+
     def update_bashrc(self, container: Container, content: str):
         '''
         update user initialization script by replace file, first create
@@ -332,7 +350,7 @@ class InContainer(BaseBuild):
             to_path=f'/home/{oebuild_const.CONTAINER_USER}')
         container.exec_run(
             cmd=f'''
-            mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINER_USER}/.bashrc
+mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINER_USER}/.bashrc
             ''',
             user="root"
         )
@@ -352,8 +370,10 @@ class InContainer(BaseBuild):
             container=container,
             command=f"cat /home/{oebuild_const.CONTAINER_USER}/.bashrc",
             user="root",
-            work_space=None,
-            stream=False)
+            params={
+                "work_space": None,
+                "stream": False
+            })
 
         if res.exit_code != 0:
             logger.error(res.output)

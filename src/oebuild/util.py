@@ -265,9 +265,12 @@ def get_host_proxy(proxy_name):
 
 @contextmanager
 def suppress_print():
+    '''
+    make standand stdout to null, so the output can be none
+    '''
+    original_stdout = sys.stdout
     try:
-        with open('/dev/null', 'w') as f:
-            original_stdout = sys.stdout
+        with open('/dev/null', 'w', encoding="utf-8") as f:
             sys.stdout = f
             yield
     finally:

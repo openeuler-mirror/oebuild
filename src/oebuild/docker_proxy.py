@@ -97,7 +97,7 @@ class DockerProxy:
     def get_all_container(self):
         '''
         get all container like command 'docker ps -a'
-        args: 
+        args:
             None
         '''
         return self._docker.containers.list(all=True)
@@ -183,26 +183,25 @@ class DockerProxy:
             res = tar.extractall(path=dst_path)
         return res is None
 
-    def container_exec_command(self,
-                               container: Container,
-                               command: str or list,
+    def container_exec_command(self, container: Container,
+                               command: str | list,
                                user: str = '',
-                               work_space=None,
-                               stream=True,
-                               demux=False):
+                               params=None):
         '''
         run command like 'docker run exec', other param
         will be default and just use a little params
         returns a data stream
         '''
+        if params is None:
+            params = {}
         res = container.exec_run(
             cmd=command,
             user=user,
-            workdir=work_space,
+            workdir=None if "work_space" not in params else params['work_space'],
             stderr=True,
             stdout=True,
-            stream=stream,
-            demux=demux
+            stream=True if "stream" not in params else params['stream'],
+            demux=False if "demux" not in params else params['dumex']
         )
 
         return res

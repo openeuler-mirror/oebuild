@@ -45,6 +45,9 @@ class CheckDockerTag:
             self.tag_list.append(key)
 
     def get_tags(self,):
+        '''
+        return docker image tag list
+        '''
         return self.tag_list
 
     def list_image_tag(self,):
@@ -62,12 +65,13 @@ the openeuler embedded docker tag can be selected list:
         print(log)
 
     def get_tag(self,) -> str:
-
+        '''
+        return docker instance tag
+        '''
         if self.docker_tag is not None and self.docker_tag != "":
             if self.docker_tag not in self.tag_list:
                 return None
-            else:
-                return str(self.docker_tag)
+            return str(self.docker_tag)
 
         yocto_dir = self.configure.source_yocto_dir()
         env_path = os.path.join(yocto_dir, ".oebuild/env.yaml")

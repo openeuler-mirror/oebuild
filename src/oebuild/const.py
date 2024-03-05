@@ -36,9 +36,9 @@ SSTATE_CACHE = '/usr1/openeuler/sstate-cache'
 
 # used for bitbake/in_container.py
 BASH_BANNER = '''
-    Welcome to the openEuler Embedded build environment, 
-    where you can run 'bitbake openeuler-image' to build 
-    standard images 
+    Welcome to the openEuler Embedded build environment,
+    where you can run 'bitbake openeuler-image' to build
+    standard images
 '''
 
 # used for configure.py
