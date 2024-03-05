@@ -98,6 +98,8 @@ pipeline {
                                     --diff_branch master
                                 """, returnStdout: true).trim()
                                 sh """echo $diff_files"""
+                                // 安装oebuild，以解决pylint检查的依赖问题
+                                sh """pip install -e /home/jenkins/agent/$giteeRepoName"""
                                 // 执行scope检查
                                 def randomStr = getRandomStr()
                                 def logDir = mkdirOpeneulerLog()
