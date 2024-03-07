@@ -26,7 +26,7 @@ from oebuild.m_log import logger
 @dataclass
 class DockerParam:
     '''
-    xxxxxxxxx
+    DockerParam defines the various parameters required for container startup
     '''
     # point out the docker image
     image: str
@@ -39,17 +39,15 @@ class DockerParam:
 
 
 @dataclass
-class Compile(PlatformTemplate):
+class BuildParam:
     '''
-    Compile is the parsed object of compile.yaml and is used to manipulate the build file
+    Carries the compilation-related parameters.
     '''
     toolchain_dir: Optional[str]
 
     nativesdk_dir: Optional[str]
 
     not_use_repos: bool
-
-    build_in: str
 
     sstate_cache: Optional[str]
 
@@ -58,6 +56,14 @@ class Compile(PlatformTemplate):
     tmp_dir: Optional[str]
 
     docker_image: Optional[str]
+
+
+@dataclass
+class Compile(PlatformTemplate, BuildParam):
+    '''
+    Compile is the parsed object of compile.yaml and is used to manipulate the build file
+    '''
+    build_in: str
 
     docker_param: Optional[DockerParam]
 

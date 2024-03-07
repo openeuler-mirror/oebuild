@@ -201,7 +201,7 @@ class DockerProxy:
             stderr=True,
             stdout=True,
             stream=True if "stream" not in params else params['stream'],
-            demux=False if "demux" not in params else params['dumex']
+            demux=False if "demux" not in params else params['demux']
         )
 
         return res
