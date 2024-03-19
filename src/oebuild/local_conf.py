@@ -57,8 +57,8 @@ def get_nativesdk_sysroot(nativesdk_dir=oebuild_const.NATIVESDK_DIR):
         if ret is not None:
             abs_path = os.path.join(sysroot_dir, item)
             if os.path.isdir(abs_path):
-                return os.path.join("sysroot", item)
-    logger.error("can not find any sysroot directory")
+                return os.path.join("sysroots", item)
+    logger.error("can not find any sysroots directory")
     sys.exit(1)
 
 
@@ -93,6 +93,7 @@ def match_and_replace(pre: str, new_str: str, content: str):
     return content
 
 
+# pylint:disable=[R0914,R0911,R0912,R0915]
 class LocalConf:
     '''
     LocalConf corresponds to the local.conf configuration
@@ -217,27 +218,6 @@ class LocalConf:
                 pre=key,
                 new_str=f'{key} = "{value}"',
                 content=content)
-        return content
-
-    def replace_param(self, parse_compile: ParseCompile, content: str):
-        '''
-        match and replace param by ParseCompile.local_conf
-        '''
-        if parse_compile.local_conf is None:
-            return
-        for line in parse_compile.local_conf.split('\n'):
-            ret = re.match(r'^([A-Z0-9_:]+)(append)(\s)', line)
-            if ret is not None:
-                content = match_and_add(line, content)
-                continue
-            ret = re.match(r'^(([A-Z0-9a-z_-]|[/])+)(\s)', line)
-            if ret is not None:
-                content = match_and_replace(ret.group(), line, content)
-                continue
-            ret = re.match(r'^(require)(\s)', line)
-            if ret is not None:
-                content = match_and_add(line, content)
-                continue
         return content
 
     def check_nativesdk_valid(self, nativesdk_dir):
