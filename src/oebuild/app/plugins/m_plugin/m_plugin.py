@@ -17,6 +17,7 @@ import pathlib
 import re
 import subprocess
 import textwrap
+import sys
 
 from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
@@ -46,10 +47,10 @@ class MPlugin(OebuildCommand):
             'mplugin',
             ' Manage Personal Custom plugin',
             description=textwrap.dedent('''
-        This is a plugin management function that supports users to customize plugin and add them to the oebuild 
-        for use. plugin only affect locally installed oebuilds, and supports viewing personal existing plugin and 
-        uninstalling plugin.'''
-                                        ))
+This is a plugin management function that supports users to customize plugin and add them
+to the oebuild for use. plugin only affect locally installed oebuilds, and supports
+viewing personal existing plugin and uninstalling plugin.
+'''))
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
         """
@@ -72,7 +73,7 @@ class MPlugin(OebuildCommand):
   install: -d  plugin_dir_path -m major_file  -n plugin_name
   list:
   enable/disable: enable/disable -n plugin_name
-  remove: -n plugin_name 
+  remove: -n plugin_name
 ''')
         parser.add_argument('-f', '--file', dest='file',
                             help='''
@@ -124,7 +125,7 @@ class MPlugin(OebuildCommand):
             unknown = unknown[1:]
 
         if self.pre_parse_help(args, unknown):
-            return
+            sys.exit(0)
         args = args.parse_args(unknown)
 
         if not os.path.exists(self.oebuild_plugin_yaml_path.absolute()):
@@ -135,80 +136,101 @@ class MPlugin(OebuildCommand):
         plugin_dict_old = copy.deepcopy(plugin_dict)
 
         if command == 'install':
-            if not args.plugin_name:
-                logger.error('Please enter the correct command:  Missing -n parameter ')
-                return
-
-            if args.plugin_name == 'mplugin':
-                logger.error(' This command does not allow overwrite ')
-                return
-
-            if plugin_dict is not None:
-                append_command_ext = OebuildApp().get_command_ext(plugin_dict['plugins'])
-            else:
-                append_command_ext = {}
-
-            if args.plugin_name in self.command_ext.keys() \
-                    or args.plugin_name in append_command_ext.keys():
-                while True:
-                    user_input = input(
-                        f'Do you want to overwrite the existing plugin ({args.plugin_name}) in oebuild(Y/N)')
-                    if user_input.lower() == 'y':
-                        break
-                    if user_input.lower() == 'n':
-                        return
+            self._install_param_check(args=args, plugin_dict=plugin_dict)
             if args.file and os.path.exists(args.file):
-                self.install_plugin(args.file,
-                                    args.plugin_name,
-                                    plugin_dict,
-                                    plugin_dict_old,
-                                    command,
-                                    None)
-
-            elif args.dir_path and os.path.exists(args.dir_path):
-                if not args.major:
-                    logger.error(" Please specify the major file ")
-                    return
-                file = str(pathlib.Path(args.dir_path, args.major.split('/')[-1]))
-                if not os.path.exists(file):
-                    logger.error("the %s not exist, please check the plugin file path", file)
-                    return
                 self.install_plugin(
-                    file,
-                    args.plugin_name,
+                    {
+                        'file': args.file,
+                        'plugin_name': args.plugin_name,
+                        'command': command
+                    },
                     plugin_dict,
-                    plugin_dict_old,
-                    command,
-                    args.dir_path)
-
-            else:
-                logger.error("the %s not exist, please check the plugin file path", args.file)
-            return
-        if command == 'list':
-            if plugin_dict and 'plugins' in plugin_dict:
-                print("""# oebuild plugin:\n#""")
-                print(f'{"name".ljust(20)}{"status".ljust(20)}{"path"}')
-                for plugin_data in plugin_dict['plugins']:
-                    print(f'{plugin_data["name"].ljust(20)}{str(plugin_data["status"]).ljust(20)}'
-                          f'{plugin_data["path"]}')
-            else:
-                logger.error('No plugin has been created yet')
-            return
-
-        if command in ['enable', 'disable']:
-            if plugin_dict and 'plugins' in plugin_dict:
-                for plugin_data in plugin_dict['plugins']:
-                    if plugin_data['name'] == args.plugin_name:
-                        plugin_data['status'] = command
-                        oebuild_util.write_yaml(self.oebuild_plugin_yaml_path, plugin_dict)
-                        print('change success')
-                        return
-                logger.error('the plugin %s does not exist', args.plugin_name)
-            else:
-                logger.error('No plugin has been created yet')
-
-        if command == 'remove':
+                    plugin_dict_old)
+                sys.exit(0)
+            elif args.dir_path and os.path.exists(args.dir_path):
+                file = str(pathlib.Path(args.dir_path, args.major.split('/')[-1]))
+                self._install_for_dir_check(args=args, file=file)
+                self.install_plugin(
+                    {
+                        'file': file,
+                        'plugin_name': args.plugin_name,
+                        'command': command,
+                        'dir_path': args.dir_path
+                    },
+                    plugin_dict,
+                    plugin_dict_old)
+                sys.exit(0)
+            logger.error("the %s not exist, please check the plugin file path", args.file)
+            sys.exit(-1)
+        elif command == 'list':
+            self.list_plugin(plugin_dict=plugin_dict)
+        elif command in ['enable', 'disable']:
+            self.enable_disable_plugin(command=command, plugin_dict=plugin_dict, args=args)
+        elif command == 'remove':
             self.remove_plugin(args.plugin_name)
+
+    def list_plugin(self, plugin_dict):
+        '''
+        list plugin infomation with format like 'plugin_name status plugin_path'
+        '''
+        if plugin_dict and 'plugins' in plugin_dict:
+            print("""# oebuild plugin:\n#""")
+            print(f'{"name".ljust(20)}{"status".ljust(20)}{"path"}')
+            for plugin_data in plugin_dict['plugins']:
+                print(f'{str(plugin_data["name"]).ljust(20)}'
+                      f'{str(plugin_data["status"]).ljust(20)}'
+                      f'{str(plugin_data["path"])}')
+        else:
+            logger.error('No plugin has been created yet')
+            sys.exit(-1)
+
+    def enable_disable_plugin(self, command, plugin_dict, args):
+        '''
+        enable plugin or disable plugin
+        '''
+        if plugin_dict and 'plugins' in plugin_dict:
+            for plugin_data in plugin_dict['plugins']:
+                if plugin_data['name'] == args.plugin_name:
+                    plugin_data['status'] = command
+                    oebuild_util.write_yaml(self.oebuild_plugin_yaml_path, plugin_dict)
+                    print('change success')
+            logger.error('the plugin %s does not exist', args.plugin_name)
+            sys.exit(-1)
+        else:
+            logger.error('No plugin has been created yet')
+            sys.exit(-1)
+
+    def _install_for_dir_check(self, args, file):
+        if not args.major:
+            logger.error(" Please specify the major file ")
+            sys.exit(-1)
+        if not os.path.exists(file):
+            logger.error("the %s not exist, please check the plugin file path", file)
+            sys.exit(-1)
+
+    def _install_param_check(self, args, plugin_dict):
+        if not args.plugin_name:
+            logger.error('Please enter the correct command:  Missing -n parameter ')
+            sys.exit(-1)
+
+        if args.plugin_name == 'mplugin':
+            logger.error(' This command does not allow overwrite ')
+            sys.exit(-1)
+
+        if plugin_dict is not None:
+            append_command_ext = OebuildApp().get_command_ext(plugin_dict['plugins'])
+        else:
+            append_command_ext = {}
+
+        if args.plugin_name in self.command_ext.keys() \
+                or args.plugin_name in append_command_ext.keys():
+            while True:
+                user_input = input('Do you want to overwrite the existing '
+                                   f'plugin ({args.plugin_name}) in oebuild(Y/N)')
+                if user_input.lower() == 'y':
+                    break
+                if user_input.lower() == 'n':
+                    sys.exit(0)
 
     def create_or_update_plugin_yaml(self, plugin_name, class_name, python_file_name, plugin_dict):
         """
@@ -226,10 +248,12 @@ class MPlugin(OebuildCommand):
 
         if plugin_dict and 'plugins' in plugin_dict:
             plugin_list, old_plugin_path = self.input_or_update_dict(
-                plugin_name,
-                class_name,
-                python_file_name,
-                'enable',
+                {
+                    'plugin_name': plugin_name,
+                    'class_name': class_name,
+                    'python_file_name': python_file_name,
+                    'plugin_status': "enable"
+                },
                 plugin_dict['plugins'])
             plugin_dict['plugins'] = plugin_list
             oebuild_util.write_yaml(self.oebuild_plugin_yaml_path, plugin_dict)
@@ -240,12 +264,7 @@ class MPlugin(OebuildCommand):
         oebuild_util.write_yaml(self.oebuild_plugin_yaml_path, plugin_dict)
         return old_plugin_path
 
-    def input_or_update_dict(self,
-                             plugin_name,
-                             class_name,
-                             python_file_name,
-                             plugin_status,
-                             plugin_list):
+    def input_or_update_dict(self, plugin_obj, plugin_list):
         """
             Modify or insert environmental data
         Args:
@@ -264,15 +283,17 @@ class MPlugin(OebuildCommand):
             if 'name' not in plugin_data:
                 logger.error('plugin_name not exits')
                 return plugin_list, old_plugin_path
-            if plugin_data['name'] == plugin_name:
-                plugin_data['class'] = class_name
+            if plugin_data['name'] == plugin_obj['plugin_name']:
+                plugin_data['class'] = plugin_obj['class_name']
                 old_plugin_path = os.path.abspath(os.path.dirname(plugin_data['path']))
-                plugin_data['path'] = python_file_name
-                plugin_data['status'] = plugin_status
+                plugin_data['path'] = plugin_obj['python_file_name']
+                plugin_data['status'] = plugin_obj['plugin_status']
                 insert_flag = False
         if insert_flag:
-            plugin_list.append({'name': plugin_name, 'class': class_name,
-                                'path': python_file_name, 'status': plugin_status})
+            plugin_list.append({'name': plugin_obj['plugin_name'],
+                                'class': plugin_obj['class_name'],
+                                'path': plugin_obj['python_file_name'],
+                                'status': plugin_obj['plugin_status']})
         return plugin_list, old_plugin_path
 
     def query_method(self, file_path):
@@ -321,52 +342,59 @@ class MPlugin(OebuildCommand):
         else:
             logger.error('No plugin has been created yet')
 
-    def install_plugin(self, file, plugin_name, plugin_dict, plugin_dict_old, command, dir_path):
+    def install_plugin(self, install_plugin_object, plugin_dict, plugin_dict_old):
         """
-            install plugin
+            install plugin the install_plugin_object container follow item
+            file: xxx
+            plugin_name: xxx
+            command: xxx
+            dir_path: xxx
         Args:
-            file:
-            plugin_name:
+            install_plugin_object:
             plugin_dict:
             plugin_dict_old:
-            command:
-            dir_path:
 
         Returns:
 
         """
-        def_name, class_name = self.query_method(file)
+        def_name, class_name = self.query_method(install_plugin_object['file'])
         if not ('do_run' in def_name and 'do_add_parser' in def_name):
             logger.error('do_run or do_add_parser method does not exist')
-            return
+            sys.exit(-1)
         if not class_name:
             logger.error('class not extends OebuildCommand')
-            return
-        file_split_info = file.split('/')
+            sys.exit(-1)
+        file_split_info = install_plugin_object['file'].split('/')
         if len(file_split_info) > 1:
             file_name = pathlib.Path(file_split_info[-2], file_split_info[-1])
         else:
             file_name = pathlib.Path('plugin_info', file_split_info[-1])
-        file_path = pathlib.Path(self.oebuild_plugin_repository, plugin_name, file_name)
+        file_path = pathlib.Path(self.oebuild_plugin_repository,
+                                 install_plugin_object['plugin_name'],
+                                 file_name)
 
-        old_plugin_path = self.create_or_update_plugin_yaml(plugin_name, class_name,
+        old_plugin_path = self.create_or_update_plugin_yaml(install_plugin_object['plugin_name'],
+                                                            class_name,
                                                             str(file_path), plugin_dict)
 
         if old_plugin_path != '':
             subprocess.check_output(
                 f'mv {old_plugin_path} ~/.local/{old_plugin_path.split("/")[-1]}', shell=True)
 
-        file_dir_path = pathlib.Path(self.oebuild_plugin_repository, plugin_name).absolute()
+        file_dir_path = pathlib.Path(self.oebuild_plugin_repository,
+                                     install_plugin_object['plugin_name']).absolute()
         if not os.path.exists(pathlib.Path(file_dir_path, 'plugin_info')):
             os.makedirs(pathlib.Path(file_dir_path, 'plugin_info'))
 
-        if dir_path is None:
-            subprocess.check_output(f'cp {file} {file_path}', shell=True)
+        if 'dir_path' not in install_plugin_object:
+            subprocess.check_output(f"cp {install_plugin_object['file']} {file_path}",
+                                    shell=True)
         else:
-            subprocess.check_output(f'cp -r {dir_path} {file_dir_path}', shell=True)
+            subprocess.check_output(f"cp -r {install_plugin_object['dir_path']} {file_dir_path}",
+                                    shell=True)
 
         command_info = subprocess.run(
-            ['oebuild', f'{plugin_name}', '-h'],
+            ['oebuild', f"{install_plugin_object['plugin_name']}", '-h'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -387,11 +415,11 @@ class MPlugin(OebuildCommand):
                     f'cp -r ~/.local/{old_plugin_path.split("/")[-1]} {file_dir_path}', shell=True)
                 subprocess.check_output(
                     f'rm -rf ~/.local/{old_plugin_path.split("/")[-1]}', shell=True)
-            return
+            sys.exit(-1)
 
         if old_plugin_path != '':
             subprocess.check_output(f'rm -rf ~/.local/{old_plugin_path.split("/")[-1]}', shell=True)
 
-        print(f'{command.title()} plugin successfully \n'
+        print(f"{install_plugin_object['command'].title()} plugin successfully \n"
               f'{"name".ljust(20)}{"status".ljust(20)}{"path"} \n'
-              f'{plugin_name.ljust(20)}{"enable".ljust(20)}{file_path}')
+              f"{install_plugin_object['plugin_name'].ljust(20)}{'enable'.ljust(20)}{file_path}")
