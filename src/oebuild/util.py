@@ -49,9 +49,12 @@ def get_nativesdk_environment(nativesdk_dir=oebuild_const.NATIVESDK_DIR,
                 if os.path.isfile(abs_path) and not os.path.islink(abs_path):
                     return item
     else:
-        res = container.exec_run("ls -al", user=oebuild_const.CONTAINER_USER, workdir=nativesdk_dir)
+        res = container.exec_run("ls -al",
+                                 user=oebuild_const.CONTAINER_USER,
+                                 workdir=nativesdk_dir)
         if res.exit_code != 0:
-            logger.error("can not find any nativesdk environment initialization shell")
+            logger.error(
+                "can not find any nativesdk environment initialization shell")
             sys.exit(res.exit_code)
         list_items = res.output.decode("utf-8").split("\n")
         for item in list_items:
@@ -62,7 +65,8 @@ def get_nativesdk_environment(nativesdk_dir=oebuild_const.NATIVESDK_DIR,
             item_split = item.split(" ")
             if len(item_split) <= 0:
                 continue
-            ret = re.match("^(environment-setup-)", item_split[len(item_split) - 1])
+            ret = re.match("^(environment-setup-)",
+                           item_split[len(item_split) - 1])
             if ret is not None and item_split[0].startswith("-"):
                 return item_split[len(item_split) - 1]
 
@@ -129,28 +133,32 @@ def get_config_yaml_dir():
     '''
     return config yaml dir
     '''
-    return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.CONFIG_YAML)
+    return os.path.join(get_base_oebuild(), 'app/conf',
+                        oebuild_const.CONFIG_YAML)
 
 
 def get_plugins_yaml_path():
     '''
     return plugin yaml path
     '''
-    return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.PLUGINS_YAML)
+    return os.path.join(get_base_oebuild(), 'app/conf',
+                        oebuild_const.PLUGINS_YAML)
 
 
 def get_compile_yaml_dir():
     '''
     return compile.yaml.sample yaml dir
     '''
-    return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.COMPILE_YAML)
+    return os.path.join(get_base_oebuild(), 'app/conf',
+                        oebuild_const.COMPILE_YAML)
 
 
 def get_upgrade_yaml_dir():
     '''
     return upgrade yaml dir
     '''
-    return os.path.join(get_base_oebuild(), 'app/conf', oebuild_const.UPGRADE_YAML)
+    return os.path.join(get_base_oebuild(), 'app/conf',
+                        oebuild_const.UPGRADE_YAML)
 
 
 def generate_random_str(randomlength=16):
@@ -199,7 +207,7 @@ def get_instance(factory):
     '''
     Instantiate a class
     '''
-    return factory()
+    return factory()()
 
 
 def restore_bashrc_content(old_content):
@@ -209,7 +217,8 @@ def restore_bashrc_content(old_content):
     new_content = ''
     for line in old_content.split('\n'):
         line: str = line
-        if line.endswith(oebuild_const.BASH_END_FLAG) or line.replace(" ", '') == '':
+        if line.endswith(oebuild_const.BASH_END_FLAG) or line.replace(
+                " ", '') == '':
             continue
         new_content = new_content + line + '\n'
     return new_content

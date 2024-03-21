@@ -36,7 +36,7 @@ class ExtensionCommandError(CommandError):
 
     def __init__(self, **kwargs):
         self.hint = kwargs.pop('hint', None)
-        super(ExtensionCommandError, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
 
 @dataclass
@@ -62,17 +62,10 @@ class _CmdFactory:
 
         # Get the attribute which provides the OebuildCommand subclass.
         try:
-            cls = getattr(mod, self.attr)
+            return getattr(mod, self.attr)
         except AttributeError as a_e:
             raise ExtensionCommandError(
                 hint=f'no attribute {self.attr} in {self.py_file}') from a_e
-
-        # Create the command instance and return it.
-        try:
-            return cls()
-        except Exception as e_p:
-            raise ExtensionCommandError(
-                hint='command constructor threw an exception') from e_p
 
 
 @dataclass
@@ -111,15 +104,18 @@ def get_spec(pre_dir, command_ext: _ExtCommand):
     xxx
     '''
 
-    py_file = os.path.join(os.path.dirname(__file__), pre_dir, command_ext.path) if (
-        '/.local/oebuild_plugins/' not in command_ext.path) else command_ext.path
-    factory = _CmdFactory(py_file=py_file, name=command_ext.name, attr=command_ext.class_name)
+    py_file = os.path.join(
+        os.path.dirname(__file__), pre_dir,
+        command_ext.path) if ('/.local/oebuild_plugins/'
+                              not in command_ext.path) else command_ext.path
+    factory = _CmdFactory(py_file=py_file,
+                          name=command_ext.name,
+                          attr=command_ext.class_name)
 
-    return OebuildExtCommandSpec(
-        name=command_ext.name,
-        description=factory().description,
-        help=factory().help_msg,
-        factory=factory)
+    return OebuildExtCommandSpec(name=command_ext.name,
+                                 description=factory().description,
+                                 help=factory().help_msg,
+                                 factory=factory)
 
 
 def _commands_module_from_file(file, mod_name):
