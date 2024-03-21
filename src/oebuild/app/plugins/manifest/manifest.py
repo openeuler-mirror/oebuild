@@ -33,23 +33,21 @@ class Manifest(OebuildCommand):
     relevant source repositories based on the manifest file
     '''
 
+    help_msg = 'generate manifest from oebuild workspace'
+    description = textwrap.dedent('''\
+            manifest provides the manifest function of generating dependent
+            source repositories in the build working directory, and can restore
+            relevant source repositories based on the manifest file
+            ''')
+
     def __init__(self):
         self.configure = Configure()
         self.manifest_command = ['download', 'create']
-        super().__init__(
-            'manifest',
-            'generate manifest from oebuild workspace',
-            textwrap.dedent('''\
-    manifest provides the manifest function of generating dependent
-    source repositories in the build working directory, and can restore
-    relevant source repositories based on the manifest file
-'''
-                            ))
+        super().__init__('manifest', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
-        parser = self._parser(
-            parser_adder,
-            usage='''
+        parser = self._parser(parser_adder,
+                              usage='''
 
   %(prog)s [create / download] [-f MANIFEST_DIR]
 
@@ -60,8 +58,7 @@ class Manifest(OebuildCommand):
                             dest='manifest_dir',
                             help='''
             specify a manifest path to perform the create or restore operation
-            '''
-                            )
+            ''')
 
         return parser
 
@@ -111,19 +108,23 @@ class Manifest(OebuildCommand):
             }
             print("\r", end="")
             progress = int((index + 1) / len(src_list) * 100)
-            print(f"Expose progress: {progress}%: ", "▋" * (progress // 2), end="")
+            print(f"Expose progress: {progress}%: ",
+                  "▋" * (progress // 2),
+                  end="")
             sys.stdout.flush()
         print()
         manifest_list = dict(sorted(manifest_list.items(), key=lambda s: s[0]))
-        oebuild_util.write_yaml(
-            yaml_dir=pathlib.Path(manifest_dir),
-            data={'manifest_list': manifest_list})
+        oebuild_util.write_yaml(yaml_dir=pathlib.Path(manifest_dir),
+                                data={'manifest_list': manifest_list})
         self._add_manifest_banner(manifest_dir=os.path.abspath(manifest_dir))
 
-        print(f"expose successful, the directory is {os.path.abspath(manifest_dir)}")
+        print(
+            f"expose successful, the directory is {os.path.abspath(manifest_dir)}"
+        )
 
     def _add_manifest_banner(self, manifest_dir):
-        oebuild_conf_dir = os.path.join(oebuild_util.get_base_oebuild(), 'app/conf')
+        oebuild_conf_dir = os.path.join(oebuild_util.get_base_oebuild(),
+                                        'app/conf')
         manifest_banner_dir = os.path.join(oebuild_conf_dir, 'manifest_banner')
 
         with open(manifest_banner_dir, 'r', encoding='utf-8') as r_f:
@@ -156,10 +157,16 @@ class Manifest(OebuildCommand):
     all package download successful!!!""")
 
     def _download_repo(self, src_dir, key, value):
-        logger.info("====================download %s=====================", key)
-        repo_git = OGit(os.path.join(src_dir, key), remote_url=value['remote_url'], branch=None)
+        logger.info("====================download %s=====================",
+                    key)
+        repo_git = OGit(os.path.join(src_dir, key),
+                        remote_url=value['remote_url'],
+                        branch=None)
         if repo_git.check_out_version(version=value['version']):
-            logger.info("====================download %s successful=====================", key)
+            logger.info(
+                "====================download %s successful=====================",
+                key)
             return True
-        logger.warning("====================download %s failed=====================", key)
+        logger.warning(
+            "====================download %s failed=====================", key)
         return False

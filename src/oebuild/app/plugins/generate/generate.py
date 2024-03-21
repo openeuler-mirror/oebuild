@@ -38,96 +38,112 @@ class Generate(OebuildCommand):
     compile.yaml is generated according to different command parameters by generate
     '''
 
-    def __init__(self):
-        self.configure = Configure()
-        self.nativesdk_dir = None
-        self.toolchain_dir = None
-        self.sstate_cache = None
-        self.tmp_dir = None
-        self.oebuild_kconfig_path = os.path.expanduser('~') + '/.local/oebuild_kconfig/'
-        super().__init__(
-            'generate',
-            'help to mkdir build directory and generate compile.yaml',
-            textwrap.dedent('''\
+    help_msg = 'help to mkdir build directory and generate compile.yaml'
+    description = textwrap.dedent('''\
             The generate command is the core command in the entire build process, which
             is mainly used to customize the build configuration parameters and generate
             a compile.yaml by customizing each parameter. In addition, for a large number
             of configuration parameter input is not very convenient, generate provides a
             way to specify compile.yaml, users can directly specify the file after
             customizing the build configuration file
-'''
-                            ))
+            ''')
+
+    def __init__(self):
+        self.configure = Configure()
+        self.nativesdk_dir = None
+        self.toolchain_dir = None
+        self.sstate_cache = None
+        self.tmp_dir = None
+        self.oebuild_kconfig_path = os.path.expanduser(
+            '~') + '/.local/oebuild_kconfig/'
+        super().__init__('generate', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder):
-        parser = self._parser(
-            parser_adder,
-            usage='''
+        parser = self._parser(parser_adder, usage='''
 
 %(prog)s
 ''')
 
-        parser.add_argument('-l', '--list', dest='list', action="store_true",
+        parser.add_argument('-l',
+                            '--list',
+                            dest='list',
+                            action="store_true",
                             help='''
             will list support archs and features
-            '''
-                            )
+            ''')
 
-        parser.add_argument('-p', '--platform', dest='platform', default="qemu-aarch64",
+        parser.add_argument('-p',
+                            '--platform',
+                            dest='platform',
+                            default="qemu-aarch64",
                             help='''
             this param is for arch, you can find it in yocto-meta-openeuler/.oebuild/platform
-            '''
-                            )
+            ''')
 
-        parser.add_argument('-s', '--state_cache', dest='sstate_cache',
+        parser.add_argument('-s',
+                            '--state_cache',
+                            dest='sstate_cache',
                             help='''
             this param is for SSTATE_MIRRORS
-            '''
-                            )
+            ''')
 
-        parser.add_argument('-s_dir', '--sstate_dir', dest='sstate_dir',
+        parser.add_argument('-s_dir',
+                            '--sstate_dir',
+                            dest='sstate_dir',
                             help='''
             this param is for SSTATE_DIR
-            '''
-                            )
+            ''')
 
-        parser.add_argument('-m', '--tmp_dir', dest='tmp_dir',
+        parser.add_argument('-m',
+                            '--tmp_dir',
+                            dest='tmp_dir',
                             help='''
             this param is for tmp directory, the build result will be stored in
-            '''
-                            )
+            ''')
 
-        parser.add_argument('-f', '--features', dest='features', action='append',
+        parser.add_argument('-f',
+                            '--features',
+                            dest='features',
+                            action='append',
                             help='''
             this param is feature, it's a reuse command
-            '''
-                            )
+            ''')
 
-        parser.add_argument('-d', '--directory', dest='directory',
+        parser.add_argument('-d',
+                            '--directory',
+                            dest='directory',
                             help='''
             this param is build directory, the default is same to platform
-            '''
-                            )
+            ''')
 
-        parser.add_argument('-t', '--toolchain_dir', dest='toolchain_dir', default='',
+        parser.add_argument('-t',
+                            '--toolchain_dir',
+                            dest='toolchain_dir',
+                            default='',
                             help='''
             this param is for external toolchain dir, if you want use your own toolchain
-            '''
-                            )
+            ''')
 
-        parser.add_argument('-n', '--nativesdk_dir', dest='nativesdk_dir', default='',
+        parser.add_argument('-n',
+                            '--nativesdk_dir',
+                            dest='nativesdk_dir',
+                            default='',
                             help='''
             this param is for external nativesdk dir, the param will be useful when you
             want to build in host
-            '''
-                            )
+            ''')
 
-        parser.add_argument('-tag', '--docker_tag', dest='docker_tag', default='',
+        parser.add_argument('-tag',
+                            '--docker_tag',
+                            dest='docker_tag',
+                            default='',
                             help='''
             when build in docker, the param can be point docker image
-            '''
-                            )
+            ''')
 
-        parser.add_argument('-dt', '--datetime', dest="datetime",
+        parser.add_argument('-dt',
+                            '--datetime',
+                            dest="datetime",
                             help='''
             this param is add DATETIME to local.conf, the value format is 20231212010101
             ''')
@@ -144,8 +160,12 @@ class Generate(OebuildCommand):
         parser.add_argument('-b_in',
                             '--build_in',
                             dest='build_in',
-                            choices=[oebuild_const.BUILD_IN_DOCKER, oebuild_const.BUILD_IN_HOST],
-                            default=oebuild_const.BUILD_IN_DOCKER, help='''
+                            choices=[
+                                oebuild_const.BUILD_IN_DOCKER,
+                                oebuild_const.BUILD_IN_HOST
+                            ],
+                            default=oebuild_const.BUILD_IN_DOCKER,
+                            help='''
             This parameter marks the mode at build time, and is built in the container by docker
             ''')
 
@@ -162,8 +182,10 @@ class Generate(OebuildCommand):
 
         yocto_dir = self.configure.source_yocto_dir()
         if not self.check_support_oebuild(yocto_dir):
-            logger.error('Currently, yocto-meta-openeuler does not support oebuild, \
-                    please modify .oebuild/config and re-execute `oebuild update`')
+            logger.error(
+                'Currently, yocto-meta-openeuler does not support oebuild, \
+                    please modify .oebuild/config and re-execute `oebuild update`'
+            )
             return
 
         if len(unknown) == 0:
@@ -249,7 +271,8 @@ class Generate(OebuildCommand):
                     image_list = check_docker_tag.get_tags()
 
                     for key, value in enumerate(image_list):
-                        print(f"{key}, {oebuild_config.docker.repo_url}:{value}")
+                        print(
+                            f"{key}, {oebuild_config.docker.repo_url}:{value}")
                     k = input("please entry number:")
                     if k == "q":
                         return
@@ -265,18 +288,19 @@ class Generate(OebuildCommand):
 
         out_dir = pathlib.Path(os.path.join(build_dir, 'compile.yaml'))
 
-        oebuild_util.write_yaml(out_dir, parser_template.generate_compile_conf(
-            nativesdk_dir=self.nativesdk_dir,
-            toolchain_dir=self.toolchain_dir,
-            build_in=build_in,
-            sstate_cache=self.sstate_cache,
-            tmp_dir=self.tmp_dir,
-            datetime=args.datetime,
-            is_disable_fetch=args.is_disable_fetch,
-            docker_image=docker_image,
-            src_dir=self.configure.source_dir(),
-            compile_dir=build_dir
-        ))
+        oebuild_util.write_yaml(
+            out_dir,
+            parser_template.generate_compile_conf(
+                nativesdk_dir=self.nativesdk_dir,
+                toolchain_dir=self.toolchain_dir,
+                build_in=build_in,
+                sstate_cache=self.sstate_cache,
+                tmp_dir=self.tmp_dir,
+                datetime=args.datetime,
+                is_disable_fetch=args.is_disable_fetch,
+                docker_image=docker_image,
+                src_dir=self.configure.source_dir(),
+                compile_dir=build_dir))
 
         self._print_generate(build_dir=build_dir)
 
@@ -296,17 +320,20 @@ oebuild bitbake
 
     def _check_param_in_host(self, args):
         if args.toolchain_dir == '':
-            raise ValueError("build in host must points toolchain directory in '-t' param")
+            raise ValueError(
+                "build in host must points toolchain directory in '-t' param")
 
         if args.nativesdk_dir == '':
-            raise ValueError("build in host must points nativesdk directory in '-n' param")
+            raise ValueError(
+                "build in host must points nativesdk directory in '-n' param")
 
-    def _add_platform_template(self, args, yocto_oebuild_dir, parser_template: ParseTemplate):
-        if args.platform + '.yaml' in os.listdir(os.path.join(yocto_oebuild_dir, 'platform')):
+    def _add_platform_template(self, args, yocto_oebuild_dir,
+                               parser_template: ParseTemplate):
+        if args.platform + '.yaml' in os.listdir(
+                os.path.join(yocto_oebuild_dir, 'platform')):
             try:
                 parser_template.add_template(
-                    os.path.join(yocto_oebuild_dir,
-                                 'platform',
+                    os.path.join(yocto_oebuild_dir, 'platform',
                                  args.platform + '.yaml'))
             except BaseParseTemplate as e_p:
                 raise e_p
@@ -315,14 +342,16 @@ oebuild bitbake
 wrong platform, please run `oebuild generate -l` to view support platform""")
             sys.exit(-1)
 
-    def _add_features_template(self, args, yocto_oebuild_dir, parser_template: ParseTemplate):
+    def _add_features_template(self, args, yocto_oebuild_dir,
+                               parser_template: ParseTemplate):
         if args.features:
             for feature in args.features:
-                if feature + '.yaml' in os.listdir(os.path.join(yocto_oebuild_dir, 'features')):
+                if feature + '.yaml' in os.listdir(
+                        os.path.join(yocto_oebuild_dir, 'features')):
                     try:
-                        parser_template.add_template(os.path.join(yocto_oebuild_dir,
-                                                                  'features',
-                                                                  feature + '.yaml'))
+                        parser_template.add_template(
+                            os.path.join(yocto_oebuild_dir, 'features',
+                                         feature + '.yaml'))
                     except BaseParseTemplate as b_t:
                         raise b_t
                 else:
@@ -337,9 +366,11 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
         if args.directory is None or args.directory == '':
             build_dir = os.path.join(self.configure.build_dir(), args.platform)
         else:
-            build_dir = os.path.join(self.configure.build_dir(), args.directory)
+            build_dir = os.path.join(self.configure.build_dir(),
+                                     args.directory)
 
-        if not os.path.abspath(build_dir).startswith(self.configure.build_dir()):
+        if not os.path.abspath(build_dir).startswith(
+                self.configure.build_dir()):
             logger.error("Build path must in oebuild workspace")
             return None
 
@@ -397,9 +428,9 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
                 feature_name = feature.replace('.yml', '')
             if feature.endswith('.yaml'):
                 feature_name = feature.replace('.yaml', '')
-            feat = oebuild_util.read_yaml(pathlib.Path(os.path.join(yocto_oebuild_dir,
-                                                                    'features',
-                                                                    feature)))
+            feat = oebuild_util.read_yaml(
+                pathlib.Path(
+                    os.path.join(yocto_oebuild_dir, 'features', feature)))
             if "support" in feat:
                 table.add_row([feature_name, feat.get('support')])
             else:
@@ -423,9 +454,11 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
         basic_data = basic_config()
         platform_data = self.choice_platform(yocto_oebuild_dir)
         feature_data = self.add_feature(yocto_oebuild_dir)
-        if not os.path.exists(pathlib.Path(self.oebuild_kconfig_path).absolute()):
+        if not os.path.exists(
+                pathlib.Path(self.oebuild_kconfig_path).absolute()):
             os.makedirs(pathlib.Path(self.oebuild_kconfig_path).absolute())
-        kconfig_path = pathlib.Path(self.oebuild_kconfig_path, str(int(time.time())))
+        kconfig_path = pathlib.Path(self.oebuild_kconfig_path,
+                                    str(int(time.time())))
         with open(kconfig_path, 'w', encoding='utf-8') as kconfig_file:
             kconfig_file.write(platform_data + feature_data + basic_data)
 
@@ -460,8 +493,9 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
         platform_end = "endchoice"
         for platform in platform_list:
             platform_name = os.path.splitext(platform)[0].strip("\n")
-            platform_info = (f"""    config PLATFORM_{platform_name.upper()}\n"""
-                             f"""        bool "{platform_name}"\n\n""")
+            platform_info = (
+                f"""    config PLATFORM_{platform_name.upper()}\n"""
+                f"""        bool "{platform_name}"\n\n""")
             platform_start += platform_info
         platform_data = platform_start + platform_end
         return platform_data
@@ -490,8 +524,9 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
             feature_data = oebuild_util.read_yaml(feature_path)
             feature_name = os.path.splitext(feature)[0].strip("\n")
             if 'support' in feature_data:
-                support_str = ("if PLATFORM_" + feature_data['support'].upper().
-                               replace('|', '||PLATFORM_'))
+                support_str = ("if PLATFORM_" +
+                               feature_data['support'].upper().replace(
+                                   '|', '||PLATFORM_'))
 
             feature_info = (f"""\nconfig FEATURE_{feature_name.upper()}\n"""
                             f"""    bool "{feature_name}" {support_str}\n\n""")
@@ -519,17 +554,20 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
         for basic in basic_list:
             basic_info = basic.lower().replace("\"", "").split('=')
             if re.search(r"(?<=--).*(?=\=)", basic):
-                basic_info[0] = '-' + re.search(r"(?<=--).*(?=\=)", basic).group().lower()
+                basic_info[0] = '-' + re.search(r"(?<=--).*(?=\=)",
+                                                basic).group().lower()
                 if re.search('-DF', basic):
                     generate_command += ['-df']
                 else:
                     generate_command += basic_info
 
         if build_in:
-            build_command = build_in.group().lower().replace('=y', '').split('--')
+            build_command = build_in.group().lower().replace('=y',
+                                                             '').split('--')
             generate_command += build_command
 
-        platform = platform_search.group() if platform_search else 'qemu-aarch64'
+        platform = platform_search.group(
+        ) if platform_search else 'qemu-aarch64'
         generate_command += ['-p', platform.lower()]
 
         for feature in feature_list:
@@ -546,11 +584,13 @@ def basic_config():
     """
     toolchain_help = ("(this param is for external toolchain dir, "
                       "if you want use your own toolchain)")
-    nativesdk_help = ("(this param is for external nativesdk dir,"
-                      "the param will be useful when you want to build in host)")
-    is_disable_fetch_help = ("(this param is set openeuler_fetch in local.conf, "
-                             "the default value is enable, if set -df, the OPENEULER_FETCH"
-                             "will set to 'disable')")
+    nativesdk_help = (
+        "(this param is for external nativesdk dir,"
+        "the param will be useful when you want to build in host)")
+    is_disable_fetch_help = (
+        "(this param is set openeuler_fetch in local.conf, "
+        "the default value is enable, if set -df, the OPENEULER_FETCH"
+        "will set to 'disable')")
     basic_str = textwrap.dedent(f"""
     comment "                           THIS IS BASIC CONFIG                               "
     config BASIC-SSTATE_CACHE--S

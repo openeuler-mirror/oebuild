@@ -36,46 +36,47 @@ class Update(OebuildCommand):
     related to the build, such as container images, build base repositories, etc
     '''
 
+    help_msg = 'Update the basic environment required for the build'
+    description = textwrap.dedent('''
+            The update command will involve three areas, namely the build container,
+            yocto-meta-openeuler and the corresponding layers, if there are no parameters
+            after the update, it will be updated in order yocto-meta-openeuler, build
+            container and layers, the update of these three places is related, the update
+            of the build container will be affected by three factors, first, execute the
+            tag parameter, The container image related to the tag is updated, the second
+            identifies the build container image bound to the main build repository, in
+            yocto-meta-openeuler/.oebuild/env.yaml, the third identifies the branch
+            information of the main build repository, and identifies the type of build image
+            through the branch information of the main build repository. The layer update must
+            rely on yocto-meta-openeuler, if the main build repository does not exist will first
+            download the main build repository (the relevant git information is in .oebuild/config),
+            the layers update execution logic is different in different directories, if not in
+            the build directory will be parsed yocto-meta-openeuler/.oebuild/ common.yaml to get
+            the information that needs to be updated, and if it is in the build directory, it will
+            parse compile.yaml to get the updated information
+            ''')
+
     def __init__(self):
         self.configure = Configure()
 
-        super().__init__(
-            'update',
-            'Update the basic environment required for the build',
-            textwrap.dedent('''
-            The update command will involve three areas, namely the build container, 
-            yocto-meta-openeuler and the corresponding layers, if there are no parameters 
-            after the update, it will be updated in order yocto-meta-openeuler, build 
-            container and layers, the update of these three places is related, the update 
-            of the build container will be affected by three factors, first, execute the 
-            tag parameter, The container image related to the tag is updated, the second 
-            identifies the build container image bound to the main build repository, in 
-            yocto-meta-openeuler/.oebuild/env.yaml, the third identifies the branch 
-            information of the main build repository, and identifies the type of build image 
-            through the branch information of the main build repository. The layer update must 
-            rely on yocto-meta-openeuler, if the main build repository does not exist will first 
-            download the main build repository (the relevant git information is in .oebuild/config), 
-            the layers update execution logic is different in different directories, if not in 
-            the build directory will be parsed yocto-meta-openeuler/.oebuild/ common.yaml to get 
-            the information that needs to be updated, and if it is in the build directory, it will 
-            parse compile.yaml to get the updated information
-            ''')
-        )
+        super().__init__('update', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder):
-        parser = self._parser(
-            parser_adder,
-            usage='''
+        parser = self._parser(parser_adder,
+                              usage='''
   %(prog)s [yocto docker layer] [-tag]
 ''')
-        parser.add_argument('-tag', '--tag', dest='docker_tag',
+        parser.add_argument('-tag',
+                            '--tag',
+                            dest='docker_tag',
                             help='''
             with platform will list support archs, with feature will list support features
-            '''
-                            )
+            ''')
 
         parser.add_argument(
-            'item', nargs='?', default=None,
+            'item',
+            nargs='?',
+            default=None,
             help='''The name of the directory that will be initialized''')
 
         return parser
@@ -127,12 +128,13 @@ class Update(OebuildCommand):
         if update_layer:
             self.get_layer_repo()
 
-    def get_layer_repo(self,):
+    def get_layer_repo(self, ):
         '''
         download or update layers that will be needed
         '''
         # check the main layer if exists
-        yocto_dir = os.path.join(self.configure.source_dir(), "yocto-meta-openeuler")
+        yocto_dir = os.path.join(self.configure.source_dir(),
+                                 "yocto-meta-openeuler")
         if not os.path.exists(yocto_dir):
             # update main layer
             self.get_basic_repo()
@@ -140,28 +142,32 @@ class Update(OebuildCommand):
         # or <build-directory>/compile.yaml where in build directory
         repos = None
         if os.path.exists(os.path.join(os.getcwd(), "compile.yaml")):
-            parse_compile = ParseCompile(compile_conf_dir=os.path.join(os.getcwd(), "compile.yaml"))
+            parse_compile = ParseCompile(
+                compile_conf_dir=os.path.join(os.getcwd(), "compile.yaml"))
             repos = parse_compile.repos
         else:
-            common_path = pathlib.Path(os.path.join(yocto_dir, ".oebuild/common.yaml"))
+            common_path = pathlib.Path(
+                os.path.join(yocto_dir, ".oebuild/common.yaml"))
             repos = oebuild_util.read_yaml(yaml_dir=common_path)['repos']
 
         if repos is None:
             return
         for _, item in repos.items():
             if isinstance(item, OebuildRepo):
-                local_dir = os.path.join(self.configure.source_dir(), item.path)
+                local_dir = os.path.join(self.configure.source_dir(),
+                                         item.path)
                 key_repo = OGit(repo_dir=local_dir,
                                 remote_url=item.url,
                                 branch=item.refspec)
             else:
-                local_dir = os.path.join(self.configure.source_dir(), item['path'])
+                local_dir = os.path.join(self.configure.source_dir(),
+                                         item['path'])
                 key_repo = OGit(repo_dir=local_dir,
                                 remote_url=item['url'],
                                 branch=item['refspec'])
             key_repo.clone_or_pull_repo()
 
-    def get_basic_repo(self,):
+    def get_basic_repo(self, ):
         '''
         note: get_basic_repo is to download or update basic repo in config
         which set in keys basic_repo, the rule is that when the
@@ -172,9 +178,11 @@ class Update(OebuildCommand):
         embedded/src/yocto-meta-openeuler not exists, so just clone from config setting.
         '''
         oebuild_config = self.configure.parse_oebuild_config()
-        yocto_config: ConfigBasicRepo = oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
+        yocto_config: ConfigBasicRepo = \
+            oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
 
-        local_dir = os.path.join(self.configure.source_dir(), yocto_config.path)
+        local_dir = os.path.join(self.configure.source_dir(),
+                                 yocto_config.path)
         yocto_repo = OGit(repo_dir=local_dir,
                           remote_url=yocto_config.remote_url,
                           branch=yocto_config.branch)
@@ -182,27 +190,33 @@ class Update(OebuildCommand):
 
     def docker_image_update(self, docker_tag=None):
         '''
-        The container update logic is to update the corresponding tag 
-        container image if tag is specified, otherwise it is determined 
-        according to the yocto-meta-openeuler version branch in config, 
-        and if the version branch does not correspond to it, it will enter 
+        The container update logic is to update the corresponding tag
+        container image if tag is specified, otherwise it is determined
+        according to the yocto-meta-openeuler version branch in config,
+        and if the version branch does not correspond to it, it will enter
         interactive mode, which is selected by the user
         '''
         oebuild_config = self.configure.parse_oebuild_config()
         docker_config = oebuild_config.docker
-        check_docker_tag = CheckDockerTag(docker_tag=docker_tag, configure=self.configure)
+        check_docker_tag = CheckDockerTag(docker_tag=docker_tag,
+                                          configure=self.configure)
         if docker_tag is not None:
-            if check_docker_tag.get_tag() is None or check_docker_tag.get_tag() == "":
+            if check_docker_tag.get_tag() is None or check_docker_tag.get_tag(
+            ) == "":
                 check_docker_tag.list_image_tag()
                 return
-            docker_image = docker_config.repo_url + ":" + check_docker_tag.get_tag()
+            docker_image = docker_config.repo_url + ":" + check_docker_tag.get_tag(
+            )
         else:
-            docker_image = YoctoEnv().get_docker_image(self.configure.source_yocto_dir())
+            docker_image = YoctoEnv().get_docker_image(
+                self.configure.source_yocto_dir())
             if docker_image is None or docker_image == "":
-                if check_docker_tag.get_tag() is None or check_docker_tag.get_tag() == "":
+                if check_docker_tag.get_tag(
+                ) is None or check_docker_tag.get_tag() == "":
                     check_docker_tag.list_image_tag()
                     return
-                docker_image = docker_config.repo_url + ":" + check_docker_tag.get_tag()
+                docker_image = docker_config.repo_url + ":" + check_docker_tag.get_tag(
+                )
 
         client = DockerProxy()
         logger.info("Pull %s ...", docker_image)

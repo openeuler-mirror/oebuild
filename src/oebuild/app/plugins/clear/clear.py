@@ -29,29 +29,28 @@ class Clear(OebuildCommand):
     for some clear task
     '''
 
-    def __init__(self):
-        self.configure = Configure()
-        self.client = None
-        super().__init__(
-            'clear',
-            'clear someone which oebuild generate',
-            textwrap.dedent('''\
+    help_msg = 'clear someone which oebuild generate'
+    description = textwrap.dedent('''\
             During the construction process using oebuild, a lot of temporary products
             will be generated, such as containers,so this command can remove unimportant
             products, such as containers
-'''
-                            ))
+            ''')
+
+    def __init__(self):
+        self.configure = Configure()
+        self.client = None
+        super().__init__('clear', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
-        parser = self._parser(
-            parser_adder,
-            usage='''
+        parser = self._parser(parser_adder, usage='''
 
   %(prog)s [docker]
 ''')
 
         parser.add_argument(
-            'item', nargs='?', default=None,
+            'item',
+            nargs='?',
+            default=None,
             help='''The name of the directory that will be initialized''')
 
         return parser
@@ -71,7 +70,7 @@ class Clear(OebuildCommand):
                 return
             self.clear_docker()
 
-    def clear_docker(self,):
+    def clear_docker(self, ):
         '''
         clear container
         '''
@@ -89,10 +88,12 @@ class Clear(OebuildCommand):
             env_conf = oebuild_util.read_yaml(pathlib.Path(env))
             try:
                 container_id = env_conf['container']['short_id']
-                container = self.client.get_container(container_id=container_id)
+                container = self.client.get_container(
+                    container_id=container_id)
                 DockerProxy().stop_container(container=container)
                 DockerProxy().delete_container(container=container)
-                logger.info("Delete container: %s successful", container.short_id)
+                logger.info("Delete container: %s successful",
+                            container.short_id)
             except DockerException:
                 continue
             except KeyError:

@@ -31,6 +31,11 @@ class RunQemu(OebuildCommand):
     The command for run in qemu platform.
     '''
 
+    help_msg = 'run in qemu platform'
+    description = textwrap.dedent('''
+            The command for run in qemu platform.
+            ''')
+
     def __init__(self):
         self.configure = Configure()
         self.client = None
@@ -38,35 +43,30 @@ class RunQemu(OebuildCommand):
         self.work_dir = os.getcwd()
         self.old_bashrc = None
 
-        super().__init__(
-            'run_qemu',
-            'run in qemu platform',
-            textwrap.dedent('''
-            The command for run in qemu platform.
-            ''')
-        )
+        super().__init__('run_qemu', self.help_msg, self.description)
 
     def __del__(self):
         if self.client is not None:
             try:
                 container = self.client.get_container(self.container_id)
-                self.client.delete_container(container=container, is_force=True)
+                self.client.delete_container(container=container,
+                                             is_force=True)
             except DockerException:
                 print(f"""
-the container {self.container_id} failed to be destroyed, please run 
+the container {self.container_id} failed to be destroyed, please run
 
 `docker rm {self.container_id}`
 
 """)
 
     def do_add_parser(self, parser_adder):
-        parser = self._parser(
-            parser_adder,
-            usage='''
+        parser = self._parser(parser_adder, usage='''
   %(prog)s [command]
 ''')
         parser_adder.add_argument(
-            'command', nargs='?', default=None,
+            'command',
+            nargs='?',
+            default=None,
             help='''The name of the directory that will be initialized''')
 
         return parser
@@ -85,16 +85,17 @@ the container {self.container_id} failed to be destroyed, please run
 
         for index, param in enumerate(unknown):
             if param.startswith("qemuparams"):
-                unknown[index] = "qemuparams=\""+param.split("=")[1]+"\""
+                unknown[index] = "qemuparams=\"" + param.split("=")[1] + "\""
             if param.startswith("bootparams"):
-                unknown[index] = "bootparams=\""+param.split("=")[1]+"\""
+                unknown[index] = "bootparams=\"" + param.split("=")[1] + "\""
         self.exec_qemu(' '.join(unknown))
 
     def exec_qemu(self, params):
         '''
         exec qemu
         '''
-        container: Container = self.client.get_container(self.container_id)  # type: ignore
+        container: Container = self.client.get_container(
+            self.container_id)  # type: ignore
         self.bak_bash(container=container)
         self.init_bash(container=container)
         content = self._get_bashrc_content(container=container)
@@ -104,8 +105,7 @@ the container {self.container_id} failed to be destroyed, please run
         )
         qemu_helper_dir = os.path.join(
             oebuild_const.CONTAINER_BUILD,
-            "/tmp/work/x86_64-linux/qemu-helper-native"
-        )
+            "/tmp/work/x86_64-linux/qemu-helper-native")
         staging_bindir_native = f"""
 if [ ! -d {qemu_helper_usr} ];then
     mkdir -p {qemu_helper_usr}
@@ -113,12 +113,13 @@ if [ ! -d {qemu_helper_usr} ];then
     ln -s /opt/buildtools/nativesdk/sysroots/x86_64-pokysdk-linux/usr/bin {qemu_helper_usr}
 fi
 """
+        content = oebuild_util.add_bashrc(content=content,
+                                          line=staging_bindir_native)
         content = oebuild_util.add_bashrc(
-            content=content, line=staging_bindir_native)
-        content = oebuild_util.add_bashrc(
-            content=content, line=f"mv -f /root/{self.old_bashrc} /root/.bashrc")
-        content = oebuild_util.add_bashrc(
-            content=content, line=f"""runqemu {params} && exit""")
+            content=content,
+            line=f"mv -f /root/{self.old_bashrc} /root/.bashrc")
+        content = oebuild_util.add_bashrc(content=content,
+                                          line=f"""runqemu {params} && exit""")
         self.update_bashrc(container=container, content=content)
         os.system(f"docker exec -it -u root {container.short_id}  bash")
 
@@ -131,9 +132,10 @@ fi
         '''
         old_content = self._get_bashrc_content(container=container)
         self.update_bashrc(container=container,
-                           content=oebuild_util.restore_bashrc_content(old_content=old_content))
+                           content=oebuild_util.restore_bashrc_content(
+                               old_content=old_content))
 
-    def _check_qemu_ifup(self,):
+    def _check_qemu_ifup(self, ):
         if not os.path.exists("/etc/qemu-ifup"):
             print("""please create a virtual network interface as follows:
                   1, open /etc/qemu-ifup in vim or vi
@@ -145,7 +147,6 @@ fi
 now, you can continue run `oebuild runqemu` in compile directory
                   """)
             sys.exit(0)
-        return
 
     def deal_env_container(self, docker_image):
         '''
@@ -160,7 +161,8 @@ now, you can continue run `oebuild runqemu` in compile directory
         volumns.append("/dev/net/tun:/dev/net/tun")
         volumns.append("/etc/qemu-ifup:/etc/qemu-ifup")
         volumns.append(self.work_dir + ':' + oebuild_const.CONTAINER_BUILD)
-        volumns.append(self.configure.source_dir() + ':' + oebuild_const.CONTAINER_SRC)
+        volumns.append(self.configure.source_dir() + ':' +
+                       oebuild_const.CONTAINER_SRC)
 
         parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS + " --privileged"
         container: Container = self.client.create_container(
@@ -188,9 +190,7 @@ now, you can continue run `oebuild runqemu` in compile directory
         self.client.container_exec_command(
             container=container,
             command=f"cp /root/.bashrc /root/{old_bash}",
-            user="root",
-            work_space=None,
-            stream=False)
+            user="root")
         self.old_bashrc = old_bash
 
     def init_bash(self, container: Container):
@@ -202,21 +202,20 @@ now, you can continue run `oebuild runqemu` in compile directory
         # read container default user .bashrc content
         content = self._get_bashrc_content(container=container)
         # get nativesdk environment path automatic for next step
-        sdk_env_path = oebuild_util.get_nativesdk_environment(container=container)
+        sdk_env_path = oebuild_util.get_nativesdk_environment(
+            container=container)
         init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{sdk_env_path}'
         init_oe_command = f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
             {oebuild_const.CONTAINER_BUILD}'
+
         init_command = [init_sdk_command, init_oe_command]
         new_content = oebuild_util.init_bashrc_content(content, init_command)
         self.update_bashrc(container=container, content=new_content)
 
     def _get_bashrc_content(self, container: Container):
         content = self.client.container_exec_command(
-            container=container,
-            command="cat /root/.bashrc",
-            user="root",
-            work_space=None,
-            stream=False).output
+            container=container, command="cat /root/.bashrc",
+            user="root").output
 
         return content.decode()
 
@@ -227,14 +226,11 @@ now, you can continue run `oebuild runqemu` in compile directory
         remove it
         '''
         tmp_file = self._set_tmpfile_content(content)
-        self.client.copy_to_container(
-            container=container,
-            source_path=tmp_file,
-            to_path='/root')
-        container.exec_run(
-            cmd=f"mv /root/{tmp_file} /root/.bashrc",
-            user="root"
-        )
+        self.client.copy_to_container(container=container,
+                                      source_path=tmp_file,
+                                      to_path='/root')
+        container.exec_run(cmd=f"mv /root/{tmp_file} /root/.bashrc",
+                           user="root")
         os.remove(tmp_file)
 
     def _set_tmpfile_content(self, content: str):

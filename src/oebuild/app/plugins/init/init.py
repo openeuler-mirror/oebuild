@@ -30,15 +30,8 @@ class Init(OebuildCommand):
     to be followed by the directory name to be initialized
     '''
 
-    def __init__(self):
-        self.configure = Configure()
-        self.oebuild_dir = None
-        self.src_dir = None
-
-        super().__init__(
-            'init',
-            'Initialize an OEBUILD working directory',
-            textwrap.dedent('''\
+    help_msg = 'Initialize an OEBUILD working directory'
+    description = textwrap.dedent('''\
             Initialize the OEbuild working directory, and after executing this command,
             a new directory will be created as the OEBUILD working directory based on the
             current path. After initialization, the working directory will create an .oebuild
@@ -50,25 +43,36 @@ class Init(OebuildCommand):
             certain changes according to their own needs。 This file is to meet the user's global
             consideration of the build configuration of OEbuild, and can be easily called by third
             parties
-'''
-                            ))
+            ''')
+
+    def __init__(self):
+        self.configure = Configure()
+        self.oebuild_dir = None
+        self.src_dir = None
+
+        super().__init__('init', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder):
         self._parser(
             parser_adder,
-            usage='''
-            
-  %(prog)s [directory] [-u yocto_remote_url] [-b branch]
-''')
-
-        parser_adder.add_argument('-u', '--yocto_remote_url', dest='yocto_remote_url',
-                                  help='''Specifies the remote of yocto-meta-openeuler''')
-
-        parser_adder.add_argument('-b', '--branch', dest='branch',
-                                  help='''Specifies the branch of yocto-meta-openeuler''')
+            usage='''%(prog)s [directory] [-u yocto_remote_url] [-b branch]''')
 
         parser_adder.add_argument(
-            'directory', nargs='?', default=None,
+            '-u',
+            '--yocto_remote_url',
+            dest='yocto_remote_url',
+            help='''Specifies the remote of yocto-meta-openeuler''')
+
+        parser_adder.add_argument(
+            '-b',
+            '--branch',
+            dest='branch',
+            help='''Specifies the branch of yocto-meta-openeuler''')
+
+        parser_adder.add_argument(
+            'directory',
+            nargs='?',
+            default=None,
             help='''The name of the directory that will be initialized''')
 
         return parser_adder
@@ -87,6 +91,7 @@ class Init(OebuildCommand):
         if self.configure.is_oebuild_dir():
             log = f'The "{os.path.dirname(self.configure.oebuild_dir())}" \
                     has already been initialized, please change other directory'
+
             logger.error(log)
             sys.exit(-1)
 
@@ -103,20 +108,24 @@ class Init(OebuildCommand):
         os.chdir(args.directory)
         oebuild_config: Config = self.configure.parse_oebuild_config()
 
-        yocto_config: ConfigBasicRepo = oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
+        yocto_config: ConfigBasicRepo = \
+            oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
+
         if args.yocto_remote_url is not None:
             yocto_config.remote_url = args.yocto_remote_url
         if args.branch is not None:
             yocto_config.branch = args.branch
-        oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER] = yocto_config
+        oebuild_config.basic_repo[
+            oebuild_const.YOCTO_META_OPENEULER] = yocto_config
 
         self.configure.update_oebuild_config(oebuild_config)
 
         logger.info("init %s successful", args.directory)
         format_msg = f'''
-There is a build configuration example file under {args.directory}/.oebuild/compile.yaml.sample, 
-if you want to block complex generate instructions, you can directly copy a configuration file, 
-and then modify it according to your own needs, and then execute `oebuild generate -c <compile_dir>`.
+There is a build configuration example file under {args.directory}/.oebuild/compile.yaml.sample,
+if you want to block complex generate instructions, you can directly copy a configuration file,
+and then modify it according to your own needs, and then execute
+    `oebuild generate -c <compile_dir>`.
 please execute the follow commands next
 
     cd {os.path.abspath(os.getcwd())}
@@ -183,6 +192,7 @@ please execute the follow commands next
         '''
         try:
             compil = oebuild_util.get_compile_yaml_dir()
-            shutil.copyfile(compil, os.path.join(updir, oebuild_const.COMPILE_YAML))
+            shutil.copyfile(compil,
+                            os.path.join(updir, oebuild_const.COMPILE_YAML))
         except FileNotFoundError:
             logger.error("mkdir compile.yaml.sample failed")

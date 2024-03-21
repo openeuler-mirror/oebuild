@@ -34,31 +34,31 @@ class Bitbake(OebuildCommand):
     command directly, for example: `oebuild bitbake busybox`
     '''
 
-    def __init__(self):
-        self.compile_conf_dir = os.path.join(os.getcwd(), 'compile.yaml')
-        self.configure = Configure()
-
-        super().__init__(
-            'bitbake',
-            'execute bitbake command',
-            textwrap.dedent('''
+    help_msg = 'execute bitbake command'
+    description = textwrap.dedent('''
             The bitbake command performs the build operation, and for the build environment,
             there are two types, one is to build in docker and the other is to build in the
             host. There are also two construction methods, one is to build directly, and the
             other is to call up the build environment to be operated freely by the user
             ''')
-        )
+
+    def __init__(self):
+        self.compile_conf_dir = os.path.join(os.getcwd(), 'compile.yaml')
+        self.configure = Configure()
+
+        super().__init__('bitbake', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
-        parser = self._parser(
-            parser_adder,
-            usage='''
+        parser = self._parser(parser_adder,
+                              usage='''
 
   %(prog)s [command]
 ''')
 
         parser_adder.add_argument(
-            'command', nargs='?', default=None,
+            'command',
+            nargs='?',
+            default=None,
             help='''The name of the directory that will be initialized''')
 
         return parser
@@ -79,7 +79,8 @@ class Bitbake(OebuildCommand):
         command = self._get_command(unknow=unknown)
 
         if not self.check_support_bitbake():
-            logger.error("Please do it in compile workspace which contain compile.yaml")
+            logger.error(
+                "Please do it in compile workspace which contain compile.yaml")
             return
 
         if not os.path.exists('.env'):
@@ -92,9 +93,11 @@ class Bitbake(OebuildCommand):
             return
 
         # if has manifest.yaml, init layer repo with it
-        yocto_dir = os.path.join(self.configure.source_dir(), "yocto-meta-openeuler")
+        yocto_dir = os.path.join(self.configure.source_dir(),
+                                 "yocto-meta-openeuler")
         manifest_path = os.path.join(yocto_dir, ".oebuild/manifest.yaml")
-        parse_compile.check_with_version(self.configure.source_dir(), manifest_path=manifest_path)
+        parse_compile.check_with_version(self.configure.source_dir(),
+                                         manifest_path=manifest_path)
         parse_env = ParseEnv(env_dir='.env')
 
         if parse_compile.build_in == oebuild_const.BUILD_IN_HOST:
@@ -111,7 +114,7 @@ class Bitbake(OebuildCommand):
                           parse_compile=parse_compile,
                           command=command)
 
-    def check_support_bitbake(self,):
+    def check_support_bitbake(self, ):
         '''
         The execution of the bitbake instruction mainly relies
         on compile.yaml, which is initialized by parsing the file

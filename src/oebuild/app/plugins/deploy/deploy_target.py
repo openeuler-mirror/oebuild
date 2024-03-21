@@ -14,7 +14,6 @@ import argparse
 import textwrap
 import logging
 
-
 from oebuild.command import OebuildCommand
 from oebuild.app.plugins.deploy.com_target import ComTarget
 
@@ -23,25 +22,27 @@ logger = logging.getLogger()
 
 class DeployTarget(OebuildCommand):
     '''
-    we use package in a 
+    we use package in a
     '''
 
+    help_msg = 'deploy software on line'
+    description = textwrap.dedent('''\
+            Deploys a recipe's build output (i.e. the output of the do_install task)
+            to a live target machine over ssh. By default, any existing files will be
+            preserved instead of being overwritten and will be restored if you run
+            devtool undeploy-target. Note: this only deploys the recipe itself and
+            not any runtime dependencies, so it is assumed that those have been
+            installed on the target beforehand.
+            ''')
+
     def __init__(self) -> None:
-        super().__init__(
-            '{}',
-            'deploy software on line',
-            textwrap.dedent('''\
-Deploys a recipe's build output (i.e. the output of the do_install task) to a live target machine over ssh. By default, any existing files will be preserved instead of being
-overwritten and will be restored if you run devtool undeploy-target. Note: this only deploys the recipe itself and not any runtime dependencies, so it is assumed that those have
-been installed on the target beforehand.
-'''
-                            ))
+        super().__init__('{}', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
-        parser = self._parser(
-            parser_adder,
-            usage='''
-oebuild deploy-target [-h] [-c] [-s] [-n] [-p] [--no-check-space] [-e SSH_EXEC] [-P PORT] [-I KEY] [-S | --no-strip] recipename target
+        parser = self._parser(parser_adder,
+                              usage='''
+oebuild deploy-target [-h] [-c] [-s] [-n] [-p] [--no-check-space] [-e SSH_EXEC]
+[-P PORT] [-I KEY] [-S | --no-strip] recipename target
 ''')
 
         return parser
@@ -54,12 +55,15 @@ oebuild deploy-target [-h] [-c] [-s] [-n] [-p] [--no-check-space] [-e SSH_EXEC] 
         com_target = ComTarget()
         com_target.exec(str_args=str_args, fun="deploy-target")
 
-    def print_help_msg(self,):
+    def print_help_msg(self, ):
         print("""
-usage: oebuild deploy-target [-h] [-c] [-s] [-n] [-p] [--no-check-space] [-e SSH_EXEC] [-P PORT] [-I KEY] [-S | --no-strip] recipename target
+usage: oebuild deploy-target [-h] [-c] [-s] [-n] [-p] [--no-check-space] [-e SSH_EXEC]
+              [-P PORT] [-I KEY] [-S | --no-strip] recipename target
 
-Deploys a recipe's build output (i.e. the output of the do_install task) to a live target machine over ssh. By default, any existing files will be preserved instead of being
-overwritten and will be restored if you run devtool undeploy-target. Note: this only deploys the recipe itself and not any runtime dependencies, so it is assumed that those have
+Deploys a recipe's build output (i.e. the output of the do_install task) to a live target
+              machine over ssh. By default, any existing files will be preserved instead of being
+overwritten and will be restored if you run devtool undeploy-target. Note: this only deploys
+              the recipe itself and not any runtime dependencies, so it is assumed that those have
 been installed on the target beforehand.
 
 arguments:
@@ -77,7 +81,9 @@ options:
                         Executable to use in place of ssh
   -P PORT, --port PORT  Specify port to use for connection to the target
   -I KEY, --key KEY     Specify ssh private key for connection to the target
-  -S, --strip           Strip executables prior to deploying (default: False). The default value of this option can be controlled by setting the strip option in the [Deploy]
+  -S, --strip           Strip executables prior to deploying (default: False).
+              The default value of this option can be controlled by
+              setting the strip option in the [Deploy]
                         section to True or False.
   --no-strip            Do not strip executables prior to deploy
 """)
@@ -85,23 +91,23 @@ options:
 
 class UnDeployTarget(OebuildCommand):
     '''
-    we use package in a 
+    we use package in a
     '''
 
+    help_msg = 'undeploy software on line'
+    description = textwrap.dedent('''\
+            Un-deploys recipe output files previously deployed to a live target machine
+                                  by devtool deploy-target.
+            ''')
+
     def __init__(self) -> None:
-        super().__init__(
-            '{}',
-            'undeploy software on line',
-            textwrap.dedent('''\
-Un-deploys recipe output files previously deployed to a live target machine by devtool deploy-target.
-'''
-                            ))
+        super().__init__('{}', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
-        parser = self._parser(
-            parser_adder,
-            usage='''
-oebuild undeploy-target [-h] [-c] [-s] [-a] [-n] [-e SSH_EXEC] [-P PORT] [-I KEY] [recipename] target
+        parser = self._parser(parser_adder,
+                              usage='''
+oebuild undeploy-target [-h] [-c] [-s] [-a] [-n] [-e SSH_EXEC]
+[-P PORT] [-I KEY] [recipename] target
 ''')
 
         return parser
@@ -117,9 +123,11 @@ oebuild undeploy-target [-h] [-c] [-s] [-a] [-n] [-e SSH_EXEC] [-P PORT] [-I KEY
     def print_help_msg(self):
         print("""
 
-usage: oebuild undeploy-target [-h] [-c] [-s] [-a] [-n] [-e SSH_EXEC] [-P PORT] [-I KEY] [recipename] target
+usage: oebuild undeploy-target [-h] [-c] [-s] [-a] [-n] [-e SSH_EXEC]
+              [-P PORT] [-I KEY] [recipename] target
 
-Un-deploys recipe output files previously deployed to a live target machine by devtool deploy-target.
+Un-deploys recipe output files previously deployed to a live target machine
+              by devtool deploy-target.
 
 arguments:
   recipename            Recipe to undeploy (if not using -a/--all)
