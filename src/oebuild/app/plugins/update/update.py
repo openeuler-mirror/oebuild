@@ -87,7 +87,7 @@ class Update(OebuildCommand):
         '''
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
-            return
+            sys.exit(0)
 
         args = args.parse_args(unknown)
 
@@ -111,7 +111,7 @@ class Update(OebuildCommand):
             update_layer = True
         else:
             logger.error('Please run oebuild update [yocto docker layer]')
-            sys.exit(-1)
+            sys.exit(1)
 
         if update_yocto:
             self.get_basic_repo()
@@ -123,7 +123,7 @@ class Update(OebuildCommand):
                 self.docker_image_update(args.docker_tag)
             except DockerException as d_e:
                 logger.error(str(d_e))
-                return
+                sys.exit(-1)
 
         if update_layer:
             self.get_layer_repo()

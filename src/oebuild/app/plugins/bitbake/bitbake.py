@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details.
 import os
 import argparse
 import textwrap
+import sys
 
 from docker.errors import DockerException
 
@@ -74,14 +75,14 @@ class Bitbake(OebuildCommand):
         '''
         if '-h' in unknown or '--help' in unknown:
             self.print_help_msg()
-            return
+            sys.exit(0)
 
         command = self._get_command(unknow=unknown)
 
         if not self.check_support_bitbake():
             logger.error(
                 "Please do it in compile workspace which contain compile.yaml")
-            return
+            sys.exit(-1)
 
         if not os.path.exists('.env'):
             os.mknod('.env')
@@ -90,7 +91,7 @@ class Bitbake(OebuildCommand):
             parse_compile = ParseCompile(self.compile_conf_dir)
         except CheckCompileError as c_e:
             logger.error(str(c_e))
-            return
+            sys.exit(-1)
 
         # if has manifest.yaml, init layer repo with it
         yocto_dir = os.path.join(self.configure.source_dir(),
@@ -103,12 +104,14 @@ class Bitbake(OebuildCommand):
         if parse_compile.build_in == oebuild_const.BUILD_IN_HOST:
             in_host = InHost(self.configure)
             in_host.exec(parse_compile=parse_compile, command=command)
-            return
+            sys.exit(0)
+
         try:
             oebuild_util.check_docker()
         except DockerException as d_e:
             logger.error(str(d_e))
-            return
+            sys.exit(-1)
+
         in_container = InContainer(self.configure)
         in_container.exec(parse_env=parse_env,
                           parse_compile=parse_compile,

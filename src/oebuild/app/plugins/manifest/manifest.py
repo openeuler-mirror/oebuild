@@ -75,7 +75,7 @@ class Manifest(OebuildCommand):
 
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
-            return
+            sys.exit(0)
 
         args = args.parse_args(unknown)
         manifest_dir = args.manifest_dir if args.manifest_dir else \

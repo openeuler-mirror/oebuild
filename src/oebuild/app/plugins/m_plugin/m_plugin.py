@@ -170,7 +170,7 @@ class MPlugin(OebuildCommand):
                 sys.exit(0)
             logger.error("the %s not exist, please check the plugin file path",
                          args.file)
-            sys.exit(-1)
+            sys.exit(1)
         elif command == 'list':
             self.list_plugin(plugin_dict=plugin_dict)
         elif command in ['enable', 'disable']:

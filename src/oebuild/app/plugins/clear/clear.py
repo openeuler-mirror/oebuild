@@ -14,6 +14,7 @@ import argparse
 import textwrap
 import os
 import pathlib
+import sys
 
 from docker.errors import DockerException
 
@@ -58,7 +59,7 @@ class Clear(OebuildCommand):
     def do_run(self, args: argparse.Namespace, unknown=None):
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
-            return
+            sys.exit(1)
 
         args = args.parse_args(unknown)
 
@@ -67,7 +68,7 @@ class Clear(OebuildCommand):
                 self.client = DockerProxy()
             except DockerException:
                 logger.error("Please install docker first!!!")
-                return
+                sys.exit(-1)
             self.clear_docker()
 
     def clear_docker(self, ):

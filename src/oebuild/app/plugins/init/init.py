@@ -84,7 +84,7 @@ class Init(OebuildCommand):
 
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
-            return
+            sys.exit(0)
 
         args = args.parse_args(unknown)
 
@@ -99,11 +99,11 @@ class Init(OebuildCommand):
             logger.error("'oebuild init' need param directory")
             logger.info("\noebuild init help:")
             self.print_help_msg()
-            return
+            sys.exit(1)
 
         if not self.init_workspace(args.directory):
             logger.error("mkdir %s failed", args.directory)
-            return
+            sys.exit(-1)
 
         os.chdir(args.directory)
         oebuild_config: Config = self.configure.parse_oebuild_config()

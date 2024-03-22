@@ -58,39 +58,18 @@ class InHost(BaseBuild):
         except NativesdkNotExist as n_e:
             logger.error(str(n_e))
             logger.error("Please set valid nativesdk directory")
-            return
+            sys.exit(1)
         except NativesdkNotValid as n_e:
             logger.error(str(n_e))
             logger.error('''
-The nativesdk path must be valid, it is recommended 
-that you download the nativesdk script and then perform 
+The nativesdk path must be valid, it is recommended
+that you download the nativesdk script and then perform
 initialization operations''')
-            return
+            sys.exit(1)
 
         if command is not None and command != "":
             self._append_build_sh(str_list=[command], build_dir=os.getcwd())
-            with subprocess.Popen('bash build.sh',
-                                  shell=True,
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE,
-                                  encoding="utf-8",
-                                  text=True) as s_p:
-                if s_p.returncode is not None and s_p.returncode != 0:
-                    err_msg = ''
-                    if s_p.stderr is not None:
-                        for line in s_p.stderr:
-                            err_msg.join(line)
-                        raise ValueError(err_msg)
-                res = None
-                while res is None:
-                    res = s_p.poll()
-                    if s_p.stdout is not None:
-                        for line in s_p.stdout:
-                            logger.info(line.strip('\n'))
-                    if s_p.stderr is not None:
-                        for line in s_p.stderr:
-                            logger.error(line.strip('\n'))
-                sys.exit(res)
+            self._bash_build()
         else:
             # run in Interactive mode
             banner_list = []
@@ -108,6 +87,30 @@ initialization operations''')
             new_content = self._add_bashrc(content, line=source_build_str)
             self.update_bashrc(new_content)
             pty.spawn("bash")
+
+    def _bash_build(self,):
+        with subprocess.Popen('bash build.sh',
+                              shell=True,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE,
+                              encoding="utf-8",
+                              text=True) as s_p:
+            if s_p.returncode is not None and s_p.returncode != 0:
+                err_msg = ''
+                if s_p.stderr is not None:
+                    for line in s_p.stderr:
+                        err_msg.join(line)
+                    raise ValueError(err_msg)
+            res = None
+            while res is None:
+                res = s_p.poll()
+                if s_p.stdout is not None:
+                    for line in s_p.stdout:
+                        logger.info(line.strip('\n'))
+                if s_p.stderr is not None:
+                    for line in s_p.stderr:
+                        logger.error(line.strip('\n'))
+            sys.exit(res)
 
     def _mk_build_sh(self, nativesdk_dir, build_dir):
         # get nativesdk environment path automatic for next step

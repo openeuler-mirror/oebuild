@@ -107,7 +107,7 @@ class Menv(OebuildCommand):
                 print('''
 Please enter the correct command: oebuild menv create [-d -f] Create an environment -n env_name
                       ''')
-                sys.exit(-1)
+                sys.exit(1)
             self.create_environment(args=args)
         elif command == 'activate':
             # Activate Environment
@@ -117,7 +117,7 @@ Please enter the correct command: oebuild menv create [-d -f] Create an environm
             print(
                 'Please enter the correct command: oebuild menv activate -n env_name'
             )
-            sys.exit(-1)
+            sys.exit(1)
 
         elif command == 'list':
             env_dict = oebuild_util.read_yaml(self.oebuild_env_yaml_path)
@@ -136,7 +136,7 @@ Please enter the correct command: oebuild menv create [-d -f] Create an environm
             print(
                 'Please enter the correct command: oebuild menv remove -n env_name'
             )
-            sys.exit(-1)
+            sys.exit(1)
 
     def create_environment(self, args):
         '''

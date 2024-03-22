@@ -175,7 +175,7 @@ class Generate(OebuildCommand):
     def do_run(self, args: argparse.Namespace, unknown=None):
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
-            return
+            sys.exit(1)
         if not self.configure.is_oebuild_dir():
             logger.error('Your current directory had not finished init')
             sys.exit(-1)
@@ -186,7 +186,7 @@ class Generate(OebuildCommand):
                 'Currently, yocto-meta-openeuler does not support oebuild, \
                     please modify .oebuild/config and re-execute `oebuild update`'
             )
-            return
+            sys.exit(-1)
 
         if len(unknown) == 0:
             config_path = self.create_kconfig(yocto_dir)
@@ -204,7 +204,7 @@ class Generate(OebuildCommand):
                 self._check_param_in_host(args=args)
             except ValueError as v_e:
                 logger.error(str(v_e))
-                return
+                sys.exit(-1)
             self.nativesdk_dir = args.nativesdk_dir
             build_in = oebuild_const.BUILD_IN_HOST
 
@@ -219,12 +219,12 @@ class Generate(OebuildCommand):
 
         if args.list:
             self.list_info()
-            return
+            sys.exit(0)
 
         build_dir = self._init_build_dir(args=args)
 
         if build_dir is None:
-            return
+            sys.exit(1)
 
         parser_template = ParseTemplate(yocto_dir=yocto_dir)
 
@@ -236,10 +236,10 @@ class Generate(OebuildCommand):
                                         parser_template=parser_template)
         except BaseParseTemplate as b_t:
             logger.error(str(b_t))
-            return
+            sys.exit(-1)
         except ValueError as v_e:
             logger.error(str(v_e))
-            return
+            sys.exit(-1)
 
         try:
             self._add_features_template(args=args,
@@ -248,10 +248,10 @@ class Generate(OebuildCommand):
         except BaseParseTemplate as b_t:
             logger.error(str(b_t))
             self._list_feature()
-            return
+            sys.exit(-1)
         except ValueError as v_e:
             logger.error(str(v_e))
-            return
+            sys.exit(-1)
 
         if os.path.exists(os.path.join(build_dir, 'compile.yaml')):
             os.remove(os.path.join(build_dir, 'compile.yaml'))
@@ -275,7 +275,7 @@ class Generate(OebuildCommand):
                             f"{key}, {oebuild_config.docker.repo_url}:{value}")
                     k = input("please entry number:")
                     if k == "q":
-                        return
+                        sys.exit(0)
                     try:
                         index = int(k)
                         docker_tag = image_list[index]

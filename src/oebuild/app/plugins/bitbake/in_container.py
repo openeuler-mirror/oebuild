@@ -55,7 +55,7 @@ class InContainer(BaseBuild):
         if not docker_proxy.is_image_exists(docker_param.image):
             logger.error('''The docker image does not exists, please run fellow command:
     `oebuild update docker`''')
-            return
+            sys.exit(-1)
 
         self.deal_env_container(env=parse_env, docker_param=docker_param)
         self.exec_compile(parse_compile=parse_compile, command=command)
