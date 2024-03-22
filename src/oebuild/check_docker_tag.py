@@ -39,10 +39,7 @@ class CheckDockerTag:
         oebuild_config = self.configure.parse_oebuild_config()
         docker_config = oebuild_config.docker
         tags = {}
-        for tag in docker_config.tag_map.values():
-            tags[tag] = True
-        for key in tags:
-            self.tag_list.append(key)
+        self.tag_list = list(set(docker_config.tag_map.values()))
 
     def get_tags(self,):
         '''
