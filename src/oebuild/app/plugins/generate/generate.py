@@ -486,24 +486,13 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
         basic_data = basic_config()
         platform_data = self.choice_platform(yocto_oebuild_dir)
         feature_data = self.add_feature(yocto_oebuild_dir)
+        toolchain_data = self.add_toolchain(yocto_oebuild_dir)
         if not os.path.exists(
                 pathlib.Path(self.oebuild_kconfig_path).absolute()):
             os.makedirs(pathlib.Path(self.oebuild_kconfig_path).absolute())
         kconfig_path = pathlib.Path(self.oebuild_kconfig_path,
                                     str(int(time.time())))
         info = textwrap.dedent("""
-        config TOOLCHAIN
-            bool "Build Toolchain"
-        if TOOLCHAIN
-            config TOOLCHAINS_CONFIG_AARCH64
-            bool "AARCH64"
-            config TOOLCHAINS_CONFIG_ARM32
-            bool "ARM32"
-            config TOOLCHAINS_CONFIG_X86-64
-            bool "X86-64"
-            config TOOLCHAINS_CONFIG_RISCV64
-            bool "RISCV64"
-        endif
         config NATIVE-SDK
             bool "Build Nativesdk"
             depends on !TOOLCHAIN
@@ -513,7 +502,7 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
             default y
         if IMAGE
         """)
-        write_data = info + platform_data + feature_data + basic_data + "\nendif"
+        write_data = toolchain_data + info + platform_data + feature_data + basic_data + "\nendif"
         with open(kconfig_path, 'w', encoding='utf-8') as kconfig_file:
             kconfig_file.write(write_data)
 
@@ -589,6 +578,36 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
             feature_start += feature_info
 
         return feature_start
+
+    def add_toolchain(self, yocto_oebuild_dir):
+        """
+            add toolchain to kconfig
+        Args:
+            yocto_oebuild_dir: yocto_oebuild_dir
+
+        Returns:
+
+        """
+        cross_path = os.path.join(yocto_oebuild_dir, "cross-tools")
+        if not os.path.exists(cross_path):
+            logger.error('Build dependency not downloaded, not supported for build. Please '
+                         'download the latest yocto meta openeuler repository')
+            sys.exit(-1)
+        toolchain_list = os.listdir(os.path.join(cross_path, 'configs'))
+        toolchain_start = """
+        config TOOLCHAIN
+            bool "Build Toolchain"
+        if TOOLCHAIN
+        """
+        for config in toolchain_list:
+            if not re.search('xml', config):
+                toolchain_info = (f"""\nconfig TOOLCHAINS_{config.upper()}\n"""
+                                  f"""    bool "{config.upper()}"\n""")
+                toolchain_start += toolchain_info
+
+        toolchain_start += "endif\n"
+        return toolchain_start
+
 
     def generate_command(self, config_path):
         """
@@ -689,12 +708,13 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
             sys.exit(-1)
         toolchain_list = os.listdir(os.path.join(cross_path, 'configs'))
         for config in toolchain_list:
-            if re.search('[.-]', config):
+            if re.search('xml', config):
                 toolchain_list.remove(config)
         if toolchain_name_list and not set(toolchain_name_list).issubset(toolchain_list):
             logger.error(f'toolchain name not exists, toolchain list is {toolchain_list}')
             sys.exit(-1)
         build_dir = os.path.join(self.configure.build_dir(), 'toolchain')
+        os.chdir(os.path.dirname(build_dir))
         subprocess.run(f'rm -rf {build_dir}', shell=True, check=False)
         subprocess.run('oebuild generate -d toolchain', shell=True, check=False)
         subprocess.check_output(f'cp -r {cross_path} {build_dir}', shell=True)

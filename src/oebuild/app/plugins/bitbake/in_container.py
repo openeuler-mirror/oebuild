@@ -38,6 +38,7 @@ def split_command(generate_command):
         command = """
         ./cross-tools/update.sh  ###!!!###\n
         cp config_aarch64 .config && ct-ng build  ###!!!###\n
+        cp config_aarch64-musl .config && ct-ng build  ###!!!###\n
         cp config_arm32 .config && ct-ng build  ###!!!###\n
         cp config_x86_64 .config && ct-ng build  ###!!!###\n
         cp config_riscv64 .config && ct-ng build  ###!!!###\n"""
@@ -45,7 +46,6 @@ def split_command(generate_command):
         command = "./cross-tools/update.sh  ###!!!###\n"
         for command_info in generate_command.split(' ')[2:]:
             command = f"{command}cp {command_info} .config && ct-ng build  ###!!!###\n"
-
     return command
 
 
