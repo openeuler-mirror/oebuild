@@ -400,8 +400,10 @@ class MPlugin(OebuildCommand):
         file_split_info = install_plugin_object['file'].split('/')
         if len(file_split_info) > 1:
             file_name = pathlib.Path(file_split_info[-2], file_split_info[-1])
+            file_name_dir = file_split_info[-2]
         else:
             file_name = pathlib.Path('plugin_info', file_split_info[-1])
+            file_name_dir = ""
         file_path = pathlib.Path(self.oebuild_plugin_repository,
                                  install_plugin_object['plugin_name'],
                                  file_name)
@@ -420,6 +422,9 @@ class MPlugin(OebuildCommand):
             install_plugin_object['plugin_name']).absolute()
         if not os.path.exists(pathlib.Path(file_dir_path, 'plugin_info')):
             os.makedirs(pathlib.Path(file_dir_path, 'plugin_info'))
+
+        if file_name_dir and not os.path.exists(pathlib.Path(file_dir_path, file_name_dir)):
+            os.makedirs(pathlib.Path(file_dir_path, file_name_dir))
 
         if 'dir_path' not in install_plugin_object:
             subprocess.check_output(
