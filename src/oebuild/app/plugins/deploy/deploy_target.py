@@ -51,7 +51,7 @@ oebuild deploy-target [-h] [-c] [-s] [-n] [-p] [--no-check-space] [-e SSH_EXEC]
     def do_run(self, args: argparse.Namespace, unknown=None):
         if '-h' in unknown or '--help' in unknown:
             self.print_help_msg()
-            sys.exit(1)
+            sys.exit(0)
         str_args = ' '.join(unknown)
         com_target = ComTarget()
         com_target.exec(str_args=str_args, fun="deploy-target")
@@ -116,7 +116,7 @@ oebuild undeploy-target [-h] [-c] [-s] [-a] [-n] [-e SSH_EXEC]
     def do_run(self, args: argparse.Namespace, unknown=None):
         if '-h' in unknown or '--help' in unknown:
             self.print_help_msg()
-            sys.exit(1)
+            sys.exit(0)
         str_args = ' '.join(unknown)
         com_target = ComTarget()
         com_target.exec(str_args=str_args, fun="undeploy-target")

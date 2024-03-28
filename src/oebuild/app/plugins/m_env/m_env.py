@@ -99,7 +99,7 @@ class Menv(OebuildCommand):
             unknown = unknown[1:]
 
         if self.pre_parse_help(args, unknown):
-            sys.exit(1)
+            sys.exit(0)
         args = args.parse_args(unknown)
 
         if command == 'create':

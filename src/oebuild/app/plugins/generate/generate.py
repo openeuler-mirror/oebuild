@@ -199,7 +199,7 @@ class Generate(OebuildCommand):
     def do_run(self, args: argparse.Namespace, unknown=None):
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
-            sys.exit(1)
+            sys.exit(0)
         if not self.configure.is_oebuild_dir():
             logger.error('Your current directory had not finished init')
             sys.exit(-1)
