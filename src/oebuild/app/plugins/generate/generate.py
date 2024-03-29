@@ -608,7 +608,6 @@ wrong platform, please run `oebuild generate -l` to view support feature""")
         toolchain_start += "endif\n"
         return toolchain_start
 
-
     def generate_command(self, config_path):
         """
             generate_command to oebuild generate

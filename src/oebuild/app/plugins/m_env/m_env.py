@@ -168,6 +168,7 @@ Please enter the correct command: oebuild menv create [-d -f] Create an environm
         print('The path is invalid, please check the path ')
         sys.exit(-1)
 
+    # pylint: disable=R0914
     def execute_setup_directory(self, setup_file_path, env_name):
         """
             Prepare the environment using the parsed SDK folder provided
@@ -214,13 +215,11 @@ Please enter the correct command: oebuild menv create [-d -f] Create an environm
                     r"sed -i '$a\mv ~/.bashrc_back ~/.bashrc -f' ~/.bashrc",
                     shell=True)
                 # Add prompt words
+                separator = "===================================================="
+                prompt_one = "Your environment is ready"
+                prompt_two = "Please proceed with the subsequent operations here"
                 wrap = '\\n###!###\\n'
-                prompt_words = f'''
-===================================================={wrap}
-Your environment is ready{wrap}
-Please proceed with the subsequent operations here{wrap}
-===================================================={wrap}
-'''
+                prompt_words = separator + wrap + prompt_one + wrap + prompt_two + wrap + separator
                 subprocess.check_output(
                     rf'''sed -i '$a\echo "{prompt_words}"' ~/.bashrc''',
                     shell=True)
