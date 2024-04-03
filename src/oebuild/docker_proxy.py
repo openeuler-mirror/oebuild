@@ -15,6 +15,7 @@ from io import BytesIO
 import tarfile
 import subprocess
 import sys
+from typing import List
 
 import docker
 from docker.errors import ImageNotFound, NotFound
@@ -184,7 +185,7 @@ class DockerProxy:
         return res is None
 
     def container_exec_command(self, container: Container,
-                               command: str | list,
+                               command,
                                user: str = '',
                                params=None):
         '''
@@ -209,7 +210,7 @@ class DockerProxy:
     def create_container(self,
                          image: str,
                          parameters: str,
-                         volumes: list[str],
+                         volumes: List[str],
                          command: str) -> Container:
         '''
         create a new container

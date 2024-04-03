@@ -40,7 +40,7 @@ class BBLayers:
         '''
         return self._bblayers_dir
 
-    def add_layer(self, pre_dir: str, layers: str | list):
+    def add_layer(self, pre_dir: str, layers):
         '''
         Add a layer layer to bblayers.conf, but our layer
         layer verification is done on the host,
@@ -64,7 +64,7 @@ class BBLayers:
 
         bb_utils.edit_bblayers_conf(self.bblayers_dir, add=bblayers, remove=None)
 
-    def check_layer_exist(self, layers: str | list):
+    def check_layer_exist(self, layers):
         '''
         To check if it is legitimate to add a layer,
         the main thing is to verify the existence of layer.conf

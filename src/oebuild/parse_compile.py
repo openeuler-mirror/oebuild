@@ -13,7 +13,7 @@ See the Mulan PSL v2 for more details.
 import os
 from dataclasses import dataclass
 import pathlib
-from typing import Optional
+from typing import Optional, List
 import sys
 
 import oebuild.util as oebuild_util
@@ -33,7 +33,7 @@ class DockerParam:
     # point out the parameter for create container
     parameters: str
     # point out the volumns for create container
-    volumns: list[str]
+    volumns: List[str]
     # point out the command for create container
     command: str
 
