@@ -217,7 +217,7 @@ class Generate(OebuildCommand):
             if not os.path.exists(config_path):
                 sys.exit(0)
             generate_command = self.generate_command(config_path)
-            subprocess.check_output(f'rm {config_path}', shell=True)
+            subprocess.check_output(f'rm -rf  {config_path}', shell=True)
             args = args.parse_args(generate_command)
         else:
             args = args.parse_args(unknown)
@@ -388,7 +388,7 @@ wrong platform, please run `oebuild generate -l` to view support platform""")
                         raise b_t
                 else:
                     logger.error("""
-wrong platform, please run `oebuild generate -l` to view support feature""")
+Wrong platform, please run `oebuild generate -l` to view support feature""")
                     sys.exit(-1)
 
     def _init_build_dir(self, args):
