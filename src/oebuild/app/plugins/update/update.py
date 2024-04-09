@@ -118,6 +118,14 @@ class Update(OebuildCommand):
 
         if update_docker:
             try:
+                # check if yocto exists, if not exists, give a notice
+                if not os.path.exists(self.configure.source_yocto_dir()):
+                    logger.error(textwrap.dedent(
+                        "The container's update depends on yocto-meta-openeuler."
+                        " Please either run 'oebuild update yocto' or manually "
+                        "download yocto-meta-openeuler in the src directory."
+                        ))
+                    sys.exit(-1)
                 oebuild_util.check_docker()
                 # check yocto/oebuild/env.yaml，get container_tag and update docker image
                 self.docker_image_update(args.docker_tag)
