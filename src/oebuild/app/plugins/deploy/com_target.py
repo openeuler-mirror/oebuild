@@ -13,7 +13,6 @@ See the Mulan PSL v2 for more details.
 import os
 import sys
 import re
-import logging
 
 from docker.models.containers import Container
 from docker.errors import DockerException
@@ -21,11 +20,9 @@ from docker.errors import DockerException
 from oebuild.docker_proxy import DockerProxy
 from oebuild.configure import Configure
 import oebuild.util as oebuild_util
-from oebuild.parse_compile import ParseCompile, CheckCompileError
+from oebuild.parse_param import ParseCompileParam
 from oebuild.m_log import logger
 import oebuild.const as oebuild_const
-
-logger = logging.getLogger()
 
 TARGET_DIR_NAME = "target_dev"
 TARGET_SCRIPT_NAME = "oebuild_dev"
@@ -51,7 +48,7 @@ class ComTarget:
                 self.client.delete_container(container=container, is_force=True)
             except DockerException:
                 print(f"""
-the container {self.container_id} failed to be destroyed, please run 
+the container {self.container_id} failed to be destroyed, please run
 
 `docker rm {self.container_id}`
 
@@ -79,9 +76,9 @@ the container {self.container_id} failed to be destroyed, please run
             sys.exit(-1)
 
         if not self._check_conf_directory():
-            logger.error('''
-        You must work in a exist build directory, that mean you built before or initialize environment at least
-        ''')
+            logger.error('You must work in a exist build directory, '
+                         'that mean you built before or initialize '
+                         'environment at least')
             sys.exit(-1)
 
         logger.info("Initializing environment, please wait ...")
@@ -96,9 +93,9 @@ the container {self.container_id} failed to be destroyed, please run
             line=f"export PATH=$PATH:/home/openeuler/{TARGET_DIR_NAME}")
         content = oebuild_util.add_bashrc(
             content=content,
-            line=f"""
-            mv -f /home/{oebuild_const.CONTAINER_USER}/{self.old_bashrc} /home/{oebuild_const.CONTAINER_USER}/.bashrc
-            """)
+            line=(f"mv -f /home/{oebuild_const.CONTAINER_USER}/{self.old_bashrc} "
+                  f"/home/{oebuild_const.CONTAINER_USER}/.bashrc")
+            )
         content = oebuild_util.add_bashrc(
             content=content,
             line=f"{TARGET_SCRIPT_NAME} {fun} {str_args}")
@@ -123,11 +120,9 @@ the container {self.container_id} failed to be destroyed, please run
         the deploy feature should only be runed in docker build type
         '''
         compile_path = os.path.join(self.work_dir, "compile.yaml")
-        try:
-            parse_compile = ParseCompile(compile_path)
-        except CheckCompileError as c_e:
-            logger.error(str(c_e))
-            sys.exit(-1)
+        compile_dict = oebuild_util.read_yaml(yaml_path=compile_path)
+        parse_compile = ParseCompileParam.parse_to_obj(compile_param_dict=compile_dict)
+
         if parse_compile.build_in != oebuild_const.BUILD_IN_DOCKER:
             return False
         return True
@@ -194,12 +189,10 @@ the container {self.container_id} failed to be destroyed, please run
         old_bash = oebuild_util.generate_random_str(6)
         self.client.container_exec_command(
             container=container,
-            command=f"""
-            cp /home/{oebuild_const.CONTAINER_USER}/.bashrc /home/{oebuild_const.CONTAINER_USER}/{old_bash}
-            """,
+            command=(f"cp /home/{oebuild_const.CONTAINER_USER}/.bashrc "
+                     f"/home/{oebuild_const.CONTAINER_USER}/{old_bash}"),
             user="root",
-            work_space=None,
-            stream=False)
+            params={'stream': False})
         self.old_bashrc = old_bash
 
     def init_bash(self, container: Container):
@@ -226,8 +219,7 @@ the container {self.container_id} failed to be destroyed, please run
             container=container,
             command=f"cat /home/{oebuild_const.CONTAINER_USER}/.bashrc",
             user="root",
-            work_space=None,
-            stream=False).output
+            params={'stream': False}).output
 
         return content.decode()
 
@@ -243,9 +235,8 @@ the container {self.container_id} failed to be destroyed, please run
             source_path=tmp_file,
             to_path=f'/home/{oebuild_const.CONTAINER_USER}')
         container.exec_run(
-            cmd=f"""
-            mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINER_USER}/.bashrc
-            """,
+            cmd=(f"mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} "
+                 f"/home/{oebuild_const.CONTAINER_USER}/.bashrc"),
             user="root"
         )
         os.remove(tmp_file)
@@ -279,12 +270,14 @@ the container {self.container_id} failed to be destroyed, please run
         return new_content
 
     def _check_change_ugid(self, container: Container):
+        params = {
+            'work_space': f"/home/{oebuild_const.CONTAINER_USER}",
+            'stream': False}
         res = self.client.container_exec_command(
             container=container,
             user='root',
             command=f"id {oebuild_const.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-            stream=False)
+            params=params)
         if res.exit_code != 0:
             raise ValueError("check docker user id faild")
 
@@ -314,17 +307,23 @@ the container {self.container_id} failed to be destroyed, please run
             self._change_container_gid(container=container, gid=os.getgid())
 
     def _change_container_uid(self, container: Container, uid: int):
+        params = {
+            'work_space': f"/home/{oebuild_const.CONTAINER_USER}",
+            'stream': False
+        }
         self.client.container_exec_command(
             container=container,
             user='root',
             command=f"usermod -u {uid} {oebuild_const.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-            stream=False)
+            params=params)
 
     def _change_container_gid(self, container: Container, gid: int):
+        params = {
+            'work_space': f"/home/{oebuild_const.CONTAINER_USER}",
+            'stream': False
+        }
         self.client.container_exec_command(
             container=container,
             user='root',
             command=f"groupmod -g {gid} {oebuild_const.CONTAINER_USER}",
-            work_space=f"/home/{oebuild_const.CONTAINER_USER}",
-            stream=False)
+            params=params)

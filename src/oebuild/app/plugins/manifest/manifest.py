@@ -114,7 +114,7 @@ class Manifest(OebuildCommand):
             sys.stdout.flush()
         print()
         manifest_list = dict(sorted(manifest_list.items(), key=lambda s: s[0]))
-        oebuild_util.write_yaml(yaml_dir=pathlib.Path(manifest_dir),
+        oebuild_util.write_yaml(yaml_path=pathlib.Path(manifest_dir),
                                 data={'manifest_list': manifest_list})
         self._add_manifest_banner(manifest_dir=os.path.abspath(manifest_dir))
 

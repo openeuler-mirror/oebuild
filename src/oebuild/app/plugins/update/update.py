@@ -14,15 +14,13 @@ import argparse
 import os
 import textwrap
 import sys
-import pathlib
 
 from docker.errors import DockerException
 
 import oebuild.util as oebuild_util
 from oebuild.command import OebuildCommand
-from oebuild.parse_template import OebuildRepo
-from oebuild.parse_compile import ParseCompile
-from oebuild.configure import Configure, ConfigBasicRepo, YoctoEnv
+from oebuild.parse_param import ParseCompileParam
+from oebuild.configure import Configure, ConfigBasicRepo
 from oebuild.docker_proxy import DockerProxy
 from oebuild.ogit import OGit
 from oebuild.check_docker_tag import CheckDockerTag
@@ -95,11 +93,6 @@ class Update(OebuildCommand):
             logger.error('Your current directory had not finished init')
             sys.exit(-1)
 
-        # if args.list is not None:
-        #     if args.list == "docker":
-        #         self.list_image_tag()
-        #     return
-
         update_yocto, update_docker, update_layer = False, False, False
         if args.item is None:
             update_yocto, update_docker, update_layer = True, True, True
@@ -150,30 +143,22 @@ class Update(OebuildCommand):
         # or <build-directory>/compile.yaml where in build directory
         repos = None
         if os.path.exists(os.path.join(os.getcwd(), "compile.yaml")):
-            parse_compile = ParseCompile(
-                compile_conf_dir=os.path.join(os.getcwd(), "compile.yaml"))
-            repos = parse_compile.repos
+            compile_param_dict = oebuild_util.read_yaml(os.path.join(os.getcwd(), "compile.yaml"))
+            compile_param = ParseCompileParam.parse_compile_param_to_obj(
+                compile_param_dict=compile_param_dict)
+            repos = compile_param.repos
         else:
-            common_path = pathlib.Path(
-                os.path.join(yocto_dir, ".oebuild/common.yaml"))
-            repos = oebuild_util.read_yaml(yaml_dir=common_path)['repos']
+            common_path = os.path.join(yocto_dir, ".oebuild/common.yaml")
+            repos = oebuild_util.trans_dict_key_to_list(
+                oebuild_util.read_yaml(yaml_path=common_path)['repos'])
 
         if repos is None:
-            return
-        for _, item in repos.items():
-            if isinstance(item, OebuildRepo):
-                local_dir = os.path.join(self.configure.source_dir(),
-                                         item.path)
-                key_repo = OGit(repo_dir=local_dir,
-                                remote_url=item.url,
-                                branch=item.refspec)
-            else:
-                local_dir = os.path.join(self.configure.source_dir(),
-                                         item['path'])
-                key_repo = OGit(repo_dir=local_dir,
-                                remote_url=item['url'],
-                                branch=item['refspec'])
-            key_repo.clone_or_pull_repo()
+            sys.exit(0)
+
+        oebuild_util.download_repo_from_manifest(
+            repo_list=repos,
+            src_dir=self.configure.source_dir(),
+            manifest_path=self.configure.yocto_manifest_dir())
 
     def get_basic_repo(self, ):
         '''
@@ -216,7 +201,7 @@ class Update(OebuildCommand):
             docker_image = docker_config.repo_url + ":" + check_docker_tag.get_tag(
             )
         else:
-            docker_image = YoctoEnv().get_docker_image(
+            docker_image = oebuild_util.get_docker_image_from_yocto(
                 self.configure.source_yocto_dir())
             if docker_image is None or docker_image == "":
                 if check_docker_tag.get_tag(

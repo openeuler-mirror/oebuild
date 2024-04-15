@@ -16,6 +16,7 @@ import tarfile
 import subprocess
 import sys
 from typing import List
+import re
 
 import docker
 from docker.errors import ImageNotFound, NotFound
@@ -225,3 +226,77 @@ class DockerProxy:
             sys.exit(res.returncode)
         container_id = res.stdout.strip()
         return self.get_container(container_id=container_id)
+
+    def check_change_ugid(self, container: Container, container_user):
+        '''
+        the function is to check and change container user uid and gid to same with host's,
+        together also alter directory pointed uid and gid
+        '''
+        res = self.container_exec_command(
+            container=container,
+            user='root',
+            command=f"id {container_user}",
+            params={
+                "work_space": f"/home/{container_user}",
+                "stream": False
+            })
+
+        if res.exit_code != 0:
+            raise ValueError("check docker user id faild")
+
+        res_cont = res.output.decode()
+
+        cuids = res_cont.split(' ')
+        # get uid from container in default user
+        pattern = re.compile(r'(?<=uid=)\d{1,}(?=\(' + container_user + r'\))')
+        match_uid = pattern.search(cuids[0])
+        if match_uid:
+            cuid = match_uid.group()
+        else:
+            raise ValueError(f"can not get container {container_user} uid")
+        # get gid from container in default user
+        pattern = re.compile(r'(?<=gid=)\d{1,}(?=\(' + container_user + r'\))')
+        match_gid = pattern.search(cuids[1])
+        if match_gid:
+            cgid = match_gid.group()
+        else:
+            raise ValueError(f"can not get container {container_user} gid")
+
+        # judge host uid and gid are same with container uid and gid
+        # if not same and change container uid and gid equal to host's uid and gid
+        if os.getuid() != cuid:
+            self.change_container_uid(
+                container=container,
+                uid=os.getuid(),
+                container_user=container_user)
+        if os.getgid() != cgid:
+            self.change_container_gid(
+                container=container,
+                gid=os.getgid(),
+                container_user=container_user)
+
+    def change_container_uid(self, container: Container, uid: int, container_user):
+        '''
+        alter container user pointed uid
+        '''
+        self.container_exec_command(
+            container=container,
+            user='root',
+            command=f"usermod -u {uid} {container_user}",
+            params={
+                "work_space": f"/home/{container_user}",
+                "stream": False
+            })
+
+    def change_container_gid(self, container: Container, gid: int, container_user):
+        '''
+        alter container pointed gid
+        '''
+        self.container_exec_command(
+            container=container,
+            user='root',
+            command=f"groupmod -g {gid} {container_user}",
+            params={
+                "work_space": f"/home/{container_user}",
+                "stream": False
+            })

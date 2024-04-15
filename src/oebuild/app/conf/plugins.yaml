@@ -32,3 +32,6 @@ plugins:
 - name: mplugin
   class: MPlugin
   path: plugins/m_plugin/m_plugin.py
+- name: toolchain
+  class: Toolchain
+  path: plugins/toolchain/toolchain.py

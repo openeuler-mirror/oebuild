@@ -133,6 +133,13 @@ class Configure:
         return os.path.join(Configure.source_dir(), yocto_dir)
 
     @staticmethod
+    def yocto_manifest_dir():
+        '''
+        return .oebuild/manifest.yaml
+        '''
+        return os.path.join(Configure.source_yocto_dir(), ".oebuild/manifest.yaml")
+
+    @staticmethod
     def source_poky_dir():
         '''
         return src/yocto-poky path
@@ -155,6 +162,13 @@ class Configure:
         return os.path.join(Configure.oebuild_topdir(), 'build')
 
     @staticmethod
+    def source_nativesdk_dir():
+        '''
+        returns yocto-meta-openeuler/.oebuild/nativesdk
+        '''
+        return os.path.join(Configure.source_yocto_dir(), '.oebuild/nativesdk')
+
+    @staticmethod
     def env_dir():
         '''
         returns env path
@@ -169,7 +183,7 @@ class Configure:
         '''
 
         config = oebuild_util.read_yaml(
-            yaml_dir=pathlib.Path(Configure.oebuild_dir(), oebuild_const.CONFIG))
+            yaml_path=os.path.join(Configure.oebuild_dir(), oebuild_const.CONFIG))
 
         tag_map = {}
         for key, value in config['docker']['tag_map'].items():
@@ -211,31 +225,8 @@ class Configure:
 
         try:
             oebuild_util.write_yaml(
-                yaml_dir=pathlib.Path(Configure.oebuild_dir(), oebuild_const.CONFIG),
+                yaml_path=pathlib.Path(Configure.oebuild_dir(), oebuild_const.CONFIG),
                 data=data)
             return True
         except TypeError:
             return False
-
-
-class YoctoEnv:
-    '''
-    the YoctoEnv class is used for yocto-meta-openeuler/.oebuild/env.yaml
-    '''
-    @staticmethod
-    def get_docker_image(yocto_dir):
-        '''
-        determine yocto-meta-openeuler's supported docker image in env.yaml
-        '''
-        if not os.path.exists(yocto_dir):
-            raise ValueError("the yocto direction is not exists")
-
-        env_path = os.path.join(yocto_dir, ".oebuild/env.yaml")
-        if not os.path.exists(env_path):
-            return None
-
-        env_parse = oebuild_util.read_yaml(pathlib.Path(env_path))
-        if "docker_image" in env_parse:
-            return str(env_parse['docker_image'])
-
-        return None

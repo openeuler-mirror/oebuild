@@ -19,7 +19,8 @@ from docker.errors import DockerException
 
 from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
-from oebuild.parse_compile import ParseCompile, CheckCompileError
+from oebuild.struct import CompileParam
+from oebuild.parse_param import ParseCompileParam
 from oebuild.parse_env import ParseEnv
 import oebuild.util as oebuild_util
 from oebuild.app.plugins.bitbake.in_container import InContainer
@@ -87,23 +88,23 @@ class Bitbake(OebuildCommand):
         if not os.path.exists('.env'):
             os.mknod('.env')
 
-        try:
-            parse_compile = ParseCompile(self.compile_conf_dir)
-        except CheckCompileError as c_e:
-            logger.error(str(c_e))
-            sys.exit(-1)
+        compile_param_dict = oebuild_util.read_yaml(self.compile_conf_dir)
+        compile_param: CompileParam = ParseCompileParam.parse_to_obj(
+            compile_param_dict)
 
         # if has manifest.yaml, init layer repo with it
         yocto_dir = os.path.join(self.configure.source_dir(),
                                  "yocto-meta-openeuler")
         manifest_path = os.path.join(yocto_dir, ".oebuild/manifest.yaml")
-        parse_compile.check_with_version(self.configure.source_dir(),
-                                         manifest_path=manifest_path)
+        oebuild_util.download_repo_from_manifest(
+            repo_list=compile_param.repos,
+            src_dir=self.configure.source_dir(),
+            manifest_path=manifest_path)
         parse_env = ParseEnv(env_dir='.env')
 
-        if parse_compile.build_in == oebuild_const.BUILD_IN_HOST:
+        if compile_param.build_in == oebuild_const.BUILD_IN_HOST:
             in_host = InHost(self.configure)
-            in_host.exec(parse_compile=parse_compile, command=command)
+            in_host.exec(compile_param=compile_param, command=command)
             sys.exit(0)
 
         try:
@@ -114,7 +115,7 @@ class Bitbake(OebuildCommand):
 
         in_container = InContainer(self.configure)
         in_container.exec(parse_env=parse_env,
-                          parse_compile=parse_compile,
+                          compile_param=compile_param,
                           command=command)
 
     def check_support_bitbake(self, ):

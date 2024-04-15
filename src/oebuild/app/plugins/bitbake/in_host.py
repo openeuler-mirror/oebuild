@@ -12,14 +12,14 @@ See the Mulan PSL v2 for more details.
 import os
 import subprocess
 import pty
-import shutil
 import sys
 
 from oebuild.local_conf import NativesdkNotExist, NativesdkNotValid
 from oebuild.configure import Configure
-from oebuild.parse_compile import ParseCompile
+from oebuild.parse_param import CompileParam
 from oebuild.m_log import logger
 from oebuild.app.plugins.bitbake.base_build import BaseBuild
+from oebuild.bashrc import Bashrc
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
 
@@ -32,13 +32,14 @@ class InHost(BaseBuild):
     def __init__(self, configure: Configure):
         self.configure = configure
         self.container_id = None
+        self.bashrc = Bashrc()
 
-    def exec(self, parse_compile: ParseCompile, command):
+    def exec(self, compile_param: CompileParam, command):
         '''
         execute bitbake commands
         '''
         self._init_build_sh(build_dir=os.getcwd())
-        self._mk_build_sh(nativesdk_dir=parse_compile.nativesdk_dir, build_dir=os.getcwd())
+        self._mk_build_sh(nativesdk_dir=compile_param.nativesdk_dir, build_dir=os.getcwd())
         self.init_bitbake()
 
         # add bblayers, this action must before replace local_conf
@@ -47,13 +48,13 @@ class InHost(BaseBuild):
             bblayers_dir=bblayers_dir,
             pre_dir=self.configure.source_dir(),
             base_dir=self.configure.source_dir(),
-            layers=parse_compile.layers)
+            layers=compile_param.layers)
 
-        local_dir = os.path.join(os.getcwd(), 'conf', 'local.conf')
+        local_path = os.path.join(os.getcwd(), 'conf', 'local.conf')
         try:
             self.replace_local_conf(
-                parse_compile=parse_compile,
-                local_dir=local_dir,
+                compile_param=compile_param,
+                local_path=local_path,
                 src_dir=self.configure.source_dir())
         except NativesdkNotExist as n_e:
             logger.error(str(n_e))
@@ -82,10 +83,11 @@ initialization operations''')
 
             build_sh_dir = os.path.join(os.getcwd(), 'build.sh')
             source_build_str = f"source {build_sh_dir}"
-            content = self._get_bashrc_content()
-            content = self._restore_bashrc_content(old_content=content)
-            new_content = self._add_bashrc(content, line=source_build_str)
-            self.update_bashrc(new_content)
+            # content = self.bashrc.get_bashrc_content()
+            content = self.bashrc.get_bashrc_content()
+            content = self.bashrc.restore_bashrc_content(old_content=content)
+            new_content = self.bashrc.add_bashrc(content, line=source_build_str)
+            self.bashrc.update_bashrc(content=new_content)
             pty.spawn("bash")
 
     def _bash_build(self,):
@@ -150,14 +152,3 @@ initialization operations''')
         substitutions, and finally writing the initialization script
         '''
         subprocess.getoutput("bash build.sh")
-
-    def _get_bashrc_content(self,):
-        return subprocess.getoutput('cat $HOME/.bashrc')
-
-    def update_bashrc(self, content: str):
-        '''
-        update user initialization script by replace file, first create
-        a file and writed content and mv it to host's .bashrc
-        '''
-        tmp_file = self._set_tmpfile_content(content)
-        shutil.move(tmp_file, os.path.join(os.environ['HOME'], '.bashrc'))

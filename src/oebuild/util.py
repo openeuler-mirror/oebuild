@@ -28,6 +28,10 @@ from oebuild.docker_proxy import DockerProxy
 from oebuild.m_log import logger
 from oebuild.version import __version__
 import oebuild.const as oebuild_const
+from oebuild.ogit import OGit
+from oebuild.struct import RepoParam, DockerParam
+from oebuild.parse_param import ParseRepoParam
+from oebuild.parse_env import EnvContainer, ParseEnv
 
 
 def get_nativesdk_environment(nativesdk_dir=oebuild_const.NATIVESDK_DIR,
@@ -74,15 +78,17 @@ def get_nativesdk_environment(nativesdk_dir=oebuild_const.NATIVESDK_DIR,
     sys.exit(1)
 
 
-def read_yaml(yaml_dir: pathlib.Path):
+def read_yaml(yaml_path):
     '''
     read yaml file and parse it to object
     '''
-    if not os.path.exists(yaml_dir.absolute()):
-        raise ValueError(f"yaml_dir can not find in :{yaml_dir.absolute()}")
+    if isinstance(yaml_path, str):
+        yaml_path = pathlib.Path(yaml_path)
+    if not os.path.exists(yaml_path.absolute()):
+        raise ValueError(f"yaml_dir can not find in :{yaml_path.absolute()}")
 
     try:
-        with open(yaml_dir.absolute(), 'r', encoding='utf-8') as r_f:
+        with open(yaml_path, 'r', encoding='utf-8') as r_f:
             yaml = YAML()
             data = yaml.load(r_f.read())
             return data
@@ -90,16 +96,18 @@ def read_yaml(yaml_dir: pathlib.Path):
         raise e_p
 
 
-def write_yaml(yaml_dir: pathlib.Path, data):
+def write_yaml(yaml_path, data):
     '''
     write data to yaml file
     '''
-    if not os.path.exists(yaml_dir.absolute()):
-        if not os.path.exists(os.path.dirname(yaml_dir.absolute())):
-            os.makedirs(os.path.dirname(yaml_dir.absolute()))
-        os.mknod(yaml_dir)
+    if isinstance(yaml_path, str):
+        yaml_path = pathlib.Path(yaml_path)
+    if not os.path.exists(yaml_path.absolute()):
+        if not os.path.exists(os.path.dirname(yaml_path.absolute())):
+            os.makedirs(os.path.dirname(yaml_path.absolute()))
+        os.mknod(yaml_path)
 
-    with open(yaml_dir, 'w', encoding='utf-8') as w_f:
+    with open(yaml_path, 'w', encoding='utf-8') as w_f:
         yaml = YAML()
         yaml.dump(data, w_f)
 
@@ -270,6 +278,80 @@ def get_host_proxy(proxy_name):
             host_proxy[name] = value
 
     return host_proxy
+
+
+def download_repo_from_manifest(repo_list, src_dir, manifest_path):
+    '''
+    Download the repos set in compile.yaml based on the given base path
+    '''
+    manifest = None
+    if os.path.exists(manifest_path):
+        manifest = read_yaml(pathlib.Path(manifest_path))['manifest_list']
+    for repo_name in repo_list:
+        repo_dir = os.path.join(src_dir, repo_name)
+        if repo_name in manifest:
+            repo_obj: RepoParam = ParseRepoParam.parse_to_obj(manifest[repo_name])
+            repo_git = OGit(repo_dir=repo_dir, remote_url=repo_obj.remote_url, branch=None)
+            repo_git.check_out_version(version=repo_obj.version)
+
+
+def get_docker_image_from_yocto(yocto_dir):
+    '''
+    determine yocto-meta-openeuler's supported docker image in env.yaml
+    '''
+    if not os.path.exists(yocto_dir):
+        raise ValueError("the yocto direction is not exists")
+
+    env_path = os.path.join(yocto_dir, ".oebuild/env.yaml")
+    if not os.path.exists(env_path):
+        return None
+
+    env_parse = read_yaml(yaml_path=env_path)
+    if "docker_image" in env_parse:
+        return str(env_parse['docker_image'])
+
+    return None
+
+
+def deal_env_container(env: ParseEnv, docker_param: DockerParam):
+    '''
+    This operation realizes the processing of the container,
+    controls how the container is processed by parsing the env
+    variable, if the container does not exist, or the original
+    environment and the current environment that needs to be set
+    are inconsistent, you need to create a new container, otherwise
+    directly enable the sleeping container
+    '''
+    docker_proxy = DockerProxy()
+    if env.container is None \
+            or env.container.short_id is None \
+            or not docker_proxy.is_container_exists(env.container.short_id):
+        # judge which container
+        container: Container = docker_proxy.create_container(
+            image=docker_param.image,
+            parameters=docker_param.parameters,
+            volumes=docker_param.volumns,
+            command=docker_param.command)
+
+        env_container = EnvContainer(container.short_id)
+        env.set_env_container(env_container)
+        env.export_env()
+
+    container_id = env.container.short_id
+    container: Container = docker_proxy.get_container(container_id)  # type: ignore
+    if not docker_proxy.is_container_running(container):
+        docker_proxy.start_container(container)
+    return container_id
+
+
+def trans_dict_key_to_list(obj):
+    '''
+    transfer dict key to list
+    '''
+    res = []
+    for key in obj:
+        res.append(key)
+    return res
 
 
 @contextmanager

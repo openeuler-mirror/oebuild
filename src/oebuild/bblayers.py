@@ -84,4 +84,5 @@ class BBLayers:
 
             layer_conf_dir = os.path.join(layer_dir, 'conf', 'layer.conf')
             if not os.path.exists(layer_conf_dir):
+                print(layer_conf_dir)
                 raise ValueError("invalid layer")

@@ -24,7 +24,7 @@ class OGit:
     owner git to print progress in clone action
     '''
 
-    def __init__(self, repo_dir, remote_url, branch) -> None:
+    def __init__(self, repo_dir, remote_url, branch=None) -> None:
         self._repo_dir = repo_dir
         self._remote_url = remote_url
         self._branch = branch
@@ -101,6 +101,7 @@ class OGit:
         except GitCommandError:
             logger.error("update faild")
             return False
+        logger.info("Fetching into %s successful\n", self._repo_dir)
         return True
 
     @staticmethod

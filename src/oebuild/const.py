@@ -32,13 +32,25 @@ SSTATE_DIR = "SSTATE_DIR"
 TMP_DIR = "TMPDIR"
 
 NATIVE_GCC_DIR = '/usr1/openeuler/native_gcc'
-SSTATE_CACHE = '/usr1/openeuler/sstate-cache'
+SSTATE_MIRRORS = '/usr1/openeuler/sstate-cache'
 
 # used for bitbake/in_container.py
 BASH_BANNER = '''
-    Welcome to the openEuler Embedded build environment,
-    where you can run 'bitbake openeuler-image' to build
-    standard images
+    Welcome to the openEuler Embedded build environment, where you
+    can run [bitbake recipe] to build what you want, or you ran
+    run [bitbake -h] for help
+'''
+
+# used for toolchain/toolchain.py
+TOOLCHAIN_BASH_BANNER = '''
+    Welcome to the openEuler Embedded build environment, where you
+    can create openEuler Embedded cross-chains tools by follows:
+    "./cross-tools/prepare.sh"
+    "cp config_aarch64 .config && ct-ng build"
+    "cp config_aarch64-musl .config && ct-ng build"
+    "cp config_arm32 .config && ct-ng build"
+    "cp config_x86_64 .config && ct-ng build"
+    "cp config_riscv64 .config && ct-ng build"
 '''
 
 # used for configure.py

@@ -12,7 +12,6 @@ See the Mulan PSL v2 for more details.
 
 import argparse
 import re
-import resource
 import subprocess
 import textwrap
 import os
@@ -24,11 +23,13 @@ from shutil import rmtree
 from kconfiglib import Kconfig
 from menuconfig import menuconfig
 from prettytable import PrettyTable
+from ruamel.yaml.scalarstring import LiteralScalarString
 
 from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
-from oebuild.configure import Configure, YoctoEnv
-from oebuild.parse_template import BaseParseTemplate, ParseTemplate
+from oebuild.configure import Configure
+from oebuild.parse_template import BaseParseTemplate, \
+    ParseTemplate, get_docker_param_dict, parse_repos_layers_local_obj
 from oebuild.m_log import logger, INFO_COLOR
 from oebuild.check_docker_tag import CheckDockerTag
 import oebuild.const as oebuild_const
@@ -53,7 +54,7 @@ class Generate(OebuildCommand):
         self.configure = Configure()
         self.nativesdk_dir = None
         self.toolchain_dir = None
-        self.sstate_cache = None
+        self.sstate_mirrors = None
         self.tmp_dir = None
         self.oebuild_kconfig_path = os.path.expanduser(
             '~') + '/.local/oebuild_kconfig/'
@@ -82,8 +83,8 @@ class Generate(OebuildCommand):
             ''')
 
         parser.add_argument('-s',
-                            '--state_cache',
-                            dest='sstate_cache',
+                            '--state_mirrors',
+                            dest='sstate_mirrors',
                             help='''
             this param is for SSTATE_MIRRORS
             ''')
@@ -170,36 +171,32 @@ class Generate(OebuildCommand):
             This parameter marks the mode at build time, and is built in the container by docker
             ''')
 
-        parser.add_argument('-sdk',
-                            '--sdk',
-                            dest='sdk',
+        parser.add_argument('--nativesdk',
+                            dest='nativesdk',
                             action="store_true",
                             help='''
                     This parameter is used to indicate whether to build an SDK
                     ''')
 
-        parser.add_argument('-toolchain',
-                            '--toolchain',
+        parser.add_argument('--toolchain',
                             dest='toolchain',
                             action="store_true",
                             help='''
                             This parameter is used to indicate whether to build an toolchain
                             ''')
 
-        parser.add_argument('-tn',
-                            '--toolchain_name',
+        parser.add_argument('--toolchain_name',
                             dest='toolchain_name',
                             action='append',
                             help='''
                             This parameter is used to toolchain name
                             ''')
 
-        parser.add_argument('-at',
-                            '--auto_build',
+        parser.add_argument('--auto_build',
                             dest='auto_build',
                             action="store_true",
                             help='''
-                                    This parameter is used to auto_build
+                                    This parameter is used for nativesdk and toolchain build
                             ''')
 
         return parser
@@ -233,14 +230,27 @@ class Generate(OebuildCommand):
         build_in = args.build_in
         auto_build = bool(args.auto_build)
 
-        if args.sdk:
-            self.build_sdk(args.build_in, args.directory, args.toolchain_dir,
-                           args.nativesdk_dir, auto_build)
+        if args.nativesdk:
+            # this is for default directory is qemu-aarch64
+            if args.directory is None or args.directory == '':
+                args.directory = "nativesdk"
+            build_dir = self._init_build_dir(args=args)
+            if build_dir is None:
+                sys.exit(0)
+            self.build_sdk(args.build_in, build_dir, auto_build)
+            self._print_nativesdk(build_dir=build_dir)
             sys.exit(0)
 
         if args.toolchain:
+            # this is for default directory is qemu-aarch64
+            if args.directory is None or args.directory == '':
+                args.directory = "toolchain"
             toolchain_name_list = args.toolchain_name if args.toolchain_name else []
-            self.tool_chain(toolchain_name_list, auto_build)
+            build_dir = self._init_build_dir(args=args)
+            if build_dir is None:
+                sys.exit(0)
+            self.build_toolchain(build_dir, toolchain_name_list, auto_build)
+            self._print_toolchain(build_dir=build_dir)
             sys.exit(0)
 
         if args.build_in == oebuild_const.BUILD_IN_HOST:
@@ -255,8 +265,8 @@ class Generate(OebuildCommand):
         if args.toolchain_dir != '':
             self.toolchain_dir = args.toolchain_dir
 
-        if args.sstate_cache is not None:
-            self.sstate_cache = args.sstate_cache
+        if args.sstate_mirrors is not None:
+            self.sstate_mirrors = args.sstate_mirrors
 
         if args.tmp_dir is not None:
             self.tmp_dir = args.tmp_dir
@@ -300,7 +310,7 @@ class Generate(OebuildCommand):
         if os.path.exists(os.path.join(build_dir, 'compile.yaml')):
             os.remove(os.path.join(build_dir, 'compile.yaml'))
 
-        docker_image = YoctoEnv().get_docker_image(yocto_dir=yocto_dir)
+        docker_image = oebuild_util.get_docker_image_from_yocto(yocto_dir=yocto_dir)
         if docker_image is None:
             check_docker_tag = CheckDockerTag(args.docker_tag, self.configure)
             oebuild_config = self.configure.parse_oebuild_config()
@@ -332,19 +342,20 @@ class Generate(OebuildCommand):
 
         out_dir = pathlib.Path(os.path.join(build_dir, 'compile.yaml'))
 
+        param = parser_template.get_default_generate_compile_conf_param()
+        param['nativesdk'] = self.nativesdk_dir
+        param['toolchain_dir'] = self.toolchain_dir
+        param['build_in'] = build_in
+        param['sstate_mirrors'] = self.sstate_mirrors
+        param['tmp_dir'] = self.tmp_dir
+        param['datetime'] = args.datetime
+        param['is_disable_fetch'] = args.is_disable_fetch
+        param['docker_image'] = docker_image
+        param['src_dir'] = self.configure.source_dir()
+        param['compile_dir'] = build_dir
         oebuild_util.write_yaml(
             out_dir,
-            parser_template.generate_compile_conf(
-                nativesdk_dir=self.nativesdk_dir,
-                toolchain_dir=self.toolchain_dir,
-                build_in=build_in,
-                sstate_cache=self.sstate_cache,
-                tmp_dir=self.tmp_dir,
-                datetime=args.datetime,
-                is_disable_fetch=args.is_disable_fetch,
-                docker_image=docker_image,
-                src_dir=self.configure.source_dir(),
-                compile_dir=build_dir))
+            parser_template.generate_compile_conf(param))
 
         self._print_generate(build_dir=build_dir)
 
@@ -357,6 +368,34 @@ please run follow command:
 
 cd {build_dir}
 oebuild bitbake
+
+=============================================
+'''
+        logger.info(format_dir)
+
+    def _print_nativesdk(self, build_dir):
+        format_dir = f'''
+generate compile.yaml successful
+
+please run follow command:
+=============================================
+
+cd {build_dir}
+oebuild bitbake or oebuild bitbake buildtools-extended-tarball
+
+=============================================
+'''
+        logger.info(format_dir)
+
+    def _print_toolchain(self, build_dir):
+        format_dir = f'''
+generate toolchain.yaml successful
+
+please run follow command:
+=============================================
+
+cd {build_dir}
+oebuild toolchain
 
 =============================================
 '''
@@ -422,20 +461,26 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         if os.path.exists(build_dir):
             logger.warning("the build directory %s already exists", build_dir)
             while True:
-                in_res = input("""
-    do you want to overwrite it? the overwrite action will replace the compile.yaml
-    to new and delete conf directory, enter Y for yes, N for no:""")
-                if in_res not in ["Y", "y", "yes", "N", "n", "no"]:
+                in_res = input(f"""
+    do you want to overwrite it({os.path.basename(build_dir)})? the overwrite
+    action will replace the compile.yaml to new and delete conf directory,
+    enter Y for yes, N for no, C for create:""")
+                if in_res not in ["Y", "y", "yes", "N", "n", "no", "C", "c", "create"]:
                     print("""
     wrong input""")
                     continue
                 if in_res in ['N', 'n', 'no']:
                     return None
+                if in_res in ['C', 'c', 'create']:
+                    in_res = input("""
+    please enter now build name, we will create it under build directory:""")
+                    build_dir = os.path.join(self.configure.build_dir(), in_res)
+                    if os.path.exists(build_dir):
+                        continue
                 break
             if os.path.exists(os.path.join(build_dir, "conf")):
                 rmtree(os.path.join(build_dir, "conf"))
-        else:
-            os.makedirs(build_dir)
+        os.makedirs(build_dir)
         return build_dir
 
     def list_info(self, ):
@@ -669,10 +714,10 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             generate_command += ['-f', feature.lower()]
 
         if native_sdk:
-            generate_command = ['-sdk']
+            generate_command = ['--nativesdk']
 
         if tool_chain:
-            generate_command = ['-toolchain']
+            generate_command = ['--toolchain']
 
             if toolchain_list:
                 for toolchain_info in toolchain_list:
@@ -683,38 +728,53 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
 
         return generate_command
 
-    def build_sdk(self, build_in, directory, toolchain_dir, nativesdk_dir, auto_build):
+    def build_sdk(self, build_in, build_dir, auto_build):
         """
 
         Args:
             build_in: host or docker
             directory: build dir
-            toolchain_dir: toolchain dir
-            nativesdk_dir: nativesdk dir
             auto_build: auto_build
-
         Returns:
 
         """
-        args_dir = directory if directory else "nativeSDK"
-        subprocess.run(f'rm -rf {args_dir}', shell=True, check=False)
-        subprocess.run(f'oebuild generate -d {args_dir}', shell=True, check=False)
-        build_dir = os.path.join(self.configure.build_dir(), args_dir)
-        yaml_path = pathlib.Path(f"{build_dir}/compile.yaml")
-        if os.path.exists(yaml_path):
-            info = oebuild_util.read_yaml(yaml_path)
-            info['machine'] = 'sdk'
-            if build_in == 'host':
-                info['build_in'] = 'host'
-                del info['docker_param']
-                info['nativesdk_dir'] = os.path.abspath(nativesdk_dir)
-                info['toolchain_dir'] = os.path.abspath(toolchain_dir)
-            oebuild_util.write_yaml(yaml_path, info)
-        os.chdir(build_dir)
+        compile_dir = os.path.join(self.configure.build_dir(), build_dir)
+        compile_yaml_path = f"{compile_dir}/compile.yaml"
+        common_yaml_path = os.path.join(
+            self.configure.source_yocto_dir(), '.oebuild/common.yaml')
+        repos, layers, local_conf = parse_repos_layers_local_obj(common_yaml_path)
+        info = {
+            'repos': repos,
+            'layers': layers,
+            'local_conf': local_conf
+        }
+        if build_in == 'host':
+            info['build_in'] = 'host'
+        else:
+            docker_image = get_docker_image(
+                yocto_dir=self.configure.source_yocto_dir(),
+                docker_tag="latest",
+                configure=self.configure
+            )
+            info['docker_param'] = get_docker_param_dict(
+                docker_image=docker_image,
+                src_dir=self.configure.source_dir(),
+                compile_dir=compile_dir,
+                toolchain_dir=None,
+                sstate_mirrors=None
+            )
+        # add nativesdk conf
+        nativesdk_yaml_path = os.path.join(
+            self.configure.source_yocto_dir(), '.oebuild/nativesdk/local.conf')
+        with open(nativesdk_yaml_path, 'r', encoding='utf-8') as f:
+            local_conf += f.read()+"\n"
+            info['local_conf'] = LiteralScalarString(local_conf)
+        oebuild_util.write_yaml(compile_yaml_path, info)
         if auto_build:
+            os.chdir(compile_dir)
             subprocess.run('oebuild bitbake buildtools-extended-tarball', shell=True, check=False)
 
-    def tool_chain(self, toolchain_name_list, auto_build):
+    def build_toolchain(self, build_dir, toolchain_name_list, auto_build):
         """
 
         Args:
@@ -724,31 +784,69 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         Returns:
 
         """
-        cross_path = os.path.join(self.configure.source_yocto_dir(), ".oebuild/cross-tools")
-        if not os.path.exists(cross_path):
+        source_cross_dir = os.path.join(self.configure.source_yocto_dir(), ".oebuild/cross-tools")
+        if not os.path.exists(source_cross_dir):
             logger.error('Build dependency not downloaded, not supported for build. Please '
                          'download the latest yocto meta openeuler repository')
             sys.exit(-1)
-        toolchain_list = os.listdir(os.path.join(cross_path, 'configs'))
-        for config in toolchain_list:
-            if re.search('xml', config):
-                toolchain_list.remove(config)
-        if toolchain_name_list and not set(toolchain_name_list).issubset(toolchain_list):
-            logger.error(f'toolchain name not exists, toolchain list is {toolchain_list}')
-            sys.exit(-1)
-        build_dir = os.path.join(self.configure.build_dir(), 'toolchain')
-        if os.path.exists(build_dir):
-            os.chdir(os.path.dirname(build_dir))
-            subprocess.run(f'rm -rf {build_dir}', shell=True, check=False)
-        subprocess.run('oebuild generate -d toolchain', shell=True, check=False)
-        subprocess.check_output(f'cp -r {cross_path} {build_dir}', shell=True)
-        os.chdir(build_dir)
-        resource.setrlimit(resource.RLIMIT_NOFILE, (1048576, 1048576))
-        subprocess.check_output('./cross-tools/prepare.sh ../toolchain/', shell=True)
-        logger.info('build toolchain...')
-        toolchain_name = ' ' + ' '.join(toolchain_name_list) if toolchain_name_list else ''
+        # add toolchain.yaml to compile
+        docker_param = get_docker_param_dict(
+            docker_image=oebuild_const.DEFAULT_DOCKER,
+            src_dir=self.configure.source_dir(),
+            compile_dir=build_dir,
+            toolchain_dir=None,
+            sstate_mirrors=None)
+        config_list = []
+        for toolchain_name in toolchain_name_list:
+            if toolchain_name.startwith("config_"):
+                config_list.append(toolchain_name)
+                continue
+            config_list.append("config_" + toolchain_name)
+        oebuild_util.write_yaml(
+            yaml_path=os.path.join(build_dir, 'toolchain.yaml'),
+            data={
+                'config_list': config_list,
+                'docker_param': docker_param
+            }
+        )
         if auto_build:
-            subprocess.run(f'oebuild bitbake toolchain{toolchain_name}', shell=True, check=False)
+            subprocess.run('oebuild toolchain auto', shell=True, check=False)
+
+
+def get_docker_image(yocto_dir, docker_tag, configure: Configure):
+    '''
+    xxx
+    '''
+    docker_image = oebuild_util.get_docker_image_from_yocto(yocto_dir=yocto_dir)
+    if docker_image is None:
+        check_docker_tag = CheckDockerTag(docker_tag, configure)
+        oebuild_config = configure.parse_oebuild_config()
+        if check_docker_tag.get_tag() is not None:
+            docker_tag = str(check_docker_tag.get_tag())
+        else:
+            # select docker image
+            while True:
+                print('''
+If the system does not recognize which container image to use, select the
+following container, enter it numerically, and enter q to exit:''')
+                image_list = check_docker_tag.get_tags()
+
+                for key, value in enumerate(image_list):
+                    print(
+                        f"{key}, {oebuild_config.docker.repo_url}:{value}")
+                k = input("please entry number:")
+                if k == "q":
+                    sys.exit(0)
+                try:
+                    index = int(k)
+                    docker_tag = image_list[index]
+                    break
+                except IndexError:
+                    print("please entry true number")
+        docker_tag = docker_tag.strip()
+        docker_tag = docker_tag.strip('\n')
+        docker_image = f"{oebuild_config.docker.repo_url}:{docker_tag}"
+    return docker_image
 
 
 def basic_config():
@@ -769,7 +867,7 @@ def basic_config():
     basic_str = textwrap.dedent(f"""
     comment "                           THIS IS BASIC CONFIG                               "
     config BASIC-SSTATE_CACHE--S
-        string "sstate_cache     (this param is for SSTATE_MIRRORS)"
+        string "sstate_mirrors     (this param is for SSTATE_MIRRORS)"
         default "None"
     config BASIC-SSTATE_DIR--S_DIR
         string "sstate_dir     (this param is for SSTATE_DIR)"
