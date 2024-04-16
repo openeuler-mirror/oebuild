@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details.
 
 import argparse
 import re
+import resource
 import subprocess
 import textwrap
 import os
@@ -193,9 +194,25 @@ class Generate(OebuildCommand):
                             This parameter is used to toolchain name
                             ''')
 
+        parser.add_argument('-menuconfig',
+                            '--menuconfig',
+                            dest='menuconfig',
+                            action="store_true",
+                            help='''
+                            This parameter is used to menuconfig
+                            ''')
+
+        parser.add_argument('-at',
+                            '--auto_build',
+                            dest='auto_build',
+                            action="store_true",
+                            help='''
+                                    This parameter is used to auto_build
+                            ''')
+
         return parser
 
-    # pylint:disable=[R0914,R0911,R0912,R0915,W1203]
+    # pylint:disable=[R0914,R0911,R0912,R0915,W1203,R0913]
     def do_run(self, args: argparse.Namespace, unknown=None):
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
@@ -212,7 +229,7 @@ class Generate(OebuildCommand):
             )
             sys.exit(-1)
 
-        if len(unknown) == 0:
+        if '-mc' in unknown:
             config_path = self.create_kconfig(yocto_dir)
             if not os.path.exists(config_path):
                 sys.exit(0)
@@ -222,14 +239,17 @@ class Generate(OebuildCommand):
         else:
             args = args.parse_args(unknown)
         build_in = args.build_in
+        auto_build = bool(args.auto_build)
+
         if args.sdk:
-            self.build_sdk(args.build_in, args.directory, args.toolchain_dir, args.nativesdk_dir)
-            return
+            self.build_sdk(args.build_in, args.directory, args.toolchain_dir,
+                           args.nativesdk_dir, auto_build)
+            sys.exit(0)
 
         if args.toolchain:
             toolchain_name_list = args.toolchain_name if args.toolchain_name else []
-            self.tool_chain(toolchain_name_list)
-            return
+            self.tool_chain(toolchain_name_list, auto_build)
+            sys.exit(0)
 
         if args.build_in == oebuild_const.BUILD_IN_HOST:
             try:
@@ -493,12 +513,15 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         kconfig_path = pathlib.Path(self.oebuild_kconfig_path,
                                     str(int(time.time())))
         info = textwrap.dedent("""
-        config NATIVE-SDK
+        config NATIVE_SDK
             bool "Build Nativesdk"
             depends on !TOOLCHAIN
+        config AUTO_BUILD
+            bool "Auto Build"
+            depends on NATIVE_SDK
         config IMAGE
             bool "Build OS"
-            depends on !NATIVE-SDK && !TOOLCHAIN
+            depends on !NATIVE_SDK && !TOOLCHAIN
             default y
         if IMAGE
         """)
@@ -597,15 +620,17 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         toolchain_start = """
         config TOOLCHAIN
             bool "Build Toolchain"
-        if TOOLCHAIN
+        config AUTO_BUILD
+            bool "Auto Build"
+            depends on TOOLCHAIN
         """
         for config in toolchain_list:
             if not re.search('xml', config):
                 toolchain_info = (f"""\nconfig TOOLCHAINS_{config.upper()}\n"""
-                                  f"""    bool "{config.upper()}"\n""")
+                                  f"""    bool "{config.upper()}"\n"""
+                                  """     depends on TOOLCHAIN && AUTO_BUILD\n""")
                 toolchain_start += toolchain_info
 
-        toolchain_start += "endif\n"
         return toolchain_start
 
     def generate_command(self, config_path):
@@ -624,9 +649,10 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         platform_search = re.search(r"(?<=CONFIG_PLATFORM_).*(?==y)", content)
         feature_list = re.findall(r"(?<=CONFIG_FEATURE_).*(?==y)", content)
         build_in = re.search(r"(?<=CONFIG_BUILD).*(?==y)", content)
-        native_sdk = re.search("(?<=NATIVE-SDK).*", content)
+        native_sdk = re.search("(?<=NATIVE_SDK).*", content)
         tool_chain = re.search("(?<=TOOLCHAIN).*", content)
         toolchain_list = re.findall("(?<=TOOLCHAINS_).*(?==y)", content)
+        auto_build = re.findall("(?<=AUTO_BUILD).*", content)
         generate_command = []
         for basic in basic_list:
             basic_info = basic.lower().replace("\"", "").split('=')
@@ -660,9 +686,12 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
                 for toolchain_info in toolchain_list:
                     generate_command += ['-tn', toolchain_info.lower()]
 
+        if auto_build:
+            generate_command += ['-at']
+
         return generate_command
 
-    def build_sdk(self, build_in, directory, toolchain_dir, nativesdk_dir):
+    def build_sdk(self, build_in, directory, toolchain_dir, nativesdk_dir, auto_build):
         """
 
         Args:
@@ -670,6 +699,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             directory: build dir
             toolchain_dir: toolchain dir
             nativesdk_dir: nativesdk dir
+            auto_build: auto_build
 
         Returns:
 
@@ -689,13 +719,15 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
                 info['toolchain_dir'] = os.path.abspath(toolchain_dir)
             oebuild_util.write_yaml(yaml_path, info)
         os.chdir(build_dir)
-        subprocess.run('oebuild bitbake buildtools-extended-tarball', shell=True, check=False)
+        if auto_build:
+            subprocess.run('oebuild bitbake buildtools-extended-tarball', shell=True, check=False)
 
-    def tool_chain(self, toolchain_name_list):
+    def tool_chain(self, toolchain_name_list, auto_build):
         """
 
         Args:
             toolchain_name_list: choose toolchain
+            auto_build: auto_build
 
         Returns:
 
@@ -719,10 +751,12 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         subprocess.run('oebuild generate -d toolchain', shell=True, check=False)
         subprocess.check_output(f'cp -r {cross_path} {build_dir}', shell=True)
         os.chdir(build_dir)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (1048576, 1048576))
         subprocess.check_output('./cross-tools/prepare.sh ../toolchain/', shell=True)
         logger.info('build toolchain...')
         toolchain_name = ' ' + ' '.join(toolchain_name_list) if toolchain_name_list else ''
-        subprocess.run(f'oebuild bitbake toolchain{toolchain_name}', shell=True, check=False)
+        if auto_build:
+            subprocess.run(f'oebuild bitbake toolchain{toolchain_name}', shell=True, check=False)
 
 
 def basic_config():
