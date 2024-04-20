@@ -194,14 +194,6 @@ class Generate(OebuildCommand):
                             This parameter is used to toolchain name
                             ''')
 
-        parser.add_argument('-menuconfig',
-                            '--menuconfig',
-                            dest='menuconfig',
-                            action="store_true",
-                            help='''
-                            This parameter is used to menuconfig
-                            ''')
-
         parser.add_argument('-at',
                             '--auto_build',
                             dest='auto_build',
@@ -229,7 +221,7 @@ class Generate(OebuildCommand):
             )
             sys.exit(-1)
 
-        if '-mc' in unknown:
+        if len(unknown) == 0:
             config_path = self.create_kconfig(yocto_dir)
             if not os.path.exists(config_path):
                 sys.exit(0)
