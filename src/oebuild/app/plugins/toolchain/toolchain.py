@@ -34,11 +34,10 @@ class Toolchain(OebuildCommand):
     The toolchain provides the ability to build a cross-compilation chain.
     '''
 
-    help_msg = 'generate manifest from oebuild workspace'
+    help_msg = 'build openEuler cross-toolchain'
     description = textwrap.dedent('''\
-            manifest provides the manifest function of generating dependent
-            source repositories in the build working directory, and can restore
-            relevant source repositories based on the manifest file
+            The toolchain provides similar functionality to bitbake, allowing
+            for the construction of an openEuler cross-toolchain.
             ''')
 
     def __init__(self):

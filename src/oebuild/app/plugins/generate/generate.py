@@ -28,8 +28,8 @@ from ruamel.yaml.scalarstring import LiteralScalarString
 from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
 from oebuild.configure import Configure
-from oebuild.parse_template import BaseParseTemplate, \
-    ParseTemplate, get_docker_param_dict, parse_repos_layers_local_obj
+from oebuild.parse_template import BaseParseTemplate, ParseTemplate, \
+    get_docker_param_dict, parse_repos_layers_local_obj
 from oebuild.m_log import logger, INFO_COLOR
 from oebuild.check_docker_tag import CheckDockerTag
 import oebuild.const as oebuild_const
@@ -815,7 +815,10 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
 
 def get_docker_image(yocto_dir, docker_tag, configure: Configure):
     '''
-    xxx
+    get docker image
+    first we search in yocto-meta-openeuler/.oebuild/env.yaml
+    second search in default ${workdir}/.oebuild/config.yaml
+    third get from user input
     '''
     docker_image = oebuild_util.get_docker_image_from_yocto(yocto_dir=yocto_dir)
     if docker_image is None:

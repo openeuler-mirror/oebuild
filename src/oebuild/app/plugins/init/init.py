@@ -15,6 +15,7 @@ import shutil
 import os
 import textwrap
 import sys
+import pathlib
 
 from oebuild.command import OebuildCommand
 import oebuild.util as oebuild_util
@@ -138,7 +139,7 @@ please execute the follow commands next
         init workspace will copy config file and make new src directory
         '''
         try:
-            os.mkdir(directory)
+            os.mkdir(pathlib.Path(directory).absolute())
         except FileExistsError:
             return False
 

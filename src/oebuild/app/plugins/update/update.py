@@ -144,7 +144,7 @@ class Update(OebuildCommand):
         repos = None
         if os.path.exists(os.path.join(os.getcwd(), "compile.yaml")):
             compile_param_dict = oebuild_util.read_yaml(os.path.join(os.getcwd(), "compile.yaml"))
-            compile_param = ParseCompileParam.parse_compile_param_to_obj(
+            compile_param = ParseCompileParam().parse_to_obj(
                 compile_param_dict=compile_param_dict)
             repos = compile_param.repos
         else:

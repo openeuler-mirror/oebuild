@@ -30,10 +30,10 @@ class RepoParam:
 @dataclass
 class OebuildEnv:
     '''
-    xxx
+    when run oebuild build.yaml, the OebuildEnv will be need in build.yaml
     '''
     workdir: str
-    openeuler_layer: RepoParam
+    openeuler_layer: Optional[RepoParam]
     build_list: Optional[list]
 
 
@@ -55,7 +55,7 @@ class DockerParam:
 @dataclass
 class CompileLocalParam:
     '''
-    xxx
+    this is for parse to local.conf
     '''
     sstate_mirrors: Optional[str]
     sstate_dir: Optional[str]
@@ -65,7 +65,7 @@ class CompileLocalParam:
 @dataclass
 class CompileParamComm:
     '''
-    xxx
+    this is for common param to compile.yaml
     '''
     build_in: str
     machine: str
@@ -79,14 +79,22 @@ class CompileParamComm:
 @dataclass
 class CompileParamHost:
     '''
-    xxx
+    this is parse for host environment
     '''
     toolchain_dir: Optional[str]
     nativesdk_dir: Optional[str]
 
 
 @dataclass
-class CompileParam(CompileParamComm, CompileLocalParam, CompileParamHost):
+class CompileParamBitbakeCmds:
+    '''
+    this is for autobuild, oebuild need bitbake_cmds to run bitbake cmd automatic
+    '''
+    bitbake_cmds: Optional[list]
+
+
+@dataclass
+class CompileParam(CompileParamComm, CompileLocalParam, CompileParamHost, CompileParamBitbakeCmds):
     '''
     Compile is the parsed object of compile.yaml and is used to manipulate the build file
     '''
@@ -95,7 +103,9 @@ class CompileParam(CompileParamComm, CompileLocalParam, CompileParamHost):
 @dataclass
 class ToolchainParam:
     '''
-    xxx
+    this param is for oebuld toolchain
     '''
+    # config_list is for toolchain type,for example: config_aarch64
     config_list: Optional[list]
+    # docker_param is for docker startup param
     docker_param: DockerParam

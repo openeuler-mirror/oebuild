@@ -164,7 +164,7 @@ class ParseTemplate:
         except Exception as e_p:
             raise e_p
 
-    def get_default_generate_compile_conf_param(self, ):
+    def get_default_generate_compile_conf_param(self,):
         '''
         return default generate_compile_conf param
         '''

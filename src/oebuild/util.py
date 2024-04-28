@@ -284,12 +284,15 @@ def download_repo_from_manifest(repo_list, src_dir, manifest_path):
     '''
     Download the repos set in compile.yaml based on the given base path
     '''
+    if repo_list is None or len(repo_list) == 0:
+        return
     manifest = None
     if os.path.exists(manifest_path):
         manifest = read_yaml(pathlib.Path(manifest_path))['manifest_list']
     for repo_name in repo_list:
         repo_dir = os.path.join(src_dir, repo_name)
         if repo_name in manifest:
+            print(repo_name)
             repo_obj: RepoParam = ParseRepoParam.parse_to_obj(manifest[repo_name])
             repo_git = OGit(repo_dir=repo_dir, remote_url=repo_obj.remote_url, branch=None)
             repo_git.check_out_version(version=repo_obj.version)

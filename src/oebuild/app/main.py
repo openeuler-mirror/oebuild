@@ -18,11 +18,14 @@ import getpass
 import colorama
 
 import oebuild.util as oebuild_util
+import oebuild.const as oebuild_const
+from oebuild.m_log import logger
+from oebuild.struct import CompileParam
+from oebuild.parse_param import ParseOebuildEnvParam, ParseCompileParam
 from oebuild.auto_completion import AutoCompletion
 from oebuild.version import __version__
 from oebuild.spec import get_spec, _ExtCommand
 from oebuild.command import OebuildCommand
-from oebuild.m_log import logger
 from oebuild.oebuild_parser import OebuildArgumentParser, OebuildHelpAction
 
 APP = "app"
@@ -41,13 +44,13 @@ class OebuildApp:
         self.cmd = None
         try:
             plugins_dir = pathlib.Path(self.base_oebuild_dir, 'app/conf', 'plugins.yaml')
-            self.oebuild_plugins_path = os.path.expanduser('~') + '/.local/oebuild_plugins/'
-            self.append_plugins_dir = pathlib.Path(self.oebuild_plugins_path, 'append_plugins.yaml')
+            oebuild_plugins_path = os.path.expanduser('~') + '/.local/oebuild_plugins/'
+            append_plugins_dir = pathlib.Path(oebuild_plugins_path, 'append_plugins.yaml')
             self.command_ext = self.get_command_ext(oebuild_util.read_yaml(plugins_dir)['plugins'])
-            if os.path.exists(self.append_plugins_dir) \
-                    and oebuild_util.read_yaml(self.append_plugins_dir):
+            if os.path.exists(append_plugins_dir) \
+                    and oebuild_util.read_yaml(append_plugins_dir):
                 self.command_ext = self.get_command_ext(
-                    oebuild_util.read_yaml(self.append_plugins_dir)['plugins'],
+                    oebuild_util.read_yaml(append_plugins_dir)['plugins'],
                     self.command_ext)
             self.command_spec = {}
         except Exception as e_p:
@@ -188,6 +191,150 @@ def extension_commands(pre_dir, commandlist: OrderedDict):
     return specs
 
 
+class QuickBuild():
+    '''
+    The build command will quickly generate the compile.yaml
+    '''
+
+    def __init__(self, build_yaml_path):
+        self.app = OebuildApp()
+        self.build_yaml_path = pathlib.Path(build_yaml_path)
+        self.oebuild_env = None
+        self.build_data = None
+
+    def _check_yaml(self,):
+        if not os.path.exists(self.build_yaml_path.absolute()):
+            logger.error("%s is not exists!", self.build_yaml_path)
+            sys.exit(-1)
+        data = oebuild_util.read_yaml(yaml_path=self.build_yaml_path)
+        self.build_data = data
+        if "oebuild_env" not in data:
+            logger.error("%s is not valid", self.build_yaml_path.name)
+            sys.exit(-1)
+        self.oebuild_env = ParseOebuildEnvParam().parse_to_obj(data['oebuild_env'])
+
+    def run(self):
+        '''
+        Execute oebuild commands in order.
+        '''
+        self._check_yaml()
+
+        self.do_init()
+
+        self.do_update_layer()
+
+        self.do_build_list()
+
+    def do_init(self, ):
+        '''
+        Execute oebuild command : oebuild init [directory] [-u yocto_remote_url] [-b branch]
+        '''
+        argv = [
+            'init',
+        ]
+        try:
+            data = oebuild_util.read_yaml(yaml_path=self.build_yaml_path)
+            # get openeuler repo param
+            if 'openeuler_layer' in data:
+                argv.append("-u")
+                argv.append(self.oebuild_env.openeuler_layer.remote_url)
+
+                argv.append("-b")
+                argv.append(self.oebuild_env.openeuler_layer.version)
+            argv.append(self.oebuild_env.workdir)
+        except Exception as e_p:
+            raise e_p
+        self.app.run(argv or sys.argv[1:])
+
+    def do_update_layer(self, ):
+        '''
+        Execute oebuild command : oebuild update [yocto docker layer] [-tag]
+        '''
+        argv = [
+            'update',
+            'layer'
+        ]
+        self.app.run(argv or sys.argv[1:])
+
+    def do_build_list(self,):
+        '''
+        Build sequentially from the given compile parameter list.
+        '''
+        for build_name in self.oebuild_env.build_list:
+            self._generate_and_bitbake(build_name=build_name)
+
+    def _generate_and_bitbake(self, build_name):
+        '''
+        Execute oebuild command : oebuild generate
+        '''
+        if build_name not in self.build_data:
+            logger.error("lack %s dict data in %s", build_name, self.build_yaml_path)
+            sys.exit(-1)
+        compile_param_dict = self.build_data[build_name]
+        compile_param = ParseCompileParam().parse_to_obj(compile_param_dict=compile_param_dict)
+        self._generate(compile_param=compile_param, build_name=build_name)
+        compile_dir = os.path.join(self.oebuild_env.workdir, "build", build_name)
+        self._bitbake(
+            bitbake_cmds=compile_param.bitbake_cmds,
+            compile_dir=compile_dir,
+            build_in=compile_param.build_in)
+
+    def _generate(self, compile_param: CompileParam, build_name):
+        # check compile if exists, if exists, exit with -1
+        compile_dir = os.path.join(self.oebuild_env.workdir, "build", build_name)
+        if os.path.exists(compile_dir):
+            logger.error("%s has exists", compile_dir)
+            sys.exit(-1)
+
+        if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
+            if compile_param.docker_param is None:
+                logger.error("param is error, build in docker need docker_param")
+                sys.exit(-1)
+            # check src and compile_dir if exists
+            src_volumn_flag = False
+            compile_volumn_flag = False
+            for volumn in compile_param.docker_param.volumns:
+                volumn_split = volumn.split(":")
+                if oebuild_const.CONTAINER_SRC == volumn_split[1].strip(" "):
+                    src_volumn_flag = True
+                if volumn_split[1].strip(" ").startswith(oebuild_const.CONTAINER_BUILD):
+                    compile_volumn_flag = True
+            if not src_volumn_flag:
+                compile_param.docker_param.volumns.append(
+                    f"{self.oebuild_env.workdir}/src:{oebuild_const.CONTAINER_SRC}"
+                )
+            if not compile_volumn_flag:
+                compile_param.docker_param.volumns.append(
+                    f"{compile_dir}:{oebuild_const.CONTAINER_BUILD}/{build_name}"
+                )
+        compile_param_dict = ParseCompileParam().parse_to_dict(compile_param=compile_param)
+        os.makedirs(compile_dir)
+        compile_yaml_path = os.path.join(compile_dir, "compile.yaml")
+        oebuild_util.write_yaml(yaml_path=compile_yaml_path, data=compile_param_dict)
+
+    def _bitbake(self, bitbake_cmds, compile_dir, build_in):
+        os.chdir(compile_dir)
+        if build_in == oebuild_const.BUILD_IN_DOCKER:
+            self._update_docker()
+        for bitbake_cmd in bitbake_cmds:
+            bitbake_cmd: str = bitbake_cmd.strip(" ")
+            argv = [
+                'bitbake',
+                bitbake_cmd.lstrip("bitbake")
+            ]
+            self.app.run(argv or sys.argv[1:])
+
+    def _update_docker(self,):
+        '''
+        Execute oebuild command : oebuild update [yocto docker layer] [-tag]
+        '''
+        argv = [
+            'update',
+            'docker'
+        ]
+        self.app.run(argv or sys.argv[1:])
+
+
 def main(argv=None):
     '''
     oebuild main entrypoint
@@ -197,8 +344,12 @@ def main(argv=None):
 
     colorama.init()
     AutoCompletion().run()
-    app = OebuildApp()
-    app.run(argv or sys.argv[1:])
+    if (len(sys.argv) > 1) and 'yaml' in sys.argv[1]:
+        build = QuickBuild(build_yaml_path=sys.argv[1])
+        build.run()
+    else:
+        app = OebuildApp()
+        app.run(argv or sys.argv[1:])
 
 
 if __name__ == "__main__":

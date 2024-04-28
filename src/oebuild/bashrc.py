@@ -33,7 +33,8 @@ class Bashrc:
 
     def set_container(self, container: Container):
         '''
-        xxx
+        After setting the container parameters, all operations on bashrc
+        will be based on the container.
         '''
         self.container = container
         self.client = DockerProxy()
@@ -71,7 +72,7 @@ mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINE
 
     def get_bashrc_content(self,):
         '''
-        xxx
+        get bashrc shell content
         '''
         # return host bashrc
         if self.container is None:
@@ -95,7 +96,7 @@ mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINE
     @staticmethod
     def restore_bashrc_content(old_content):
         '''
-        xxx
+        restore bashrc content, it will delete line with oebuild_const.BASH_END_FLAG
         '''
         new_content = ''
         for line in old_content.split('\n'):
@@ -108,7 +109,7 @@ mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINE
     @staticmethod
     def add_bashrc(content: str, line: str):
         '''
-        xxx
+        add new line to bashrc with oebuild_const.BASH_END_FLAG
         '''
         if not content.endswith('\n'):
             content = content + '\n'
@@ -119,9 +120,9 @@ mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINE
     @staticmethod
     def init_bashrc_content(old_content, init_command: list):
         '''
-        xxx
+        add init command line to bashrc shell
         '''
-        new_content = Bashrc.restore_bashrc_content(old_content=old_content)
+        new_content = Bashrc().restore_bashrc_content(old_content=old_content)
 
         for command in init_command:
             new_content = new_content + command + oebuild_const.BASH_END_FLAG + '\n'

@@ -12,9 +12,42 @@ See the Mulan PSL v2 for more details.
 
 from typing import Dict
 
-from oebuild.struct import RepoParam, DockerParam, CompileParam, ToolchainParam
+from oebuild.struct import RepoParam, DockerParam, CompileParam, ToolchainParam, OebuildEnv
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
+
+
+class ParseOebuildEnvParam:
+    '''
+    OebuildEnv:
+        workdir: str
+        openeuler_layer: RepoParam
+        build_list: Optional[list]
+    '''
+    @staticmethod
+    def parse_to_obj(oebuild_env_param_dict) -> OebuildEnv:
+        '''
+        parse dict to OebuildEnv
+        '''
+        return OebuildEnv(
+            workdir=oebuild_env_param_dict['workdir'],
+            openeuler_layer=(None if 'openeuler_layer' not in oebuild_env_param_dict else
+                             ParseRepoParam.parse_to_obj(
+                                 oebuild_env_param_dict['openeuler_layer'])),
+            build_list=(None if 'build_list' not in oebuild_env_param_dict else
+                        oebuild_env_param_dict['build_list'])
+        )
+
+    @staticmethod
+    def parse_to_dict(oebuild_env_obj: OebuildEnv):
+        '''
+        parse OebuildEnv to dict
+        '''
+        return {
+            "workdir": oebuild_env_obj.workdir,
+            "openeuler_layer": oebuild_env_obj.openeuler_layer,
+            "build_list": oebuild_env_obj.build_list
+        }
 
 
 class ParseRepoParam:
@@ -132,12 +165,13 @@ class ParseCompileParam:
             repos=None if len(repos) == 0 else repos,
             local_conf=get_value_from_dict('local_conf', compile_param_dict, None),
             layers=get_value_from_dict('layers', compile_param_dict, None),
-            docker_param=docker_param)
+            docker_param=docker_param,
+            bitbake_cmds=get_value_from_dict('bitbake_cmds', compile_param_dict, None))
 
     @staticmethod
     def parse_to_dict(compile_param: CompileParam):
         '''
-        xxx
+        parse CompileParam obj to dict
         '''
         compile_obj = {}
         compile_obj['build_in'] = compile_param.build_in
@@ -158,7 +192,10 @@ class ParseCompileParam:
         if compile_param.layers is not None:
             compile_obj['layers'] = compile_param.layers
         if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
-            compile_obj['docker_param'] = compile_param.docker_param
+            compile_obj['docker_param'] = ParseDockerParam().parse_to_dict(
+                compile_param.docker_param)
+        if compile_param.bitbake_cmds is not None:
+            compile_obj['bitbake_cmds'] = compile_param.bitbake_cmds
 
         return compile_obj
 

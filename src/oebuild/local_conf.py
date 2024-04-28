@@ -168,14 +168,16 @@ class LocalConf:
 
     def _add_content_to_local_conf(self, content, local_conf):
         user_content_flag = "#===========the content is user added=================="
-        if user_content_flag not in content and local_conf != "":
+        if user_content_flag not in content and local_conf is not None and local_conf != "":
             # check if exists remark sysmbol, if exists and replace it
+            content += f"\n{user_content_flag}\n"
             for line in local_conf.split('\n'):
                 if line.startswith("#"):
                     r_line = line.lstrip("#").strip(" ")
                     content = content.replace(r_line, line)
-            content += f"\n{user_content_flag}\n"
-            content += local_conf
+                if line.strip(" ") == "None":
+                    continue
+                content += line + "\n"
 
         with open(self.local_path, 'w', encoding="utf-8") as r_f:
             r_f.write(content)
