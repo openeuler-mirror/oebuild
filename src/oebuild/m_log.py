@@ -28,16 +28,21 @@ ERR_COLOR = colorama.Fore.LIGHTRED_EX
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-fh = logging.FileHandler('oebuild.log')
-fh.setLevel(logging.INFO)
-
 ch = logging.StreamHandler(stream=sys.stdout)
 ch.setLevel(logging.INFO)
 
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 
-logger.addHandler(fh)
 logger.addHandler(ch)
+
+
+def set_log_to_file():
+    '''
+    set log to log file
+    '''
+    fh = logging.FileHandler('oebuild.log')
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)

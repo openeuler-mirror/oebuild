@@ -19,7 +19,7 @@ import subprocess
 from docker.models.containers import ExecResult
 
 from oebuild.command import OebuildCommand
-from oebuild.m_log import logger
+from oebuild.m_log import logger, set_log_to_file
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
 from oebuild.parse_param import ParseToolchainParam
@@ -62,6 +62,8 @@ class Toolchain(OebuildCommand):
         if '-h' in unknown or '--help' in unknown:
             self.print_help_msg()
             sys.exit(0)
+
+        set_log_to_file()
 
         if not self._check_support_toolchain():
             logger.error(

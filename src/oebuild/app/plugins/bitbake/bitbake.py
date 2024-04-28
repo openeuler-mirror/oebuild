@@ -25,7 +25,7 @@ from oebuild.parse_env import ParseEnv
 import oebuild.util as oebuild_util
 from oebuild.app.plugins.bitbake.in_container import InContainer
 from oebuild.app.plugins.bitbake.in_host import InHost
-from oebuild.m_log import logger
+from oebuild.m_log import logger, set_log_to_file
 import oebuild.const as oebuild_const
 
 
@@ -77,6 +77,7 @@ class Bitbake(OebuildCommand):
         if '-h' in unknown or '--help' in unknown:
             self.print_help_msg()
             sys.exit(0)
+        set_log_to_file()
 
         command = self._get_command(unknow=unknown)
 
