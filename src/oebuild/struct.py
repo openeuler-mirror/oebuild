@@ -47,7 +47,7 @@ class DockerParam:
     # point out the parameter for create container
     parameters: str
     # point out the volumns for create container
-    volumns: list[str]
+    volumns: list
     # point out the command for create container
     command: str
 

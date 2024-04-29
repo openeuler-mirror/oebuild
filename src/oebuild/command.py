@@ -13,13 +13,6 @@ See the Mulan PSL v2 for more details.
 from abc import ABC, abstractmethod
 import argparse
 from typing import List
-import colorama
-
-INF_COLOR = colorama.Fore.LIGHTGREEN_EX
-
-WRN_COLOR = colorama.Fore.LIGHTYELLOW_EX
-
-ERR_COLOR = colorama.Fore.LIGHTRED_EX
 
 
 class OebuildCommand(ABC):
@@ -31,14 +24,14 @@ class OebuildCommand(ABC):
         self.description = description
         self.parser: argparse.ArgumentParser = None
 
-    def run(self, args: argparse.ArgumentParser, unknown: List[str]):
+    def run(self, args: argparse.ArgumentParser, unknown: List):
         '''
         The executing body, each inherited class will
         register the executor with the executor body for execution
         '''
         self.do_run(args=args, unknown=unknown)
 
-    def pre_parse_help(self, args: argparse.ArgumentParser, unknown: List[str]):
+    def pre_parse_help(self, args: argparse.ArgumentParser, unknown: List):
         '''
         Whether to parse the help command in advance, designed to adapt to some extended
         scenarios that do not require command resolution, generally the function is placed
@@ -76,7 +69,7 @@ class OebuildCommand(ABC):
         '''
 
     @abstractmethod
-    def do_run(self, args: argparse.Namespace, unknown: List[str]):
+    def do_run(self, args: argparse.Namespace, unknown: List):
         '''
         Subclasses must implement; called to run the command.
         :param args: ``argparse.Namespace`` of parsed arguments

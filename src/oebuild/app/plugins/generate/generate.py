@@ -30,7 +30,7 @@ import oebuild.util as oebuild_util
 from oebuild.configure import Configure
 from oebuild.parse_template import BaseParseTemplate, ParseTemplate, \
     get_docker_param_dict, parse_repos_layers_local_obj
-from oebuild.m_log import logger, INFO_COLOR
+from oebuild.m_log import logger
 from oebuild.check_docker_tag import CheckDockerTag
 import oebuild.const as oebuild_const
 
@@ -503,7 +503,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
                 table.add_row([platform.replace('.yml', '')])
             if platform.endswith('.yaml'):
                 table.add_row([platform.replace('.yaml', '')])
-        print(table, INFO_COLOR)
+        print(table)
 
     def _list_feature(self, ):
         yocto_dir = self.configure.source_yocto_dir()
@@ -524,7 +524,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
                 table.add_row([feature_name, feat.get('support')])
             else:
                 table.add_row([feature_name, "all"])
-        print(table, INFO_COLOR)
+        print(table)
 
     def check_support_oebuild(self, yocto_dir):
         '''

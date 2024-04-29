@@ -52,7 +52,6 @@ setuptools.setup(
         'PyYaml',
         'docker',
         'GitPython',
-        'colorama',
         'ruamel.yaml',
         'dataclasses',
         'reprint',

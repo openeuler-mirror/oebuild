@@ -102,6 +102,13 @@ class Init(OebuildCommand):
             self.print_help_msg()
             sys.exit(1)
 
+        # check if oebuild workspace exist, if exist, given notice
+        if Configure().is_oebuild_dir(pathlib.Path(args.directory)):
+            logger.info("the %s has already been initialized",
+                        str(pathlib.Path(args.directory).absolute()))
+            self._print_notice(args.directory)
+            return
+
         if not self.init_workspace(args.directory):
             logger.error("mkdir %s failed", args.directory)
             sys.exit(-1)
@@ -122,14 +129,17 @@ class Init(OebuildCommand):
         self.configure.update_oebuild_config(oebuild_config)
 
         logger.info("init %s successful", args.directory)
+        self._print_notice(args.directory)
+
+    def _print_notice(self, directory):
         format_msg = f'''
-There is a build configuration example file under {args.directory}/.oebuild/compile.yaml.sample,
+There is a build configuration example file under {directory}/.oebuild/compile.yaml.sample,
 if you want to block complex generate instructions, you can directly copy a configuration file,
 and then modify it according to your own needs, and then execute
     `oebuild generate -c <compile_dir>`.
 please execute the follow commands next
 
-    cd {os.path.abspath(os.getcwd())}
+    cd {pathlib.Path(directory).absolute()}
     oebuild update
         '''
         print(format_msg)

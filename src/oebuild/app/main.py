@@ -15,8 +15,6 @@ import pathlib
 from collections import OrderedDict
 import getpass
 
-import colorama
-
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
 from oebuild.m_log import logger
@@ -254,6 +252,7 @@ class QuickBuild():
             'update',
             'layer'
         ]
+        os.chdir(self.oebuild_env.workdir)
         self.app.run(argv or sys.argv[1:])
 
     def do_build_list(self,):
@@ -342,7 +341,6 @@ def main(argv=None):
     if not check_user():
         return
 
-    colorama.init()
     AutoCompletion().run()
     if (len(sys.argv) > 1) and 'yaml' in sys.argv[1]:
         build = QuickBuild(build_yaml_path=sys.argv[1])

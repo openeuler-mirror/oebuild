@@ -103,12 +103,12 @@ class Configure:
         return os.path.join(Configure.oebuild_topdir(start), '.oebuild')
 
     @staticmethod
-    def is_oebuild_dir():
+    def is_oebuild_dir(start: Optional[PathType] = None):
         '''
         Determine whether OEBuild is initialized
         '''
         try:
-            Configure.oebuild_topdir()
+            Configure.oebuild_topdir(start)
             return True
         except OebuildNotFound:
             return False

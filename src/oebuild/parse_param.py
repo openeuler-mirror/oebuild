@@ -82,11 +82,11 @@ class ParseDockerParam:
     class DockerParam:
         image: str
         parameters: str
-        volumns: list[str]
+        volumns: list
         command: str
     '''
     @staticmethod
-    def parse_to_obj(docker_param_dict: Dict[str, str | list[str]]) -> DockerParam:
+    def parse_to_obj(docker_param_dict: Dict) -> DockerParam:
         '''
         parse dict to DockerParam
         '''
@@ -98,7 +98,7 @@ class ParseDockerParam:
         )
 
     @staticmethod
-    def parse_to_dict(docker_param_obj: DockerParam) -> Dict[str, str | list[str]]:
+    def parse_to_dict(docker_param_obj: DockerParam):
         '''
         parse dict to DockerParam
         '''

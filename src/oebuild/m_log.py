@@ -11,19 +11,6 @@ See the Mulan PSL v2 for more details.
 '''
 import sys
 import logging
-import colorama
-
-#: Color used (when applicable) for printing with successful()
-INFO_COLOR = colorama.Fore.WHITE
-
-#: Color used (when applicable) for printing with successful()
-SUCCESS_COLOR = colorama.Fore.LIGHTGREEN_EX
-
-#: Color used (when applicable) for printing with wrn()
-WRN_COLOR = colorama.Fore.LIGHTYELLOW_EX
-
-#: Color used (when applicable) for printing with err() and die()
-ERR_COLOR = colorama.Fore.LIGHTRED_EX
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

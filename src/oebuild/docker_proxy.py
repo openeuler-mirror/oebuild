@@ -211,7 +211,7 @@ class DockerProxy:
     def create_container(self,
                          image: str,
                          parameters: str,
-                         volumes: List[str],
+                         volumes: List,
                          command: str) -> Container:
         '''
         create a new container
