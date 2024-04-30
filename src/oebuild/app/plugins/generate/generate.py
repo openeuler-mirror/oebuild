@@ -237,7 +237,7 @@ class Generate(OebuildCommand):
             build_dir = self._init_build_dir(args=args)
             if build_dir is None:
                 sys.exit(0)
-            self.build_sdk(args.build_in, build_dir, auto_build)
+            self.build_nativesdk(args.build_in, build_dir, auto_build)
             self._print_nativesdk(build_dir=build_dir)
             sys.exit(0)
 
@@ -310,35 +310,10 @@ class Generate(OebuildCommand):
         if os.path.exists(os.path.join(build_dir, 'compile.yaml')):
             os.remove(os.path.join(build_dir, 'compile.yaml'))
 
-        docker_image = oebuild_util.get_docker_image_from_yocto(yocto_dir=yocto_dir)
-        if docker_image is None:
-            check_docker_tag = CheckDockerTag(args.docker_tag, self.configure)
-            oebuild_config = self.configure.parse_oebuild_config()
-            if check_docker_tag.get_tag() is not None:
-                docker_tag = str(check_docker_tag.get_tag())
-            else:
-                # select docker image
-                while True:
-                    print('''
-    If the system does not recognize which container image to use, select the
-    following container, enter it numerically, and enter q to exit:''')
-                    image_list = check_docker_tag.get_tags()
-
-                    for key, value in enumerate(image_list):
-                        print(
-                            f"{key}, {oebuild_config.docker.repo_url}:{value}")
-                    k = input("please entry number:")
-                    if k == "q":
-                        sys.exit(0)
-                    try:
-                        index = int(k)
-                        docker_tag = image_list[index]
-                        break
-                    except IndexError:
-                        print("please entry true number")
-            docker_tag = docker_tag.strip()
-            docker_tag = docker_tag.strip('\n')
-            docker_image = f"{oebuild_config.docker.repo_url}:{docker_tag}"
+        docker_image = get_docker_image(
+                yocto_dir=self.configure.source_yocto_dir(),
+                docker_tag=args.docker_tag,
+                configure=self.configure)
 
         out_dir = pathlib.Path(os.path.join(build_dir, 'compile.yaml'))
 
@@ -728,7 +703,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
 
         return generate_command
 
-    def build_sdk(self, build_in, build_dir, auto_build):
+    def build_nativesdk(self, build_in, build_dir, auto_build):
         """
 
         Args:
@@ -791,7 +766,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             sys.exit(-1)
         # add toolchain.yaml to compile
         docker_param = get_docker_param_dict(
-            docker_image=oebuild_const.DEFAULT_DOCKER,
+            docker_image=get_sdk_docker_image(yocto_dir=self.configure.source_yocto_dir()),
             src_dir=self.configure.source_dir(),
             compile_dir=build_dir,
             toolchain_dir=None,
@@ -849,6 +824,16 @@ following container, enter it numerically, and enter q to exit:''')
         docker_tag = docker_tag.strip()
         docker_tag = docker_tag.strip('\n')
         docker_image = f"{oebuild_config.docker.repo_url}:{docker_tag}"
+    return docker_image
+
+
+def get_sdk_docker_image(yocto_dir):
+    '''
+    get toolchain docker image
+    '''
+    docker_image = oebuild_util.get_sdk_docker_image_from_yocto(yocto_dir=yocto_dir)
+    if docker_image is None:
+        docker_image = oebuild_const.DEFAULT_SDK_DOCKER
     return docker_image
 
 

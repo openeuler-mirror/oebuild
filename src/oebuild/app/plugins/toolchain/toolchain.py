@@ -87,6 +87,8 @@ class Toolchain(OebuildCommand):
             container=self.client.get_container(container_id=self.container_id),
             container_user=oebuild_const.CONTAINER_USER)
 
+        self._set_environment_param()
+
         if unknown is None or len(unknown) == 0:
             content = self.bashrc.get_bashrc_content()
             for b_s in oebuild_const.TOOLCHAIN_BASH_BANNER.split('\n'):
@@ -132,6 +134,14 @@ class Toolchain(OebuildCommand):
         '''
         for config in config_list:
             self._build_toolchain(config_name=config)
+
+    def _set_environment_param(self):
+        content = self.bashrc.get_bashrc_content()
+        open_source_cmd = 'export OPENSOURCE_DIR="$PWD/open_source"'
+        content = self.bashrc.add_bashrc(content=content, line=open_source_cmd)
+        x_tools_cmd = 'export X_TOOLS_DIR="$PWD/x-tools"'
+        content = self.bashrc.add_bashrc(content=content, line=x_tools_cmd)
+        self.bashrc.update_bashrc(content=content)
 
     def _build_toolchain(self, config_name):
         '''

@@ -19,6 +19,7 @@ BASH_END_FLAG = "  ###!!!###"
 CONTAINER_USER = "openeuler"
 CONTAINER_BUILD = '/home/openeuler/build'
 DEFAULT_DOCKER = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-container:latest"
+DEFAULT_SDK_DOCKER = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-sdk:latest"
 CONTAINER_SRC = '/usr1/openeuler/src'
 CONTAINER_USER = "openeuler"
 NATIVESDK_DIR = "/opt/buildtools/nativesdk"
@@ -45,7 +46,7 @@ BASH_BANNER = '''
 TOOLCHAIN_BASH_BANNER = '''
     Welcome to the openEuler Embedded build environment, where you
     can create openEuler Embedded cross-chains tools by follows:
-    "./cross-tools/prepare.sh"
+    "./cross-tools/prepare.sh ./"
     "cp config_aarch64 .config && ct-ng build"
     "cp config_aarch64-musl .config && ct-ng build"
     "cp config_arm32 .config && ct-ng build"

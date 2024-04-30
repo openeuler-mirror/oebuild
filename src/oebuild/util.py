@@ -316,6 +316,24 @@ def get_docker_image_from_yocto(yocto_dir):
     return None
 
 
+def get_sdk_docker_image_from_yocto(yocto_dir):
+    '''
+    determine yocto-meta-openeuler's supported sdk docker image in env.yaml
+    '''
+    if not os.path.exists(yocto_dir):
+        raise ValueError("the yocto direction is not exists")
+
+    env_path = os.path.join(yocto_dir, ".oebuild/env.yaml")
+    if not os.path.exists(env_path):
+        return None
+
+    env_parse = read_yaml(yaml_path=env_path)
+    if "sdk_docker_image" in env_parse:
+        return str(env_parse['sdk_docker_image'])
+
+    return None
+
+
 def deal_env_container(env: ParseEnv, docker_param: DockerParam):
     '''
     This operation realizes the processing of the container,
