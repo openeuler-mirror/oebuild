@@ -282,9 +282,11 @@ def get_docker_param_dict(docker_image, src_dir, compile_dir, toolchain_dir, sst
     parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS
     volumns = []
     volumns.append("/dev/net/tun:/dev/net/tun")
-    volumns.append(src_dir + ':' + oebuild_const.CONTAINER_SRC)
-    volumns.append(compile_dir + ":" + os.path.join(
-        oebuild_const.CONTAINER_BUILD, os.path.basename(compile_dir)))
+    if src_dir is not None:
+        volumns.append(src_dir + ':' + oebuild_const.CONTAINER_SRC)
+    if compile_dir is not None:
+        volumns.append(compile_dir + ":" + os.path.join(
+            oebuild_const.CONTAINER_BUILD, os.path.basename(compile_dir)))
     if toolchain_dir is not None:
         volumns.append(toolchain_dir + ":" + oebuild_const.NATIVE_GCC_DIR)
     if sstate_mirrors is not None:

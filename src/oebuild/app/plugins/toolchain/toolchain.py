@@ -48,11 +48,14 @@ class Toolchain(OebuildCommand):
 
         super().__init__('toolchain', self.help_msg, self.description)
 
+    def __del__(self):
+        self.bashrc.restore_bashrc()
+
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
         parser = self._parser(parser_adder,
                               usage='''
 
-  %(prog)s [auto | <target>]
+  %(prog)s [auto | prepare| <target>]
 
 ''')
 
@@ -86,6 +89,7 @@ class Toolchain(OebuildCommand):
         self.client.check_change_ugid(
             container=self.client.get_container(container_id=self.container_id),
             container_user=oebuild_const.CONTAINER_USER)
+        self._set_environment_param()
 
         self._set_environment_param()
 
@@ -95,22 +99,16 @@ class Toolchain(OebuildCommand):
                 b_s = f"echo {b_s}"
                 content = self.bashrc.add_bashrc(content=content, line=b_s)
             self.bashrc.update_bashrc(content=content)
+            self.bashrc.clean_command_bash()
             # 调起容器环境
             build_dir = os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(os.getcwd()))
-            docker_exec_list = [
-                "docker",
-                "exec",
-                "-it",
-                "-u",
-                oebuild_const.CONTAINER_USER,
-                "-w",
-                build_dir,
-                self.container_id,
-                "bash"
-            ]
+            docker_exec_list = ["docker", "exec", "-it", "-u", oebuild_const.CONTAINER_USER,
+                                "-w", build_dir, self.container_id, "bash"]
             os.system(" ".join(docker_exec_list))
         elif unknown[0] == "auto":
             self.auto_build(config_list=toolchain_obj.config_list)
+        elif unknown[0] == "prepare":
+            self._run_prepare()
         else:
             cross_tools_dir = os.path.join(
                 Configure().source_yocto_dir(), ".oebuild/cross-tools/configs")
@@ -125,57 +123,62 @@ class Toolchain(OebuildCommand):
                     if config.startswith("config_"):
                         print(config)
                 print("you can run oebuild toolchain aarch64 or oebuild toolchain config_aarch64")
+                return
             self._build_toolchain(config_name=config_name)
-        self.bashrc.restore_bashrc()
 
     def auto_build(self, config_list):
         '''
         is for auto build toolchains
         '''
+        self._run_prepare()
         for config in config_list:
             self._build_toolchain(config_name=config)
 
     def _set_environment_param(self):
         content = self.bashrc.get_bashrc_content()
-        open_source_cmd = 'export OPENSOURCE_DIR="$PWD/open_source"'
+        build_dir = os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(os.getcwd()))
+        open_source_cmd = f'export CROSS_SOURCE="{build_dir}/open_source/"'
         content = self.bashrc.add_bashrc(content=content, line=open_source_cmd)
-        x_tools_cmd = 'export X_TOOLS_DIR="$PWD/x-tools"'
+        x_tools_cmd = f'export CROSS_X_TOOLS="{build_dir}/x-tools/"'
         content = self.bashrc.add_bashrc(content=content, line=x_tools_cmd)
         self.bashrc.update_bashrc(content=content)
+
+    def _run_prepare(self):
+        build_dir = os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(os.getcwd()))
+        res: ExecResult = self.client.container_exec_command(
+            container=self.client.get_container(self.container_id),
+            command="./cross-tools/prepare.sh ./",
+            user=oebuild_const.CONTAINER_USER,
+            params={
+                "work_space": build_dir
+            })
+        for line in res.output:
+            logger.info(line.decode().strip('\n'))
 
     def _build_toolchain(self, config_name):
         '''
         build toolchain with config
         '''
-        content = self.bashrc.get_bashrc_content()
-        src_config_dir = os.path.join(
-            oebuild_const.CONTAINER_SRC,
-            "yocto-meta-openeuler",
-            ".oebuild",
-            "cross-tools",
-            "configs")
-        content = self.bashrc.add_bashrc(content=content, line="./cross-tools/prepare.sh ./")
-        content = self.bashrc.add_bashrc(
-            content=content,
-            line=f"cp {src_config_dir}/{config_name} .config && ct-ng build")
-        self.bashrc.update_bashrc(content=content)
-        res: ExecResult = self.client.container_exec_command(
-            container=self.client.get_container(self.container_id),
-            command="bash .bashrc",
+        build_dir = os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(os.getcwd()))
+        container = self.client.get_container(self.container_id)
+        self.client.container_exec_command(
+            container=container,
+            command=f"cp {config_name} .config",
             user=oebuild_const.CONTAINER_USER,
             params={
-                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
-                "demux": True
-            })
-        exit_code = 0
+                "work_space": build_dir,
+                "stream": False})
+        content = self.bashrc.get_bashrc_content()
+        content = self.bashrc.add_bashrc(content=content, line="ct-ng build")
+        self.bashrc.update_bashrc(content=content)
+        self.bashrc.clean_command_bash()
+        res: ExecResult = self.client.container_exec_command(
+            container=container,
+            command=f"bash /home/{oebuild_const.CONTAINER_USER}/.bashrc",
+            user=oebuild_const.CONTAINER_USER,
+            params={"work_space": build_dir})
         for line in res.output:
-            if line[1] is not None:
-                logger.error(line[1].decode().strip('\n'))
-                exit_code = 1
-            else:
-                logger.info(line[0].decode().strip('\n'))
-        if exit_code != 0:
-            sys.exit(exit_code)
+            logger.info(line.decode().strip('\n'))
 
     def _check_support_toolchain(self):
         return os.path.exists(self._toolchain_yaml_path)

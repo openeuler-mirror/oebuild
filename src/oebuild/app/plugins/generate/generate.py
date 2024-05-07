@@ -223,6 +223,7 @@ class Generate(OebuildCommand):
             if not os.path.exists(config_path):
                 sys.exit(0)
             generate_command = self.generate_command(config_path)
+            # sys.exit(0)
             subprocess.check_output(f'rm -rf  {config_path}', shell=True)
             args = args.parse_args(generate_command)
         else:
@@ -251,7 +252,7 @@ class Generate(OebuildCommand):
                 sys.exit(0)
             self.build_toolchain(build_dir, toolchain_name_list, auto_build)
             self._print_toolchain(build_dir=build_dir)
-            sys.exit(0)
+            sys.exit(-1)
 
         if args.build_in == oebuild_const.BUILD_IN_HOST:
             try:
@@ -455,6 +456,8 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
                 break
             if os.path.exists(os.path.join(build_dir, "conf")):
                 rmtree(os.path.join(build_dir, "conf"))
+            elif os.path.exists(build_dir):
+                rmtree(build_dir)
         os.makedirs(build_dir)
         return build_dir
 
@@ -696,10 +699,10 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
 
             if toolchain_list:
                 for toolchain_info in toolchain_list:
-                    generate_command += ['-tn', toolchain_info.lower()]
+                    generate_command += ['--toolchain_name', toolchain_info.lower()]
 
         if auto_build:
-            generate_command += ['-at']
+            generate_command += ['--auto_build']
 
         return generate_command
 
@@ -773,7 +776,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             sstate_mirrors=None)
         config_list = []
         for toolchain_name in toolchain_name_list:
-            if toolchain_name.startwith("config_"):
+            if toolchain_name.startswith("config_"):
                 config_list.append(toolchain_name)
                 continue
             config_list.append("config_" + toolchain_name)
@@ -785,7 +788,27 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             }
         )
         if auto_build:
-            subprocess.run('oebuild toolchain auto', shell=True, check=False)
+            with subprocess.Popen('oebuild toolchain auto', shell=True,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE,
+                                  cwd=build_dir,
+                                  encoding="utf-8", text=True) as s_p:
+                if s_p.returncode is not None and s_p.returncode != 0:
+                    err_msg = ''
+                    if s_p.stderr is not None:
+                        for line in s_p.stderr:
+                            err_msg.join(line)
+                        raise ValueError(err_msg)
+                res = None
+                while res is None:
+                    res = s_p.poll()
+                    if s_p.stdout is not None:
+                        for line in s_p.stdout:
+                            logger.info(line.strip('\n'))
+                    if s_p.stderr is not None:
+                        for line in s_p.stderr:
+                            logger.error(line.strip('\n'))
+                sys.exit(res)
 
 
 def get_docker_image(yocto_dir, docker_tag, configure: Configure):

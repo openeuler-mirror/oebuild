@@ -62,6 +62,15 @@ mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINE
         )
         os.remove(tmp_file)
 
+    def clean_command_bash(self):
+        '''
+        this is for finished .bashrc then clean command auto
+        '''
+        old_content = self.get_bashrc_content()
+        clean_command = f"sed -i '/{oebuild_const.BASH_END_FLAG.strip()}$/d' ~/.bashrc"
+        content = Bashrc().add_bashrc(old_content, clean_command)
+        self.update_bashrc(content=content)
+
     def restore_bashrc(self):
         '''
         Restoring .bashrc will strip out the command line
