@@ -30,6 +30,16 @@ class Bashrc:
     def __init__(self,) -> None:
         self.container = None
         self.client = None
+        self.user = oebuild_const.CONTAINER_USER
+        self.home_dir = f"/home/{oebuild_const.CONTAINER_USER}"
+
+    def set_user(self, user):
+        '''
+        set user param, so the next steps will be in the user pointed
+        '''
+        self.user = user
+        if user == "root":
+            self.home_dir = "/root/"
 
     def set_container(self, container: Container):
         '''
@@ -53,10 +63,10 @@ class Bashrc:
         self.client.copy_to_container(
             container=self.container,
             source_path=tmp_file,
-            to_path=f'/home/{oebuild_const.CONTAINER_USER}')
+            to_path=self.home_dir)
         self.container.exec_run(
             cmd=f'''
-mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINER_USER}/.bashrc
+mv {self.home_dir}/{tmp_file} {self.home_dir}/.bashrc
             ''',
             user="root"
         )
@@ -89,7 +99,7 @@ mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINE
         # deal container bashrc
         res = self.client.container_exec_command(
             container=self.container,
-            command=f"cat /home/{oebuild_const.CONTAINER_USER}/.bashrc",
+            command=f"cat {self.home_dir}/.bashrc",
             user="root",
             params={
                 "work_space": None,
@@ -122,7 +132,8 @@ mv /home/{oebuild_const.CONTAINER_USER}/{tmp_file} /home/{oebuild_const.CONTAINE
         '''
         if not content.endswith('\n'):
             content = content + '\n'
-        content = content + line + oebuild_const.BASH_END_FLAG + '\n'
+        for split in line.split("\n"):
+            content = content + split + oebuild_const.BASH_END_FLAG + '\n'
 
         return content
 

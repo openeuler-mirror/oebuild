@@ -24,6 +24,7 @@ from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
 from oebuild.m_log import logger
 import oebuild.const as oebuild_const
+from oebuild.bashrc import Bashrc
 
 
 class RunQemu(OebuildCommand):
@@ -41,7 +42,7 @@ class RunQemu(OebuildCommand):
         self.client = None
         self.container_id = None
         self.work_dir = os.getcwd()
-        self.old_bashrc = None
+        self.bashrc = Bashrc()
 
         super().__init__('run_qemu', self.help_msg, self.description)
 
@@ -82,6 +83,9 @@ the container {self.container_id} failed to be destroyed, please run
         docker_image = self.get_docker_image()
         self._check_qemu_ifup()
         self.deal_env_container(docker_image=docker_image)
+        self.bashrc.set_container(
+            container=self.client.get_container(container_id=self.container_id))
+        self.bashrc.set_user("root")
 
         for index, param in enumerate(unknown):
             if param.startswith("qemuparams"):
@@ -96,44 +100,33 @@ the container {self.container_id} failed to be destroyed, please run
         '''
         container: Container = self.client.get_container(
             self.container_id)  # type: ignore
-        self.bak_bash(container=container)
+        # self.bak_bash(container=container)
         self.init_bash(container=container)
-        content = self._get_bashrc_content(container=container)
+        content = self.bashrc.get_bashrc_content()
         qemu_helper_usr = os.path.join(
             oebuild_const.CONTAINER_BUILD,
-            "/tmp/work/x86_64-linux/qemu-helper-native/1.0-r1/recipe-sysroot-native/usr"
+            "tmp/work/x86_64-linux/qemu-helper-native/1.0-r1/recipe-sysroot-native/usr"
         )
         qemu_helper_dir = os.path.join(
             oebuild_const.CONTAINER_BUILD,
-            "/tmp/work/x86_64-linux/qemu-helper-native")
+            "tmp/work/x86_64-linux/qemu-helper-native")
         staging_bindir_native = f"""
 if [ ! -d {qemu_helper_usr} ];then
     mkdir -p {qemu_helper_usr}
     chown -R {oebuild_const.CONTAINER_USER}:{oebuild_const.CONTAINER_USER} {qemu_helper_dir}
-    ln -s /opt/buildtools/nativesdk/sysroots/x86_64-pokysdk-linux/usr/bin {qemu_helper_usr}
+    ln -s /opt/buildtools/nativesdk/sysroots/x86_64-openeulersdk-linux/usr/bin {qemu_helper_usr}
 fi
 """
-        content = oebuild_util.add_bashrc(content=content,
-                                          line=staging_bindir_native)
-        content = oebuild_util.add_bashrc(
-            content=content,
-            line=f"mv -f /root/{self.old_bashrc} /root/.bashrc")
-        content = oebuild_util.add_bashrc(content=content,
-                                          line=f"""runqemu {params} && exit""")
-        self.update_bashrc(container=container, content=content)
+        content = self.bashrc.add_bashrc(content=content, line=staging_bindir_native)
+        # content = self.bashrc.add_bashrc(
+        #     content=content,
+        #     line=f"mv -f /root/{self.old_bashrc} /root/.bashrc")
+        content = self.bashrc.add_bashrc(content=content,
+                                         line=f"runqemu {params} && exit")
+        self.bashrc.update_bashrc(content=content)
         os.system(f"docker exec -it -u root {container.short_id}  bash")
 
-        self.restore_bashrc(container=container)
-
-    def restore_bashrc(self, container: Container):
-        '''
-        Restoring .bashrc will strip out the command line
-        content added during bitbake initialization
-        '''
-        old_content = self._get_bashrc_content(container=container)
-        self.update_bashrc(container=container,
-                           content=oebuild_util.restore_bashrc_content(
-                               old_content=old_content))
+        # self.bashrc.restore_bashrc()
 
     def _check_qemu_ifup(self, ):
         if not os.path.exists("/etc/qemu-ifup"):
@@ -175,23 +168,18 @@ now, you can continue run `oebuild runqemu` in compile directory
         container: Container = self.client.get_container(self.container_id)
         if not self.client.is_container_running(container):
             self.client.start_container(container)
+        # set sudo.conf be root
+        cmd = "chown -R root:root /etc/sudo.conf /etc/sudoers /etc/sudoers.d"
+        self.client.container_exec_command(container=container,
+                                           command=cmd,
+                                           user="root",
+                                           params={"stream": False})
 
     def get_docker_image(self):
         '''
         this is function is to get openeuler docker image automatic
         '''
         return oebuild_const.DEFAULT_DOCKER
-
-    def bak_bash(self, container: Container):
-        '''
-        xxx
-        '''
-        old_bash = oebuild_util.generate_random_str(6)
-        self.client.container_exec_command(
-            container=container,
-            command=f"cp /root/.bashrc /root/{old_bash}",
-            user="root")
-        self.old_bashrc = old_bash
 
     def init_bash(self, container: Container):
         '''
@@ -200,45 +188,13 @@ now, you can continue run `oebuild runqemu` in compile directory
         substitutions, and finally writing the initialization script
         '''
         # read container default user .bashrc content
-        content = self._get_bashrc_content(container=container)
+        content = self.bashrc.get_bashrc_content()
         # get nativesdk environment path automatic for next step
         sdk_env_path = oebuild_util.get_nativesdk_environment(
             container=container)
         init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{sdk_env_path}'
+        content = self.bashrc.add_bashrc(content=content, line=init_sdk_command)
         init_oe_command = f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
             {oebuild_const.CONTAINER_BUILD}'
-
-        init_command = [init_sdk_command, init_oe_command]
-        new_content = oebuild_util.init_bashrc_content(content, init_command)
-        self.update_bashrc(container=container, content=new_content)
-
-    def _get_bashrc_content(self, container: Container):
-        content = self.client.container_exec_command(
-            container=container, command="cat /root/.bashrc",
-            user="root").output
-
-        return content.decode()
-
-    def update_bashrc(self, container: Container, content: str):
-        '''
-        update user initialization script by replace file, first create
-        a file and writed content and copy it to container's .bashrc, finally
-        remove it
-        '''
-        tmp_file = self._set_tmpfile_content(content)
-        self.client.copy_to_container(container=container,
-                                      source_path=tmp_file,
-                                      to_path='/root')
-        container.exec_run(cmd=f"mv /root/{tmp_file} /root/.bashrc",
-                           user="root")
-        os.remove(tmp_file)
-
-    def _set_tmpfile_content(self, content: str):
-        while True:
-            tmp_file = oebuild_util.generate_random_str(6)
-            if os.path.exists(tmp_file):
-                continue
-            with open(tmp_file, 'w', encoding="utf-8") as w_f:
-                w_f.write(content)
-            break
-        return tmp_file
+        content = self.bashrc.add_bashrc(content=content, line=init_oe_command)
+        self.bashrc.update_bashrc(content=content)
