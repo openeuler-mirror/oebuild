@@ -522,25 +522,21 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         platform_data = self.choice_platform(yocto_oebuild_dir)
         feature_data = self.add_feature(yocto_oebuild_dir)
         toolchain_data = self.add_toolchain(yocto_oebuild_dir)
+        nativesdk_data = self.add_nativesdk(yocto_oebuild_dir)
         if not os.path.exists(
                 pathlib.Path(self.oebuild_kconfig_path).absolute()):
             os.makedirs(pathlib.Path(self.oebuild_kconfig_path).absolute())
         kconfig_path = pathlib.Path(self.oebuild_kconfig_path,
                                     str(int(time.time())))
         info = textwrap.dedent("""
-        config NATIVE_SDK
-            bool "Build Nativesdk"
-            depends on !TOOLCHAIN
-        config AUTO_BUILD
-            bool "Auto Build"
-            depends on NATIVE_SDK
         config IMAGE
             bool "Build OS"
             depends on !NATIVE_SDK && !TOOLCHAIN
             default y
         if IMAGE
         """)
-        write_data = toolchain_data + info + platform_data + feature_data + basic_data + "\nendif"
+        write_data = toolchain_data + nativesdk_data + info + platform_data + feature_data \
+            + basic_data + "\nendif"
         with open(kconfig_path, 'w', encoding='utf-8') as kconfig_file:
             kconfig_file.write(write_data)
 
@@ -628,9 +624,10 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         """
         cross_path = os.path.join(yocto_oebuild_dir, "cross-tools")
         if not os.path.exists(cross_path):
-            logger.error('Build dependency not downloaded, not supported for build. Please '
-                         'download the latest yocto meta openeuler repository')
-            sys.exit(-1)
+            # logger.error('Build dependency not downloaded, not supported for build. Please '
+            #              'download the latest yocto meta openeuler repository')
+            # sys.exit(-1)
+            return ""
         toolchain_list = os.listdir(os.path.join(cross_path, 'configs'))
         toolchain_start = """
         config TOOLCHAIN
@@ -647,6 +644,32 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
                 toolchain_start += toolchain_info
 
         return toolchain_start
+
+    def add_nativesdk(self, yocto_oebuild_dir):
+        """
+            add nativesdk to kconfig
+        Args:
+            yocto_oebuild_dir: yocto_oebuild_dir
+
+        Returns:
+
+        """
+        cross_path = os.path.join(yocto_oebuild_dir, "nativesdk")
+        if not os.path.exists(cross_path):
+            # logger.error('Build dependency not downloaded, not supported for build. Please '
+            #              'download the latest yocto meta openeuler repository')
+            # sys.exit(-1)
+            return ""
+        nativesdk_start = """
+        config NATIVE_SDK
+            bool "Build Nativesdk"
+            depends on !TOOLCHAIN
+        config AUTO_BUILD
+            bool "Auto Build"
+            depends on NATIVE_SDK
+        """
+
+        return nativesdk_start
 
     def generate_command(self, config_path):
         """
