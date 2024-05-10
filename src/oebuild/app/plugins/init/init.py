@@ -113,6 +113,7 @@ class Init(OebuildCommand):
             logger.error("mkdir %s failed", args.directory)
             sys.exit(-1)
 
+        curr_dir = os.getcwd()
         os.chdir(args.directory)
         oebuild_config: Config = self.configure.parse_oebuild_config()
 
@@ -129,6 +130,7 @@ class Init(OebuildCommand):
         self.configure.update_oebuild_config(oebuild_config)
 
         logger.info("init %s successful", args.directory)
+        os.chdir(curr_dir)
         self._print_notice(args.directory)
 
     def _print_notice(self, directory):
