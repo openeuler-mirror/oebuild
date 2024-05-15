@@ -319,7 +319,7 @@ class Generate(OebuildCommand):
         out_dir = pathlib.Path(os.path.join(build_dir, 'compile.yaml'))
 
         param = parser_template.get_default_generate_compile_conf_param()
-        param['nativesdk'] = self.nativesdk_dir
+        param['nativesdk_dir'] = self.nativesdk_dir
         param['toolchain_dir'] = self.toolchain_dir
         param['build_in'] = build_in
         param['sstate_mirrors'] = self.sstate_mirrors

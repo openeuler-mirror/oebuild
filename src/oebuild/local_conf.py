@@ -132,7 +132,7 @@ class LocalConf:
                 replace_toolchain_str = f'''
 {compile_param.toolchain_type} = "{compile_param.toolchain_dir}"'''
 
-            pre_content += replace_toolchain_str
+            pre_content += replace_toolchain_str + "\n"
 
         # replace nativesdk OPENEULER_SP_DIR
         if compile_param.build_in == oebuild_const.BUILD_IN_HOST:
