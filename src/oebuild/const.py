@@ -18,6 +18,7 @@ COMPILE_YAML = 'compile.yaml.sample'
 BASH_END_FLAG = "  ###!!!###"
 CONTAINER_USER = "openeuler"
 CONTAINER_BUILD = '/home/openeuler/build'
+CONTAINER_LLVM_LIB = '/home/openeuler/llvm-lib'
 DEFAULT_DOCKER = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-container:latest"
 DEFAULT_SDK_DOCKER = "swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-sdk:latest"
 CONTAINER_SRC = '/usr1/openeuler/src'
@@ -66,3 +67,7 @@ BUILD_IN_DOCKER = "docker"
 BUILD_IN_HOST = "host"
 
 DEFAULT_CONTAINER_PARAMS = "-itd --network host"
+
+# used for toolchain type
+GCC_TOOLCHAIN = "gcc"
+LLVM_TOOLCHAIN = "llvm"

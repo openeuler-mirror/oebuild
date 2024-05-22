@@ -105,7 +105,10 @@ class ToolchainParam:
     '''
     this param is for oebuld toolchain
     '''
-    # config_list is for toolchain type,for example: config_aarch64
-    config_list: Optional[list]
+    kind: str
+    # gcc_configs is for gcc toolchain type,for example: config_aarch64
+    gcc_configs: Optional[list]
+    # llvm_aarch64_lib is for llvm toolchain aarch64 lib
+    llvm_lib: Optional[str]
     # docker_param is for docker startup param
     docker_param: DockerParam

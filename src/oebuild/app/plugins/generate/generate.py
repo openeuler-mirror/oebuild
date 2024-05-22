@@ -33,6 +33,7 @@ from oebuild.parse_template import BaseParseTemplate, ParseTemplate, \
 from oebuild.m_log import logger
 from oebuild.check_docker_tag import CheckDockerTag
 import oebuild.const as oebuild_const
+from oebuild.app.plugins.generate.parses import parsers
 
 
 class Generate(OebuildCommand):
@@ -66,138 +67,7 @@ class Generate(OebuildCommand):
 %(prog)s
 ''')
 
-        parser.add_argument('-l',
-                            '--list',
-                            dest='list',
-                            action="store_true",
-                            help='''
-            will list support archs and features
-            ''')
-
-        parser.add_argument('-p',
-                            '--platform',
-                            dest='platform',
-                            default="qemu-aarch64",
-                            help='''
-            this param is for arch, you can find it in yocto-meta-openeuler/.oebuild/platform
-            ''')
-
-        parser.add_argument('-s',
-                            '--state_mirrors',
-                            dest='sstate_mirrors',
-                            help='''
-            this param is for SSTATE_MIRRORS
-            ''')
-
-        parser.add_argument('-s_dir',
-                            '--sstate_dir',
-                            dest='sstate_dir',
-                            help='''
-            this param is for SSTATE_DIR
-            ''')
-
-        parser.add_argument('-m',
-                            '--tmp_dir',
-                            dest='tmp_dir',
-                            help='''
-            this param is for tmp directory, the build result will be stored in
-            ''')
-
-        parser.add_argument('-f',
-                            '--features',
-                            dest='features',
-                            action='append',
-                            help='''
-            this param is feature, it's a reuse command
-            ''')
-
-        parser.add_argument('-d',
-                            '--directory',
-                            dest='directory',
-                            help='''
-            this param is build directory, the default is same to platform
-            ''')
-
-        parser.add_argument('-t',
-                            '--toolchain_dir',
-                            dest='toolchain_dir',
-                            default='',
-                            help='''
-            this param is for external toolchain dir, if you want use your own toolchain
-            ''')
-
-        parser.add_argument('-n',
-                            '--nativesdk_dir',
-                            dest='nativesdk_dir',
-                            default='',
-                            help='''
-            this param is for external nativesdk dir, the param will be useful when you
-            want to build in host
-            ''')
-
-        parser.add_argument('-tag',
-                            '--docker_tag',
-                            dest='docker_tag',
-                            default='',
-                            help='''
-            when build in docker, the param can be point docker image
-            ''')
-
-        parser.add_argument('-dt',
-                            '--datetime',
-                            dest="datetime",
-                            help='''
-            this param is add DATETIME to local.conf, the value format is 20231212010101
-            ''')
-
-        parser.add_argument('-df',
-                            '--disable_fetch',
-                            dest="is_disable_fetch",
-                            action="store_true",
-                            help='''
-            this param is set openeuler_fetch in local.conf, the default value is enable, if
-            set -df, the OPENEULER_FETCH will set to 'disable'
-            ''')
-
-        parser.add_argument('-b_in',
-                            '--build_in',
-                            dest='build_in',
-                            choices=[
-                                oebuild_const.BUILD_IN_DOCKER,
-                                oebuild_const.BUILD_IN_HOST
-                            ],
-                            default=oebuild_const.BUILD_IN_DOCKER,
-                            help='''
-            This parameter marks the mode at build time, and is built in the container by docker
-            ''')
-
-        parser.add_argument('--nativesdk',
-                            dest='nativesdk',
-                            action="store_true",
-                            help='''
-                    This parameter is used to indicate whether to build an SDK
-                    ''')
-
-        parser.add_argument('--toolchain',
-                            dest='toolchain',
-                            action="store_true",
-                            help='''
-                            This parameter is used to indicate whether to build an toolchain
-                            ''')
-
-        parser.add_argument('--toolchain_name',
-                            dest='toolchain_name',
-                            action='append',
-                            help='''
-                            This parameter is used to toolchain name
-                            ''')
-
-        parser.add_argument('--auto_build',
-                            dest='auto_build',
-                            action="store_true",
-                            help='''
-                                    This parameter is used for nativesdk and toolchain build
-                            ''')
+        parser = parsers(parser)
 
         return parser
 
@@ -222,17 +92,19 @@ class Generate(OebuildCommand):
             config_path = self.create_kconfig(yocto_dir)
             if not os.path.exists(config_path):
                 sys.exit(0)
-            generate_command = self.generate_command(config_path)
+            g_command = self.generate_command(config_path)
+            print("===========")
+            print(g_command)
             # sys.exit(0)
             subprocess.check_output(f'rm -rf  {config_path}', shell=True)
-            args = args.parse_args(generate_command)
+            args = args.parse_args(g_command)
         else:
             args = args.parse_args(unknown)
         build_in = args.build_in
         auto_build = bool(args.auto_build)
 
         if args.nativesdk:
-            # this is for default directory is qemu-aarch64
+            # this is for default directory nativesdk
             if args.directory is None or args.directory == '':
                 args.directory = "nativesdk"
             build_dir = self._init_build_dir(args=args)
@@ -242,17 +114,30 @@ class Generate(OebuildCommand):
             self._print_nativesdk(build_dir=build_dir)
             sys.exit(0)
 
-        if args.toolchain:
-            # this is for default directory is qemu-aarch64
+        if args.gcc:
+            # this is for default directory toolchain
+            print(args.directory)
             if args.directory is None or args.directory == '':
                 args.directory = "toolchain"
-            toolchain_name_list = args.toolchain_name if args.toolchain_name else []
+            toolchain_name_list = args.gcc_name if args.gcc_name else []
             build_dir = self._init_build_dir(args=args)
             if build_dir is None:
                 sys.exit(0)
-            self.build_toolchain(build_dir, toolchain_name_list, auto_build)
+            self.build_gcc(build_dir, toolchain_name_list, auto_build)
             self._print_toolchain(build_dir=build_dir)
-            sys.exit(-1)
+            sys.exit(0)
+
+        if args.llvm:
+            # this is for default directory is toolchain
+            if args.directory is None or args.directory == '':
+                args.directory = "toolchain"
+            llvm_lib = args.llvm_lib
+            build_dir = self._init_build_dir(args=args)
+            if build_dir is None:
+                sys.exit(0)
+            self.build_llvm(build_dir, llvm_lib, auto_build)
+            self._print_toolchain(build_dir=build_dir)
+            sys.exit(0)
 
         if args.build_in == oebuild_const.BUILD_IN_HOST:
             try:
@@ -313,7 +198,7 @@ class Generate(OebuildCommand):
 
         docker_image = get_docker_image(
                 yocto_dir=self.configure.source_yocto_dir(),
-                docker_tag=args.docker_tag,
+                docker_tag='',
                 configure=self.configure)
 
         out_dir = pathlib.Path(os.path.join(build_dir, 'compile.yaml'))
@@ -325,7 +210,8 @@ class Generate(OebuildCommand):
         param['sstate_mirrors'] = self.sstate_mirrors
         param['tmp_dir'] = self.tmp_dir
         param['datetime'] = args.datetime
-        param['is_disable_fetch'] = args.is_disable_fetch
+        param['no_fetch'] = args.no_fetch
+        param['no_layer'] = args.no_layer
         param['docker_image'] = docker_image
         param['src_dir'] = self.configure.source_dir()
         param['compile_dir'] = build_dir
@@ -438,8 +324,8 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             logger.warning("the build directory %s already exists", build_dir)
             while True:
                 in_res = input(f"""
-    do you want to overwrite it({os.path.basename(build_dir)})? the overwrite
-    action will replace the compile.yaml to new and delete conf directory,
+    do you want to overwrite it({os.path.basename(build_dir)})? the overwrite action
+    will replace the compile.yaml or toolchain.yaml to new and delete conf directory,
     enter Y for yes, N for no, C for create:""")
                 if in_res not in ["Y", "y", "yes", "N", "n", "no", "C", "c", "create"]:
                     print("""
@@ -491,8 +377,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         table = PrettyTable(['feature name', 'support arch'])
         table.align = "l"
         for feature in list_feature:
-            if feature.endswith('.yml'):
-                feature_name = feature.replace('.yml', '')
+            feature_name = feature.replace('.yml', '')
             if feature.endswith('.yaml'):
                 feature_name = feature.replace('.yaml', '')
             feat = oebuild_util.read_yaml(
@@ -518,28 +403,40 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
 
         """
         yocto_oebuild_dir = os.path.join(yocto_dir, '.oebuild')
-        basic_data = basic_config()
-        platform_data = self.choice_platform(yocto_oebuild_dir)
-        feature_data = self.add_feature(yocto_oebuild_dir)
-        toolchain_data = self.add_toolchain(yocto_oebuild_dir)
-        nativesdk_data = self.add_nativesdk(yocto_oebuild_dir)
+        write_data = ""
+
+        target_list_data, gcc_toolchain_data, llvm_toolchain_data = \
+            self._kconfig_add_target_list(yocto_oebuild_dir)
+        write_data += target_list_data + gcc_toolchain_data + llvm_toolchain_data
+
+        # add auto-build config
+        write_data += """
+if NATIVESDK || GCC-TOOLCHAIN || LLVM-TOOLCHAIN
+comment "if auto build nativesdk or gcc toolchain or llvm toolchain"
+    config AUTO-BUILD
+        bool "auto build"
+        default n
+endif
+"""
+
+        platform_data = self._kconfig_add_choice_platform(yocto_oebuild_dir)
+        write_data += platform_data
+
+        feature_data = self._kconfig_add_feature(yocto_oebuild_dir)
+        write_data += feature_data
+
+        common_data = self._kconfig_add_common_config()
+        write_data += common_data
+
         if not os.path.exists(
                 pathlib.Path(self.oebuild_kconfig_path).absolute()):
             os.makedirs(pathlib.Path(self.oebuild_kconfig_path).absolute())
         kconfig_path = pathlib.Path(self.oebuild_kconfig_path,
                                     str(int(time.time())))
-        info = textwrap.dedent("""
-        config IMAGE
-            bool "Build OS"
-            depends on !NATIVE_SDK && !TOOLCHAIN
-            default y
-        if IMAGE
-        """)
-        write_data = toolchain_data + nativesdk_data + info + platform_data + feature_data \
-            + basic_data + "\nendif"
+
         with open(kconfig_path, 'w', encoding='utf-8') as kconfig_file:
             kconfig_file.write(write_data)
-
+        print(kconfig_path)
         kconf = Kconfig(filename=kconfig_path)
         os.environ["MENUCONFIG_STYLE"] = "aquatic selection=fg:white,bg:blue"
         with oebuild_util.suppress_print():
@@ -548,7 +445,35 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         config_path = pathlib.Path(os.getcwd(), '.config')
         return config_path
 
-    def choice_platform(self, yocto_oebuild_dir):
+    def _kconfig_add_target_list(self, yocto_oebuild_dir):
+        target_choice = textwrap.dedent("""
+            comment "this is choose build target"
+            choice
+            prompt "choice build target"
+                config IMAGE\n
+                    bool 'OS'\n
+""")
+        gcc_toolchain_data = self._kconfig_add_gcc_toolchain(yocto_oebuild_dir)
+        if gcc_toolchain_data != "":
+            target_choice += (
+                "config GCC-TOOLCHAIN \n"
+                "       bool 'GCC TOOLCHAIN'\n\n")
+        llvm_toolchain_data = self._kconfig_add_llvm_toolchain(yocto_oebuild_dir)
+        if llvm_toolchain_data != "":
+            target_choice += (
+                "config LLVM-TOOLCHAIN \n"
+                "       bool 'LLVM TOOLCHAIN'\n\n"
+            )
+        nativesdk_check = self._kconfig_check_nativesdk(yocto_oebuild_dir)
+        if nativesdk_check:
+            target_choice += (
+                "config NATIVESDK \n"
+                "       bool 'NATIVESDK'\n\n"
+            )
+        target_choice += "endchoice"
+        return target_choice, gcc_toolchain_data, llvm_toolchain_data
+
+    def _kconfig_add_choice_platform(self, yocto_oebuild_dir):
         """
             add platform to kconfig
         Args:
@@ -564,12 +489,15 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             logger.error('platform dir is not exists')
             sys.exit(-1)
         platform_start = textwrap.dedent("""
-        comment "                           THIS IS CHOOSE PLATFORM                               "
+        if IMAGE
+        comment "this is choose OS platform"
         choice
             prompt "choice platform"
             default PLATFORM_QEMU-AARCH64\n
         """)
-        platform_end = "endchoice"
+        platform_end = """
+        endchoice
+        endif"""
         for platform in platform_list:
             platform_name = os.path.splitext(platform)[0].strip("\n")
             platform_info = (
@@ -579,7 +507,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         platform_data = platform_start + platform_end
         return platform_data
 
-    def add_feature(self, yocto_oebuild_dir):
+    def _kconfig_add_feature(self, yocto_oebuild_dir):
         """
             add feature to kconfig
         Args:
@@ -595,7 +523,8 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             logger.error('feature dir is not exists')
             sys.exit(-1)
         feature_start = """
-        comment "                           THIS IS CHOOSE FEATURE                               "
+        if IMAGE
+        comment "this is choose OS features"
         """
         for feature in feature_list:
             support_str = ""
@@ -610,10 +539,11 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             feature_info = (f"""\nconfig FEATURE_{feature_name.upper()}\n"""
                             f"""    bool "{feature_name}" {support_str}\n\n""")
             feature_start += feature_info
+        feature_start += "endif"
 
         return feature_start
 
-    def add_toolchain(self, yocto_oebuild_dir):
+    def _kconfig_add_gcc_toolchain(self, yocto_oebuild_dir):
         """
             add toolchain to kconfig
         Args:
@@ -622,30 +552,44 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         Returns:
 
         """
-        cross_path = os.path.join(yocto_oebuild_dir, "cross-tools")
-        if not os.path.exists(cross_path):
-            # logger.error('Build dependency not downloaded, not supported for build. Please '
-            #              'download the latest yocto meta openeuler repository')
-            # sys.exit(-1)
-            return ""
-        toolchain_list = os.listdir(os.path.join(cross_path, 'configs'))
-        toolchain_start = """
-        config TOOLCHAIN
-            bool "Build Toolchain"
-        config AUTO_BUILD
-            bool "Auto Build"
-            depends on TOOLCHAIN
-        """
-        for config in toolchain_list:
-            if not re.search('xml', config):
-                toolchain_info = (f"""\nconfig TOOLCHAINS_{config.upper()}\n"""
-                                  f"""    bool "{config.upper()}"\n"""
-                                  """     depends on TOOLCHAIN && AUTO_BUILD\n""")
-                toolchain_start += toolchain_info
-
+        toolchain_start = ""
+        cross_dir = os.path.join(yocto_oebuild_dir, "cross-tools")
+        if os.path.exists(cross_dir):
+            toolchain_list = os.listdir(os.path.join(cross_dir, 'configs'))
+            toolchain_start += """
+            if GCC-TOOLCHAIN
+            """
+            for config in toolchain_list:
+                if not re.search('xml', config):
+                    toolchain_info = (
+                        f"""\nconfig GCC-TOOLCHAIN_{config.upper().lstrip("CONFIG_")}\n"""
+                        f"""    bool "{config.upper().lstrip("CONFIG_")}"\n"""
+                        """     depends on GCC-TOOLCHAIN\n""")
+                    toolchain_start += toolchain_info
+            toolchain_start += "endif"
         return toolchain_start
 
-    def add_nativesdk(self, yocto_oebuild_dir):
+    def _kconfig_add_llvm_toolchain(self, yocto_oebuild_dir):
+        """
+            add toolchain to kconfig
+        Args:
+            yocto_oebuild_dir: yocto_oebuild_dir
+
+        Returns:
+
+        """
+        toolchain_start = ""
+        llvm_dir = os.path.join(yocto_oebuild_dir, "llvm-toolchain")
+        if os.path.exists(llvm_dir):
+            toolchain_start += """
+                config LLVM-TOOLCHAIN_AARCH64-LIB
+                    string "aarch64 lib dir"
+                    default "None"
+                    depends on LLVM-TOOLCHAIN
+            """
+        return toolchain_start
+
+    def _kconfig_check_nativesdk(self, yocto_oebuild_dir):
         """
             add nativesdk to kconfig
         Args:
@@ -654,22 +598,100 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         Returns:
 
         """
-        cross_path = os.path.join(yocto_oebuild_dir, "nativesdk")
-        if not os.path.exists(cross_path):
-            # logger.error('Build dependency not downloaded, not supported for build. Please '
-            #              'download the latest yocto meta openeuler repository')
-            # sys.exit(-1)
-            return ""
-        nativesdk_start = """
-        config NATIVE_SDK
-            bool "Build Nativesdk"
-            depends on !TOOLCHAIN
-        config AUTO_BUILD
-            bool "Auto Build"
-            depends on NATIVE_SDK
-        """
+        nativesdk_dir = os.path.join(yocto_oebuild_dir, "nativesdk")
+        return os.path.exists(nativesdk_dir)
 
-        return nativesdk_start
+    def _kconfig_add_common_config(self,):
+        """
+            Kconfig basic_config
+        Returns:
+
+        """
+        toolchain_help = (
+            "this param is for external toolchain dir, "
+            "if you want use your own toolchain")
+        nativesdk_help = (
+            "this param is for external nativesdk dir,"
+            "the param will be useful when you want to build in host")
+        common_str = textwrap.dedent("""
+        comment "this is common config"
+                                     """)
+        # choice build in platform
+        common_str += ("""
+        if IMAGE
+            choice
+                prompt "choice build in docker or host"
+                default BUILD_IN-DOCKER
+                config BUILD_IN-DOCKER
+                    bool "docker"
+                config BUILD_IN-HOST
+                    bool "host"
+            endchoice
+        endif
+                       """)
+        # add no fetch
+        common_str += ("""
+        config COMMON_NO-FETCH
+            bool "no_fetch (this will set openeuler_fetch to disable)"
+            default n
+            depends on IMAGE
+                       """)
+        # add no layer
+        common_str += ("""
+        config COMMON_NO-LAYER
+            bool "no_layer (this will disable layer repo update when startting bitbake environment)"
+            default n
+            depends on IMAGE
+                       """)
+        # add sstate_mirrors
+        common_str += ("""
+        config COMMON_SSTATE-MIRRORS
+            string "sstate_mirrors (this param is for SSTATE_MIRRORS)"
+            default "None"
+            depends on IMAGE && BUILD_IN-HOST
+                       """)
+        # add sstate_dir
+        common_str += ("""
+        config COMMON_SSTATE-DIR
+            string "sstate_dir (this param is for SSTATE_DIR)"
+            default "None"
+            depends on IMAGE && BUILD_IN-HOST
+                       """)
+        # add tmp_dir
+        common_str += ("""
+        config COMMON_TMP-DIR
+            string "tmp_dir (this param is for tmp_dir)"
+            default "None"
+            depends on IMAGE && BUILD_IN-HOST
+                       """)
+        # add toolchain dir
+        common_str += (f"""
+        config COMMON_TOOLCHAIN-DIR
+            string "toolchain_dir ({toolchain_help})"
+            default "None"
+            depends on IMAGE && BUILD_IN-HOST
+                       """)
+        # add nativesdk dir
+        common_str += (f"""
+        config COMMON_NATIVESDK-DIR
+            string "nativesdk_dir ({nativesdk_help})"
+            default "None"
+            depends on IMAGE && BUILD_IN-HOST
+                       """)
+        # add timestamp
+        common_str += ("""
+        config COMMON_DATETIME
+            string "datetime"
+            default "None"
+            depends on IMAGE
+                       """)
+        # add build directory
+        common_str += ("""
+        config COMMON_DIRECTORY
+            string "directory     (this param is build directory)"
+            default "None"
+                       """)
+        return common_str
 
     def generate_command(self, config_path):
         """
@@ -682,52 +704,63 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         """
         with open(config_path, 'r', encoding='utf-8') as config_file:
             content = config_file.read()
+        # sys.exit(0)
         content = re.sub('#.*|.*None.*', "", content)
-        basic_list = re.findall('(?<=CONFIG_BASIC).*', content)
+        print(content)
+        common_list = re.findall('(?<=CONFIG_COMMON_).*', content)
         platform_search = re.search(r"(?<=CONFIG_PLATFORM_).*(?==y)", content)
         feature_list = re.findall(r"(?<=CONFIG_FEATURE_).*(?==y)", content)
-        build_in = re.search(r"(?<=CONFIG_BUILD).*(?==y)", content)
-        native_sdk = re.search("(?<=NATIVE_SDK).*", content)
-        tool_chain = re.search("(?<=TOOLCHAIN).*", content)
-        toolchain_list = re.findall("(?<=TOOLCHAINS_).*(?==y)", content)
-        auto_build = re.findall("(?<=AUTO_BUILD).*", content)
-        generate_command = []
-        for basic in basic_list:
+        build_in = re.search(r"(?<=CONFIG_BUILD_IN-).*(?==y)", content)
+        nativesdk = re.search(r"(?<=CONFIG_NATIVESDK).*(?==y)", content)
+        gcc = re.search(r"(?<=CONFIG_GCC-TOOLCHAIN).*(?==y)", content)
+        gcc_list = re.findall(r"(?<=CONFIG_GCC-TOOLCHAIN_).*(?==y)", content)
+        llvm = re.search(r"(?<=CONFIG_LLVM-TOOLCHAIN).*(?==y)", content)
+        llvm_lib = re.search(r"(?<=CONFIG_LLVM-TOOLCHAIN_AARCH64-LIB).*", content)
+        auto_build = re.search(r"(?<=CONFIG_AUTO-BUILD).*(?==y)", content)
+        g_command = []
+        print(common_list)
+        print(build_in)
+        for basic in common_list:
             basic_info = basic.lower().replace("\"", "").split('=')
-            if re.search(r"(?<=--).*(?==)", basic):
-                basic_info[0] = '-' + re.search(r"(?<=--).*(?==)",
-                                                basic).group().lower()
-                if re.search('-DF', basic):
-                    generate_command += ['-df']
-                else:
-                    generate_command += basic_info
-
+            basic_info[0] = basic_info[0].replace("-", "_")
+            if basic_info[0] == 'no_fetch':
+                g_command += ['--' + basic_info[0]]
+                continue
+            if basic_info[0] == 'no_layer':
+                g_command += ['--' + basic_info[0]]
+                continue
+            g_command += ['--' + basic_info[0], basic_info[1]]
+        print(g_command)
+        # sys.exit(0)
         if build_in:
-            build_command = build_in.group().lower().replace('=y',
-                                                             '').split('--')
-            generate_command += build_command
+            g_command += ['-b_in', build_in.group().lower()]
 
         platform = platform_search.group(
         ) if platform_search else 'qemu-aarch64'
-        generate_command += ['-p', platform.lower()]
+        g_command += ['-p', platform.lower()]
 
         for feature in feature_list:
-            generate_command += ['-f', feature.lower()]
+            g_command += ['-f', feature.lower()]
 
-        if native_sdk:
-            generate_command = ['--nativesdk']
+        if nativesdk:
+            g_command += ['--nativesdk']
 
-        if tool_chain:
-            generate_command = ['--toolchain']
+        if gcc:
+            g_command += ['--gcc']
 
-            if toolchain_list:
-                for toolchain_info in toolchain_list:
-                    generate_command += ['--toolchain_name', toolchain_info.lower()]
+            if gcc_list:
+                for gcc_name in gcc_list:
+                    g_command += ['--gcc_name', gcc_name.lower()]
+
+        if llvm:
+            g_command += ['--llvm']
+            if llvm_lib:
+                g_command += ['--llvm_lib', llvm_lib.group()]
 
         if auto_build:
-            generate_command += ['--auto_build']
+            g_command += ['--auto_build']
 
-        return generate_command
+        return g_command
 
     def build_nativesdk(self, build_in, build_dir, auto_build):
         """
@@ -775,11 +808,11 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             os.chdir(compile_dir)
             subprocess.run('oebuild bitbake buildtools-extended-tarball', shell=True, check=False)
 
-    def build_toolchain(self, build_dir, toolchain_name_list, auto_build):
+    def build_gcc(self, build_dir, gcc_name_list, auto_build):
         """
 
         Args:
-            toolchain_name_list: choose toolchain
+            gcc_name_list: choose toolchain
             auto_build: auto_build
 
         Returns:
@@ -798,15 +831,69 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
             toolchain_dir=None,
             sstate_mirrors=None)
         config_list = []
-        for toolchain_name in toolchain_name_list:
-            if toolchain_name.startswith("config_"):
-                config_list.append(toolchain_name)
+        for gcc_name in gcc_name_list:
+            if gcc_name.startswith("config_"):
+                config_list.append(gcc_name)
                 continue
-            config_list.append("config_" + toolchain_name)
+            config_list.append("config_" + gcc_name)
         oebuild_util.write_yaml(
             yaml_path=os.path.join(build_dir, 'toolchain.yaml'),
             data={
-                'config_list': config_list,
+                'kind': oebuild_const.GCC_TOOLCHAIN,
+                'gcc_configs': config_list,
+                'docker_param': docker_param
+            }
+        )
+        if auto_build:
+            with subprocess.Popen('oebuild toolchain auto', shell=True,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE,
+                                  cwd=build_dir,
+                                  encoding="utf-8", text=True) as s_p:
+                if s_p.returncode is not None and s_p.returncode != 0:
+                    err_msg = ''
+                    if s_p.stderr is not None:
+                        for line in s_p.stderr:
+                            err_msg.join(line)
+                        raise ValueError(err_msg)
+                res = None
+                while res is None:
+                    res = s_p.poll()
+                    if s_p.stdout is not None:
+                        for line in s_p.stdout:
+                            logger.info(line.strip('\n'))
+                    if s_p.stderr is not None:
+                        for line in s_p.stderr:
+                            logger.error(line.strip('\n'))
+                sys.exit(res)
+
+    def build_llvm(self, build_dir, llvm_lib, auto_build):
+        """
+
+        Args:
+            llvm_lib: llvm aarch64 lib
+            auto_build: auto_build
+
+        Returns:
+
+        """
+        source_llvm_dir = os.path.join(self.configure.source_yocto_dir(), ".oebuild/llvm-toolchain")
+        if not os.path.exists(source_llvm_dir):
+            logger.error('Build dependency not downloaded, not supported for build. Please '
+                         'download the latest yocto meta openeuler repository')
+            sys.exit(-1)
+        # add toolchain.yaml to compile
+        docker_param = get_docker_param_dict(
+            docker_image=get_sdk_docker_image(yocto_dir=self.configure.source_yocto_dir()),
+            src_dir=self.configure.source_dir(),
+            compile_dir=build_dir,
+            toolchain_dir=None,
+            sstate_mirrors=None)
+        oebuild_util.write_yaml(
+            yaml_path=os.path.join(build_dir, 'toolchain.yaml'),
+            data={
+                'kind': oebuild_const.LLVM_TOOLCHAIN,
+                'llvm_lib': llvm_lib,
                 'docker_param': docker_param
             }
         )
@@ -881,60 +968,3 @@ def get_sdk_docker_image(yocto_dir):
     if docker_image is None:
         docker_image = oebuild_const.DEFAULT_SDK_DOCKER
     return docker_image
-
-
-def basic_config():
-    """
-        Kconfig basic_config
-    Returns:
-
-    """
-    toolchain_help = ("(this param is for external toolchain dir, "
-                      "if you want use your own toolchain)")
-    nativesdk_help = (
-        "(this param is for external nativesdk dir,"
-        "the param will be useful when you want to build in host)")
-    is_disable_fetch_help = (
-        "(this param is set openeuler_fetch in local.conf, "
-        "the default value is enable, if set -df, the OPENEULER_FETCH"
-        "will set to 'disable')")
-    basic_str = textwrap.dedent(f"""
-    comment "                           THIS IS BASIC CONFIG                               "
-    config BASIC-SSTATE_CACHE--S
-        string "sstate_mirrors     (this param is for SSTATE_MIRRORS)"
-        default "None"
-    config BASIC-SSTATE_DIR--S_DIR
-        string "sstate_dir     (this param is for SSTATE_DIR)"
-        default "None"
-    config BASIC-TMP_DIR--M
-        string "tmp_dir     (this param is for tmp directory, the build result will be stored in)"
-        default "None"
-    config BASIC-DIRECTORY--D
-        string "directory     (this param is build directory, the default is same to platform)"
-        default "None"
-    config BASIC-TOOLCHAIN_DIR--T
-        string "toolchain_dir     {toolchain_help}"
-        default "None"
-    config BASIC-NATIVESDK_DIR--N
-        string "nativesdk_dir     {nativesdk_help}"
-        default "None"
-    config BASIC-DOCKER_TAG--TAG
-        string "docker_tag     (when build in docker, the param can be point docker image)"
-        default "None"
-    config BASIC-DATETIME--DT
-        string "datetime     (this param is add DATETIME to local.conf)"
-        default "None"
-    config BASIC-IS_DISABLE_FETCH--DF
-        bool "is_disable_fetch     {is_disable_fetch_help}"
-        default n
-    comment " You can choose Docker or Host, default Docker "
-    choice
-        prompt "choice build_in"
-        default BUILD-B_IN--DOCKER
-        config BUILD-B_IN--DOCKER
-            bool "build_in_docker"
-        config BUILD-B_IN--HOST
-            bool "build_in_host"
-    endchoice
-    """)
-    return basic_str

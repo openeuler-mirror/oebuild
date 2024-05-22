@@ -190,7 +190,8 @@ class ParseTemplate:
             sstate_mirrors=None,
             tmp_dir=None,
             datetime=None,
-            is_disable_fetch=False,
+            no_fetch=False,
+            no_layer=False,
             docker_image: str = None,
             src_dir: str = None,
             compile_dir: str = None
@@ -224,7 +225,7 @@ class ParseTemplate:
             datetime_str = LiteralScalarString(f'DATETIME = "{param["datetime"]}"')
             local_conf = LiteralScalarString(local_conf + '\n' + datetime_str)
 
-        if param['is_disable_fetch']:
+        if param['no_fetch']:
             disable_fetch_str = LiteralScalarString('OPENEULER_FETCH = "disable"')
             local_conf = LiteralScalarString(local_conf + '\n' + disable_fetch_str)
 
@@ -233,6 +234,7 @@ class ParseTemplate:
         compile_conf['machine'] = self.platform_template.machine
         compile_conf['toolchain_type'] = self.platform_template.toolchain_type
         compile_conf = self._deal_non_essential_compile_conf_param(param, compile_conf)
+        compile_conf['no_layer'] = param['no_layer']
         compile_conf['repos'] = repos
         compile_conf['local_conf'] = local_conf
         compile_conf['layers'] = layers

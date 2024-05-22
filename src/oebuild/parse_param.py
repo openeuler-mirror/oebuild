@@ -212,7 +212,11 @@ class ParseToolchainParam:
         parse dict to RepoParam
         '''
         return ToolchainParam(
-            config_list=toolchain_param_dict['config_list'],
+            kind=toolchain_param_dict['kind'],
+            gcc_configs=None if 'gcc_configs' not in toolchain_param_dict
+            else toolchain_param_dict['gcc_configs'],
+            llvm_lib=None if 'llvm_lib' not in toolchain_param_dict
+            else toolchain_param_dict['llvm_lib'],
             docker_param=ParseDockerParam.parse_to_obj(toolchain_param_dict['docker_param'])
         )
 
@@ -221,7 +225,10 @@ class ParseToolchainParam:
         '''
         parse ToolchainParam to dict
         '''
-        return {
-            "config_list": toolchain_param_obj.config_list,
-            "docker_param": ParseDockerParam.parse_to_dict(toolchain_param_obj.docker_param)
-        }
+        res = {"kind": toolchain_param_obj.kind}
+        if toolchain_param_obj.kind == oebuild_const.GCC_TOOLCHAIN:
+            res['gcc_configs'] = toolchain_param_obj.gcc_configs
+        else:
+            res['llvm_lib'] = toolchain_param_obj.llvm_lib
+        res['docker_param'] = ParseDockerParam.parse_to_dict(toolchain_param_obj.docker_param)
+        return res
