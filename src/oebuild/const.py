@@ -34,7 +34,12 @@ SSTATE_DIR = "SSTATE_DIR"
 TMP_DIR = "TMPDIR"
 
 NATIVE_GCC_DIR = '/usr1/openeuler/native_gcc'
+NATIVE_LLVM_DIR = '/usr1/openeuler/native_llvm'
 SSTATE_MIRRORS = '/usr1/openeuler/sstate-cache'
+
+EXTERNAL_LLVM = "EXTERNAL_TOOLCHAIN_LLVM"
+EXTERNAL_GCC = "EXTERNAL_TOOLCHAIN_GCC"
+EXTERNAL = "EXTERNAL_TOOLCHAIN"
 
 # used for bitbake/in_container.py
 BASH_BANNER = '''

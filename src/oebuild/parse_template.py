@@ -186,6 +186,7 @@ class ParseTemplate:
         param obj:
             nativesdk_dir=None,
             toolchain_dir=None,
+            llvm_toolchain_dir=None
             build_in: str = oebuild_const.BUILD_IN_DOCKER,
             sstate_mirrors=None,
             tmp_dir=None,
@@ -244,10 +245,13 @@ class ParseTemplate:
 
         compile_conf['docker_param'] = get_docker_param_dict(
             docker_image=param['docker_image'],
-            src_dir=param['src_dir'],
-            compile_dir=param['compile_dir'],
-            toolchain_dir=param['toolchain_dir'],
-            sstate_mirrors=param['sstate_mirrors']
+            dir_list={
+                "src_dir": param['src_dir'],
+                "compile_dir": param['compile_dir'],
+                "toolchain_dir": param['toolchain_dir'],
+                "llvm_toolchain_dir": param['llvm_toolchain_dir'],
+                "sstate_mirrors": param['sstate_mirrors']
+            }
         )
 
         return compile_conf
@@ -257,6 +261,8 @@ class ParseTemplate:
             compile_conf['nativesdk_dir'] = param['nativesdk_dir']
         if param['toolchain_dir'] is not None:
             compile_conf['toolchain_dir'] = param['toolchain_dir']
+        if param['llvm_toolchain_dir'] is not None:
+            compile_conf['llvm_toolchain_dir'] = param['llvm_toolchain_dir']
         if param['sstate_mirrors'] is not None:
             compile_conf['sstate_mirrors'] = param['sstate_mirrors']
         if param['tmp_dir'] is not None:
@@ -277,22 +283,30 @@ class ParseTemplate:
         return repo_cict
 
 
-def get_docker_param_dict(docker_image, src_dir, compile_dir, toolchain_dir, sstate_mirrors):
+def get_docker_param_dict(docker_image, dir_list):
     '''
     transfer docker param to dict
+    dir_list:
+    src_dir
+    compile_dir
+    toolchain_dir
+    llvm_toolchain_dir
+    sstate_mirrors
     '''
     parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS
     volumns = []
     volumns.append("/dev/net/tun:/dev/net/tun")
-    if src_dir is not None:
-        volumns.append(src_dir + ':' + oebuild_const.CONTAINER_SRC)
-    if compile_dir is not None:
-        volumns.append(compile_dir + ":" + os.path.join(
-            oebuild_const.CONTAINER_BUILD, os.path.basename(compile_dir)))
-    if toolchain_dir is not None:
-        volumns.append(toolchain_dir + ":" + oebuild_const.NATIVE_GCC_DIR)
-    if sstate_mirrors is not None:
-        volumns.append(sstate_mirrors + ":" + oebuild_const.SSTATE_MIRRORS)
+    if dir_list['src_dir'] is not None:
+        volumns.append(dir_list['src_dir'] + ':' + oebuild_const.CONTAINER_SRC)
+    if dir_list['compile_dir'] is not None:
+        volumns.append(dir_list['compile_dir'] + ":" + os.path.join(
+            oebuild_const.CONTAINER_BUILD, os.path.basename(dir_list['compile_dir'])))
+    if dir_list['toolchain_dir'] is not None:
+        volumns.append(dir_list['toolchain_dir'] + ":" + oebuild_const.NATIVE_GCC_DIR)
+    if dir_list['llvm_toolchain_dir'] is not None:
+        volumns.append(dir_list['llvm_toolchain_dir'] + ":" + oebuild_const.NATIVE_LLVM_DIR)
+    if dir_list['sstate_mirrors'] is not None:
+        volumns.append(dir_list['sstate_mirrors'] + ":" + oebuild_const.SSTATE_MIRRORS)
 
     docker_param = {}
     docker_param['image'] = docker_image

@@ -101,21 +101,20 @@ class LocalConf:
 
     def __init__(self, local_conf_path: str):
         self.local_path = local_conf_path
+        if not os.path.exists(local_conf_path):
+            raise ValueError(f'{local_conf_path} not exists')
+
+        with open(local_conf_path, 'r', encoding='utf-8') as r_f:
+            self.content = r_f.read()
 
     def update(self, compile_param: CompileParam, src_dir=None):
         '''
         update local.conf by ParseCompile
         '''
-        if not os.path.exists(self.local_path):
-            raise ValueError(f'{self.local_path} not exists')
-
-        with open(self.local_path, 'r', encoding='utf-8') as r_f:
-            content = r_f.read()
-
         pre_content = self._deal_other_local_param(compile_param=compile_param, src_dir=src_dir)
 
         compile_param.local_conf = f'{pre_content}\n{compile_param.local_conf}'
-        self._add_content_to_local_conf(content=content, local_conf=compile_param.local_conf)
+        self._add_content_to_local_conf(local_conf=compile_param.local_conf)
 
     def _deal_other_local_param(self, compile_param: CompileParam, src_dir):
         pre_content = ""
@@ -123,15 +122,17 @@ class LocalConf:
         if compile_param.machine is not None:
             pre_content += f'MACHINE = "{compile_param.machine}"\n'
 
-        # replace toolchain
-        if compile_param.toolchain_dir is not None:
+        pre_content = self._deal_toolchain_replace(compile_param, pre_content)
+
+        # replace llvm toolchain
+        if compile_param.llvm_toolchain_dir is not None:
             if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
+                # check if exists TXTERNAL_TOOLCHAIN_GCC, replace it or replace TXTERNAL_TOOLCHAIN
                 replace_toolchain_str = f'''
-{compile_param.toolchain_type} = "{oebuild_const.NATIVE_GCC_DIR}"'''
+{oebuild_const.EXTERNAL_LLVM} = "{oebuild_const.NATIVE_LLVM_DIR}"'''
             else:
                 replace_toolchain_str = f'''
-{compile_param.toolchain_type} = "{compile_param.toolchain_dir}"'''
-
+{oebuild_const.EXTERNAL_LLVM} = "{compile_param.llvm_toolchain_dir}"'''
             pre_content += replace_toolchain_str + "\n"
 
         # replace nativesdk OPENEULER_SP_DIR
@@ -166,21 +167,53 @@ class LocalConf:
 
         return pre_content
 
-    def _add_content_to_local_conf(self, content, local_conf):
+    def _deal_toolchain_replace(self, compile_param: CompileParam, pre_content):
+        # The newly added external compiler chain is named EXTERNAL_TOOLCHAIN_GCC, however,
+        # the old version still uses EXTERNAL_TOOLCHAIN. Therefore, to maintain compatibility
+        # with both new and old versions, we have made the following adjustment:
+        # If EXTERNAL_TOOLCHAIN_GCC exists in the original configuration file, replace
+        # EXTERNAL_TOOLCHAIN with EXTERNAL_TOOLCHAIN_GCC.
+        if compile_param.toolchain_dir is not None:
+            if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
+                # check if exists TXTERNAL_TOOLCHAIN_GCC, replace it or replace TXTERNAL_TOOLCHAIN
+                if len(re.findall(f'^({oebuild_const.EXTERNAL_GCC})*', self.content)) > 0:
+                    toolchain_type = compile_param.toolchain_type.replace(
+                        oebuild_const.EXTERNAL,
+                        oebuild_const.EXTERNAL_GCC)
+                    replace_toolchain_str = f'''
+{toolchain_type} = "{oebuild_const.NATIVE_GCC_DIR}"'''
+                else:
+                    replace_toolchain_str = f'''
+{compile_param.toolchain_type} = "{oebuild_const.NATIVE_GCC_DIR}"'''
+            else:
+                if len(re.findall(f'^({oebuild_const.EXTERNAL_GCC})*', self.content)) > 0:
+                    toolchain_type = compile_param.toolchain_type.replace(
+                        oebuild_const.EXTERNAL,
+                        oebuild_const.EXTERNAL_GCC)
+                    replace_toolchain_str = f'''
+{toolchain_type} = "{compile_param.toolchain_dir}"'''
+                else:
+                    replace_toolchain_str = f'''
+{compile_param.toolchain_type} = "{compile_param.toolchain_dir}"'''
+            pre_content += replace_toolchain_str + "\n"
+
+        return pre_content
+
+    def _add_content_to_local_conf(self, local_conf):
         user_content_flag = "#===========the content is user added=================="
-        if user_content_flag not in content and local_conf is not None and local_conf != "":
+        if user_content_flag not in self.content and local_conf is not None and local_conf != "":
             # check if exists remark sysmbol, if exists and replace it
-            content += f"\n{user_content_flag}\n"
+            self.content += f"\n{user_content_flag}\n"
             for line in local_conf.split('\n'):
                 if line.startswith("#"):
                     r_line = line.lstrip("#").strip(" ")
-                    content = content.replace(r_line, line)
+                    self.content = self.content.replace(r_line, line)
                 if line.strip(" ") == "None":
                     continue
-                content += line + "\n"
+                self.content += line + "\n"
 
         with open(self.local_path, 'w', encoding="utf-8") as r_f:
-            r_f.write(content)
+            r_f.write(self.content)
 
     def check_nativesdk_valid(self, nativesdk_dir):
         '''

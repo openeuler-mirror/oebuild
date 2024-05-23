@@ -55,6 +55,7 @@ class Generate(OebuildCommand):
         self.configure = Configure()
         self.nativesdk_dir = None
         self.toolchain_dir = None
+        self.llvm_toolchain_dir = None
         self.sstate_mirrors = None
         self.tmp_dir = None
         self.oebuild_kconfig_path = os.path.expanduser(
@@ -93,14 +94,11 @@ class Generate(OebuildCommand):
             if not os.path.exists(config_path):
                 sys.exit(0)
             g_command = self.generate_command(config_path)
-            print("===========")
-            print(g_command)
             # sys.exit(0)
             subprocess.check_output(f'rm -rf  {config_path}', shell=True)
             args = args.parse_args(g_command)
         else:
             args = args.parse_args(unknown)
-        build_in = args.build_in
         auto_build = bool(args.auto_build)
 
         if args.nativesdk:
@@ -116,7 +114,6 @@ class Generate(OebuildCommand):
 
         if args.gcc:
             # this is for default directory toolchain
-            print(args.directory)
             if args.directory is None or args.directory == '':
                 args.directory = "toolchain"
             toolchain_name_list = args.gcc_name if args.gcc_name else []
@@ -124,7 +121,7 @@ class Generate(OebuildCommand):
             if build_dir is None:
                 sys.exit(0)
             self.build_gcc(build_dir, toolchain_name_list, auto_build)
-            self._print_toolchain(build_dir=build_dir)
+            self._print_toolchain(build_dir=build_dir, )
             sys.exit(0)
 
         if args.llvm:
@@ -139,17 +136,11 @@ class Generate(OebuildCommand):
             self._print_toolchain(build_dir=build_dir)
             sys.exit(0)
 
-        if args.build_in == oebuild_const.BUILD_IN_HOST:
-            try:
-                self._check_param_in_host(args=args)
-            except ValueError as v_e:
-                logger.error(str(v_e))
-                sys.exit(-1)
-            self.nativesdk_dir = args.nativesdk_dir
-            build_in = oebuild_const.BUILD_IN_HOST
-
         if args.toolchain_dir != '':
             self.toolchain_dir = args.toolchain_dir
+
+        if args.llvm_toolchain_dir != '':
+            self.llvm_toolchain_dir = args.llvm_toolchain_dir
 
         if args.sstate_mirrors is not None:
             self.sstate_mirrors = args.sstate_mirrors
@@ -206,7 +197,8 @@ class Generate(OebuildCommand):
         param = parser_template.get_default_generate_compile_conf_param()
         param['nativesdk_dir'] = self.nativesdk_dir
         param['toolchain_dir'] = self.toolchain_dir
-        param['build_in'] = build_in
+        param['llvm_toolchain_dir'] = self.llvm_toolchain_dir
+        param['build_in'] = args.build_in
         param['sstate_mirrors'] = self.sstate_mirrors
         param['tmp_dir'] = self.tmp_dir
         param['datetime'] = args.datetime
@@ -262,15 +254,6 @@ oebuild toolchain
 =============================================
 '''
         logger.info(format_dir)
-
-    def _check_param_in_host(self, args):
-        if args.toolchain_dir == '':
-            raise ValueError(
-                "build in host must points toolchain directory in '-t' param")
-
-        if args.nativesdk_dir == '':
-            raise ValueError(
-                "build in host must points nativesdk directory in '-n' param")
 
     def _add_platform_template(self, args, yocto_oebuild_dir,
                                parser_template: ParseTemplate):
@@ -436,7 +419,6 @@ endif
 
         with open(kconfig_path, 'w', encoding='utf-8') as kconfig_file:
             kconfig_file.write(write_data)
-        print(kconfig_path)
         kconf = Kconfig(filename=kconfig_path)
         os.environ["MENUCONFIG_STYLE"] = "aquatic selection=fg:white,bg:blue"
         with oebuild_util.suppress_print():
@@ -608,7 +590,10 @@ endif
 
         """
         toolchain_help = (
-            "this param is for external toolchain dir, "
+            "this param is for external gcc toolchain dir, "
+            "if you want use your own toolchain")
+        llvm_toolchain_help = (
+            "this param is for external llvm toolchain dir, "
             "if you want use your own toolchain")
         nativesdk_help = (
             "this param is for external nativesdk dir,"
@@ -664,12 +649,19 @@ endif
             default "None"
             depends on IMAGE && BUILD_IN-HOST
                        """)
-        # add toolchain dir
+        # add gcc toolchain dir
         common_str += (f"""
         config COMMON_TOOLCHAIN-DIR
             string "toolchain_dir ({toolchain_help})"
             default "None"
-            depends on IMAGE && BUILD_IN-HOST
+            depends on IMAGE
+                       """)
+        # add llvm toolchain dir
+        common_str += (f"""
+        config COMMON_LLVM-TOOLCHAIN-DIR
+            string "llvm_toolchain_dir ({llvm_toolchain_help})"
+            default "None"
+            depends on IMAGE
                        """)
         # add nativesdk dir
         common_str += (f"""
@@ -706,7 +698,6 @@ endif
             content = config_file.read()
         # sys.exit(0)
         content = re.sub('#.*|.*None.*', "", content)
-        print(content)
         common_list = re.findall('(?<=CONFIG_COMMON_).*', content)
         platform_search = re.search(r"(?<=CONFIG_PLATFORM_).*(?==y)", content)
         feature_list = re.findall(r"(?<=CONFIG_FEATURE_).*(?==y)", content)
@@ -718,8 +709,6 @@ endif
         llvm_lib = re.search(r"(?<=CONFIG_LLVM-TOOLCHAIN_AARCH64-LIB).*", content)
         auto_build = re.search(r"(?<=CONFIG_AUTO-BUILD).*(?==y)", content)
         g_command = []
-        print(common_list)
-        print(build_in)
         for basic in common_list:
             basic_info = basic.lower().replace("\"", "").split('=')
             basic_info[0] = basic_info[0].replace("-", "_")
@@ -730,7 +719,6 @@ endif
                 g_command += ['--' + basic_info[0]]
                 continue
             g_command += ['--' + basic_info[0], basic_info[1]]
-        print(g_command)
         # sys.exit(0)
         if build_in:
             g_command += ['-b_in', build_in.group().lower()]
@@ -792,10 +780,13 @@ endif
             )
             info['docker_param'] = get_docker_param_dict(
                 docker_image=docker_image,
-                src_dir=self.configure.source_dir(),
-                compile_dir=compile_dir,
-                toolchain_dir=None,
-                sstate_mirrors=None
+                dir_list={
+                    "src_dir": self.configure.source_dir(),
+                    "compile_dir": compile_dir,
+                    "toolchain_dir": None,
+                    "llvm_toolchain_dir": None,
+                    "sstate_mirrors": None
+                }
             )
         # add nativesdk conf
         nativesdk_yaml_path = os.path.join(
@@ -826,10 +817,14 @@ endif
         # add toolchain.yaml to compile
         docker_param = get_docker_param_dict(
             docker_image=get_sdk_docker_image(yocto_dir=self.configure.source_yocto_dir()),
-            src_dir=self.configure.source_dir(),
-            compile_dir=build_dir,
-            toolchain_dir=None,
-            sstate_mirrors=None)
+            dir_list={
+                "src_dir": self.configure.source_dir(),
+                "compile_dir": build_dir,
+                "toolchain_dir": None,
+                "llvm_toolchain_dir": None,
+                "sstate_mirrors": None
+                }
+            )
         config_list = []
         for gcc_name in gcc_name_list:
             if gcc_name.startswith("config_"):
@@ -885,10 +880,14 @@ endif
         # add toolchain.yaml to compile
         docker_param = get_docker_param_dict(
             docker_image=get_sdk_docker_image(yocto_dir=self.configure.source_yocto_dir()),
-            src_dir=self.configure.source_dir(),
-            compile_dir=build_dir,
-            toolchain_dir=None,
-            sstate_mirrors=None)
+            dir_list={
+                "src_dir": self.configure.source_dir(),
+                "compile_dir": build_dir,
+                "toolchain_dir": None,
+                "llvm_toolchain_dir": None,
+                "sstate_mirrors": None
+                }
+            )
         oebuild_util.write_yaml(
             yaml_path=os.path.join(build_dir, 'toolchain.yaml'),
             data={

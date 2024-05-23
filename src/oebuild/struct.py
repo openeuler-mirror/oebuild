@@ -77,11 +77,14 @@ class CompileParamComm:
 
 
 @dataclass
-class CompileParamHost:
+class CompileParamSDK:
     '''
     this is parse for host environment
     '''
+    # gcc toolchain dir
     toolchain_dir: Optional[str]
+    # llvm toolchain dir
+    llvm_toolchain_dir: Optional[str]
     nativesdk_dir: Optional[str]
 
 
@@ -94,7 +97,7 @@ class CompileParamBitbakeCmds:
 
 
 @dataclass
-class CompileParam(CompileParamComm, CompileLocalParam, CompileParamHost, CompileParamBitbakeCmds):
+class CompileParam(CompileParamComm, CompileLocalParam, CompileParamSDK, CompileParamBitbakeCmds):
     '''
     Compile is the parsed object of compile.yaml and is used to manipulate the build file
     '''

@@ -126,6 +126,7 @@ class ParseCompileParam:
         tmp_dir: Optional[str]
 
         toolchain_dir: Optional[str]
+        llvm_toolchain_dir: Optional[str]
         nativesdk_dir: Optional[str]
 
     '''
@@ -158,6 +159,7 @@ class ParseCompileParam:
             machine=get_value_from_dict('machine', compile_param_dict, None),
             toolchain_type=get_value_from_dict('toolchain_type', compile_param_dict, None),
             toolchain_dir=get_value_from_dict('toolchain_dir', compile_param_dict, None),
+            llvm_toolchain_dir=get_value_from_dict('llvm_toolchain_dir', compile_param_dict, None),
             nativesdk_dir=get_value_from_dict('nativesdk_dir', compile_param_dict, None),
             sstate_mirrors=get_value_from_dict('sstate_mirrors', compile_param_dict, None),
             sstate_dir=get_value_from_dict('sstate_dir', compile_param_dict, None),
@@ -179,6 +181,8 @@ class ParseCompileParam:
         compile_obj['toolchain_type'] = compile_param.toolchain_type
         if compile_param.toolchain_dir is not None:
             compile_obj['toolchain_dir'] = compile_param.toolchain_dir
+        if compile_param.llvm_toolchain_dir is not None:
+            compile_obj['llvm_toolchain_dir'] = compile_param.llvm_toolchain_dir
         if compile_param.nativesdk_dir is not None:
             compile_obj['nativesdk_dir'] = compile_param.nativesdk_dir
         if compile_param.sstate_mirrors is not None:

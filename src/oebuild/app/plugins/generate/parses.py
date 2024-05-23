@@ -74,7 +74,15 @@ def parsers(parser):
                         dest='toolchain_dir',
                         default='',
                         help='''
-        this param is for external toolchain dir, if you want use your own toolchain
+        this param is for external gcc toolchain dir, if you want use your own toolchain
+        ''')
+
+    parser.add_argument('-lt',
+                        '--llvm_toolchain_dir',
+                        dest='llvm_toolchain_dir',
+                        default='',
+                        help='''
+        this param is for external llvm toolchain dir, if you want use your own toolchain
         ''')
 
     parser.add_argument('-n',

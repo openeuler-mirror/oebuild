@@ -38,6 +38,9 @@ class InHost(BaseBuild):
         '''
         execute bitbake commands
         '''
+        # check nativesdk_dir, if not set, use default value
+        if compile_param.nativesdk_dir is None:
+            compile_param.nativesdk_dir = oebuild_const.NATIVESDK_DIR
         self._init_build_sh(build_dir=os.getcwd())
         self._mk_build_sh(nativesdk_dir=compile_param.nativesdk_dir, build_dir=os.getcwd())
         self.init_bitbake()
