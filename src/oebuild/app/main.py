@@ -13,7 +13,7 @@ import os
 import sys
 import pathlib
 from collections import OrderedDict
-import getpass
+import pwd
 
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
@@ -168,7 +168,7 @@ def check_user():
     '''
     check execute user must in normal user
     '''
-    if getpass.getuser() == "root":
+    if pwd.getpwuid(os.getuid())[0] == "root":
         logger.error("can not use oebuild in root")
         return False
     return True
