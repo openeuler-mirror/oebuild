@@ -42,17 +42,17 @@ class Toolchain(OebuildCommand):
 
     def __init__(self):
         self._toolchain_yaml_path = os.path.join(os.getcwd(), 'toolchain.yaml')
-        self.toolchain_dict = oebuild_util.read_yaml(self._toolchain_yaml_path)
-        self.toolchain_obj = ParseToolchainParam().parse_to_obj(
-            toolchain_param_dict=self.toolchain_dict)
-        self.bashrc = Bashrc()
-        self.client = DockerProxy()
+        self.toolchain_dict = None
+        self.toolchain_obj = None
+        self.bashrc = None
+        self.client = None
         self.container_id = None
 
         super().__init__('toolchain', self.help_msg, self.description)
 
     def __del__(self):
-        self.bashrc.restore_bashrc()
+        if self.bashrc is not None:
+            self.bashrc.restore_bashrc()
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
         parser = self._parser(parser_adder,
@@ -71,6 +71,7 @@ class Toolchain(OebuildCommand):
 
         set_log_to_file()
         self._check_support_toolchain()
+        self._set_init_params()
 
         # if toolchain is llvm, the docker volume should be cover llvm_lib
         self._set_llvm_pre(unknown)
@@ -112,6 +113,13 @@ class Toolchain(OebuildCommand):
             else:
                 self._build_llvm()
 
+    def _set_init_params(self,):
+        self.toolchain_dict = oebuild_util.read_yaml(self._toolchain_yaml_path)
+        self.toolchain_obj = ParseToolchainParam().parse_to_obj(
+            toolchain_param_dict=self.toolchain_dict)
+        self.bashrc = Bashrc()
+        self.client = DockerProxy()
+
     def _check_gcc_config(self, config_name: str):
         config_list = os.listdir("configs")
         if not config_name.startswith("config_"):
@@ -128,6 +136,10 @@ you can run oebuild toolchain aarch64 or oebuild toolchain config_aarch64""")
         return config_name
 
     def _deal_container(self, parse_env):
+        # check docker image openeuler-sdk if exists, if not down it
+        if not self.client.is_image_exists(self.toolchain_obj.docker_param.image):
+            print(f"the {self.toolchain_obj.docker_param.image} not exists, now pull it")
+            self.client.pull_image_with_progress(self.toolchain_obj.docker_param.image)
         self.container_id = oebuild_util.deal_env_container(
             env=parse_env, docker_param=self.toolchain_obj.docker_param)
         self.bashrc.set_container(
