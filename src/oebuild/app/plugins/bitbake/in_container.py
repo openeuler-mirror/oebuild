@@ -131,7 +131,8 @@ class InContainer(BaseBuild):
                     exit_code = 1
                 else:
                     logger.info(line[0].decode().strip('\n'))
-            sys.exit(exit_code)
+            if exit_code != 0:
+                sys.exit(exit_code)
         else:
             content = self.bashrc.get_bashrc_content()
             for b_s in oebuild_const.BASH_BANNER.split('\n'):

@@ -305,7 +305,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         # detects if a build directory already exists
         if os.path.exists(build_dir):
             logger.warning("the build directory %s already exists", build_dir)
-            while True:
+            while not args.yes:
                 in_res = input(f"""
     do you want to overwrite it({os.path.basename(build_dir)})? the overwrite action
     will replace the compile.yaml or toolchain.yaml to new and delete conf directory,
@@ -327,7 +327,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
                 rmtree(os.path.join(build_dir, "conf"))
             elif os.path.exists(build_dir):
                 rmtree(build_dir)
-        os.makedirs(build_dir)
+        os.makedirs(build_dir, exist_ok=True)
         return build_dir
 
     def list_info(self, ):

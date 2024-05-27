@@ -28,16 +28,6 @@ class RepoParam:
 
 
 @dataclass
-class OebuildEnv:
-    '''
-    when run oebuild build.yaml, the OebuildEnv will be need in build.yaml
-    '''
-    workdir: str
-    openeuler_layer: Optional[RepoParam]
-    build_list: Optional[list]
-
-
-@dataclass
 class DockerParam:
     '''
     DockerParam defines the various parameters required for container startup

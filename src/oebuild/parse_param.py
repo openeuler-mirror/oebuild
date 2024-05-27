@@ -12,42 +12,9 @@ See the Mulan PSL v2 for more details.
 
 from typing import Dict
 
-from oebuild.struct import RepoParam, DockerParam, CompileParam, ToolchainParam, OebuildEnv
+from oebuild.struct import RepoParam, DockerParam, CompileParam, ToolchainParam
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
-
-
-class ParseOebuildEnvParam:
-    '''
-    OebuildEnv:
-        workdir: str
-        openeuler_layer: RepoParam
-        build_list: Optional[list]
-    '''
-    @staticmethod
-    def parse_to_obj(oebuild_env_param_dict) -> OebuildEnv:
-        '''
-        parse dict to OebuildEnv
-        '''
-        return OebuildEnv(
-            workdir=oebuild_env_param_dict['workdir'],
-            openeuler_layer=(None if 'openeuler_layer' not in oebuild_env_param_dict else
-                             ParseRepoParam.parse_to_obj(
-                                 oebuild_env_param_dict['openeuler_layer'])),
-            build_list=(None if 'build_list' not in oebuild_env_param_dict else
-                        oebuild_env_param_dict['build_list'])
-        )
-
-    @staticmethod
-    def parse_to_dict(oebuild_env_obj: OebuildEnv):
-        '''
-        parse OebuildEnv to dict
-        '''
-        return {
-            "workdir": oebuild_env_obj.workdir,
-            "openeuler_layer": oebuild_env_obj.openeuler_layer,
-            "build_list": oebuild_env_obj.build_list
-        }
 
 
 class ParseRepoParam:
@@ -129,6 +96,7 @@ class ParseCompileParam:
         llvm_toolchain_dir: Optional[str]
         nativesdk_dir: Optional[str]
 
+        bitbake_cmds: Optional[list]
     '''
     @staticmethod
     def parse_to_obj(compile_param_dict) -> CompileParam:

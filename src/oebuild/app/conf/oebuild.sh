@@ -5,7 +5,7 @@ _myobj_complete_func() {
     secondary_command_name="${COMP_WORDS[COMP_CWORD-1]}"
     completion_txt="init update generate bitbake manifest clear runqemu menv deploy-target undeploy-target mplugin"
     case "${secondary_command_name}" in oebuild)
-       COMPREPLY=($(compgen -W "${completion_txt}" -- ${command_name}))
+       COMPREPLY=($(compgen -f -W "${completion_txt}" -- ${command_name}))
     esac
     case "${secondary_command_name}" in 
       menv)

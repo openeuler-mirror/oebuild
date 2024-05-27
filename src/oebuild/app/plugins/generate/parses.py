@@ -15,7 +15,7 @@ import oebuild.const as oebuild_const
 
 def parsers(parser):
     '''
-    xxx
+    for generate param parser
     '''
     parser.add_argument('-l',
                         '--list',
@@ -67,6 +67,14 @@ def parsers(parser):
                         dest='directory',
                         help='''
         this param is build directory, the default is same to platform
+        ''')
+
+    parser.add_argument('-y',
+                        '--yes',
+                        dest='yes',
+                        action="store_true",
+                        help='''
+        this param is default action, if use, the default action is yes in next steps
         ''')
 
     parser.add_argument('-t',

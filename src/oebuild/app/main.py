@@ -14,12 +14,13 @@ import sys
 import pathlib
 from collections import OrderedDict
 import pwd
+from shutil import rmtree
 
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
 from oebuild.m_log import logger
-from oebuild.struct import CompileParam
-from oebuild.parse_param import ParseOebuildEnvParam, ParseCompileParam
+from oebuild.parse_param import ParseCompileParam
+from oebuild.configure import Configure
 from oebuild.auto_completion import AutoCompletion
 from oebuild.version import __version__
 from oebuild.spec import get_spec, _ExtCommand
@@ -197,141 +198,113 @@ class QuickBuild():
     def __init__(self, build_yaml_path):
         self.app = OebuildApp()
         self.build_yaml_path = pathlib.Path(build_yaml_path)
-        self.oebuild_env = None
-        self.build_data = None
+        self.compile_param = None
+        self.workdir = None
+        self.build_dir = None
 
     def _check_yaml(self,):
         if not os.path.exists(self.build_yaml_path.absolute()):
             logger.error("%s is not exists!", self.build_yaml_path)
             sys.exit(-1)
         data = oebuild_util.read_yaml(yaml_path=self.build_yaml_path)
-        self.build_data = data
-        if "oebuild_env" not in data:
-            logger.error("%s is not valid", self.build_yaml_path.name)
-            sys.exit(-1)
-        self.oebuild_env = ParseOebuildEnvParam().parse_to_obj(data['oebuild_env'])
+        compile_param = ParseCompileParam().parse_to_obj(compile_param_dict=data)
+        self.compile_param = compile_param
 
     def run(self):
         '''
         Execute oebuild commands in order.
         '''
+        if not Configure().is_oebuild_dir():
+            logger.error('Your current directory is not oebuild workspace')
+            sys.exit(-1)
+        self.workdir = Configure().oebuild_topdir()
+
         self._check_yaml()
+        self.build_dir = self.compile_param.machine
 
-        self.do_init()
+        self.generate()
 
-        self.do_update_layer()
+        self.bitbake()
 
-        self.do_build_list()
-
-    def do_init(self, ):
+    def generate(self):
         '''
-        Execute oebuild command : oebuild init [directory] [-u yocto_remote_url] [-b branch]
+        xxx
         '''
-        argv = [
-            'init',
-        ]
-        try:
-            data = oebuild_util.read_yaml(yaml_path=self.build_yaml_path)
-            # get openeuler repo param
-            if 'openeuler_layer' in data:
-                argv.append("-u")
-                argv.append(self.oebuild_env.openeuler_layer.remote_url)
-
-                argv.append("-b")
-                argv.append(self.oebuild_env.openeuler_layer.version)
-            argv.append(self.oebuild_env.workdir)
-        except Exception as e_p:
-            raise e_p
-        self.app.run(argv or sys.argv[1:])
-
-    def do_update_layer(self, ):
-        '''
-        Execute oebuild command : oebuild update [yocto docker layer] [-tag]
-        '''
-        argv = [
-            'update',
-            'layer'
-        ]
-        os.chdir(self.oebuild_env.workdir)
-        self.app.run(argv or sys.argv[1:])
-
-    def do_build_list(self,):
-        '''
-        Build sequentially from the given compile parameter list.
-        '''
-        for build_name in self.oebuild_env.build_list:
-            self._generate_and_bitbake(build_name=build_name)
-
-    def _generate_and_bitbake(self, build_name):
-        '''
-        Execute oebuild command : oebuild generate
-        '''
-        if build_name not in self.build_data:
-            logger.error("lack %s dict data in %s", build_name, self.build_yaml_path)
-            sys.exit(-1)
-        compile_param_dict = self.build_data[build_name]
-        compile_param = ParseCompileParam().parse_to_obj(compile_param_dict=compile_param_dict)
-        self._generate(compile_param=compile_param, build_name=build_name)
-        compile_dir = os.path.join(self.oebuild_env.workdir, "build", build_name)
-        self._bitbake(
-            bitbake_cmds=compile_param.bitbake_cmds,
-            compile_dir=compile_dir,
-            build_in=compile_param.build_in)
-
-    def _generate(self, compile_param: CompileParam, build_name):
-        # check compile if exists, if exists, exit with -1
-        compile_dir = os.path.join(self.oebuild_env.workdir, "build", build_name)
-        if os.path.exists(compile_dir):
-            logger.error("%s has exists", compile_dir)
-            sys.exit(-1)
-
-        if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
-            if compile_param.docker_param is None:
+        os.chdir(Configure().build_dir())
+        self._init_build_dir()
+        if self.compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
+            if self.compile_param.docker_param is None:
                 logger.error("param is error, build in docker need docker_param")
                 sys.exit(-1)
             # check src and compile_dir if exists
             src_volumn_flag = False
             compile_volumn_flag = False
-            for volumn in compile_param.docker_param.volumns:
+            for volumn in self.compile_param.docker_param.volumns:
                 volumn_split = volumn.split(":")
                 if oebuild_const.CONTAINER_SRC == volumn_split[1].strip(" "):
                     src_volumn_flag = True
                 if volumn_split[1].strip(" ").startswith(oebuild_const.CONTAINER_BUILD):
                     compile_volumn_flag = True
             if not src_volumn_flag:
-                compile_param.docker_param.volumns.append(
-                    f"{self.oebuild_env.workdir}/src:{oebuild_const.CONTAINER_SRC}"
+                self.compile_param.docker_param.volumns.append(
+                    f"{self.workdir}/src:{oebuild_const.CONTAINER_SRC}"
                 )
             if not compile_volumn_flag:
-                compile_param.docker_param.volumns.append(
-                    f"{compile_dir}:{oebuild_const.CONTAINER_BUILD}/{build_name}"
+                volumn_dir = os.path.join(oebuild_const.CONTAINER_BUILD, self.build_dir)
+                self.compile_param.docker_param.volumns.append(
+                    f"{os.path.abspath(self.build_dir)}:{volumn_dir}"
                 )
-        compile_param_dict = ParseCompileParam().parse_to_dict(compile_param=compile_param)
-        os.makedirs(compile_dir)
-        compile_yaml_path = os.path.join(compile_dir, "compile.yaml")
+        compile_param_dict = ParseCompileParam().parse_to_dict(compile_param=self.compile_param)
+        compile_yaml_path = os.path.join(self.build_dir, "compile.yaml")
         oebuild_util.write_yaml(yaml_path=compile_yaml_path, data=compile_param_dict)
 
-    def _bitbake(self, bitbake_cmds, compile_dir, build_in):
-        os.chdir(compile_dir)
-        if build_in == oebuild_const.BUILD_IN_DOCKER:
-            self._update_docker()
-        for bitbake_cmd in bitbake_cmds:
+    def _init_build_dir(self):
+        # check compile if exists, if exists, exit with -1
+        if os.path.exists(self.build_dir):
+            build_dir = self.build_dir
+            logger.warning("the build directory %s already exists", build_dir)
+            while True:
+                in_res = input(f"""
+    do you want to overwrite it({os.path.basename(build_dir)})? the overwrite action
+    will replace the compile.yaml or toolchain.yaml to new and delete conf directory,
+    enter Y for yes, N for no, C for create:""")
+                if in_res not in ["Y", "y", "yes", "N", "n", "no", "C", "c", "create"]:
+                    print("""
+    wrong input""")
+                    continue
+                if in_res in ['N', 'n', 'no']:
+                    sys.exit(0)
+                if in_res in ['C', 'c', 'create']:
+                    in_res = input("""
+    please enter now build name, we will create it under build directory:""")
+                    build_dir = os.path.join(Configure().build_dir(), in_res)
+                    if os.path.exists(build_dir):
+                        continue
+                break
+            self.build_dir = build_dir
+            if os.path.exists(os.path.join(self.build_dir, "conf")):
+                rmtree(os.path.join(self.build_dir, "conf"))
+            elif os.path.exists(self.build_dir):
+                rmtree(self.build_dir)
+        os.makedirs(self.build_dir, exist_ok=True)
+
+    def bitbake(self):
+        '''
+        xxx
+        '''
+        os.chdir(self.build_dir)
+        if self.compile_param.bitbake_cmds is None:
+            print("================================================\n\n"
+                  f"please enter {self.build_dir} for next steps!!!\n\n"
+                  "================================================\n")
+            return
+        for bitbake_cmd in self.compile_param.bitbake_cmds:
             bitbake_cmd: str = bitbake_cmd.strip(" ")
             argv = [
                 'bitbake',
                 bitbake_cmd.lstrip("bitbake")
             ]
             self.app.run(argv or sys.argv[1:])
-
-    def _update_docker(self,):
-        '''
-        Execute oebuild command : oebuild update [yocto docker layer] [-tag]
-        '''
-        argv = [
-            'update',
-            'docker'
-        ]
-        self.app.run(argv or sys.argv[1:])
 
 
 def main(argv=None):
