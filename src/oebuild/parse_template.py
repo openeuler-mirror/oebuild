@@ -275,6 +275,7 @@ class ParseTemplate:
         parse repo json object to OebuildRepo
         '''
         repo_cict = {}
+        print(repos)
         for name, repo in repos.items():
             repo_cict[name] = RepoParam(
                 remote_url=repo['url'],

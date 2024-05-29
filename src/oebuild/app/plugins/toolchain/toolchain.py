@@ -73,8 +73,13 @@ class Toolchain(OebuildCommand):
         self._check_support_toolchain()
         self._set_init_params()
 
+        if unknown is not None and len(unknown) >= 2 and unknown[0] == "setlib":
+            self.toolchain_dict['llvm_lib'] = unknown[1]
+            oebuild_util.write_yaml(self._toolchain_yaml_path, self.toolchain_dict)
+            self.toolchain_obj.llvm_lib = unknown[1]
+            return
         # if toolchain is llvm, the docker volume should be cover llvm_lib
-        self._set_llvm_pre(unknown)
+        self._set_llvm_pre()
 
         if not os.path.exists('.env'):
             os.mknod('.env')
@@ -148,18 +153,9 @@ you can run oebuild toolchain aarch64 or oebuild toolchain config_aarch64""")
             container=self.client.get_container(container_id=self.container_id),
             container_user=oebuild_const.CONTAINER_USER)
 
-    def _set_llvm_pre(self, unknow):
+    def _set_llvm_pre(self):
         if self.toolchain_obj.kind != oebuild_const.LLVM_TOOLCHAIN:
             return
-        self._setlib_command(unknow)
-        self._add_llvmlib_to_volumn()
-
-    def _setlib_command(self, unknown):
-        if unknown is not None and len(unknown) >= 2:
-            if unknown[0] == "setlib":
-                self.toolchain_dict['llvm_lib'] = unknown[1]
-                oebuild_util.write_yaml(self._toolchain_yaml_path, self.toolchain_dict)
-                return
         if self.toolchain_obj.llvm_lib is None or self.toolchain_obj.llvm_lib == "":
             logger.error("""
 compile llvm toolchain need aarch64 lib, please run:
@@ -168,6 +164,7 @@ compile llvm toolchain need aarch64 lib, please run:
 
 pointed it first""")
             sys.exit(-1)
+        self._add_llvmlib_to_volumn()
 
     def _add_llvmlib_to_volumn(self):
         # check if had mounted
@@ -184,7 +181,9 @@ pointed it first""")
         '''
         is for auto build gcc toolchains
         '''
-        self._run_downcode(kind=oebuild_const.GCC_TOOLCHAIN)
+        # if exists open_source, do nothing
+        if not os.path.exists("open_source"):
+            self._run_downcode(kind=oebuild_const.GCC_TOOLCHAIN)
         for config in config_list:
             self._build_gcc(config_name=config)
 
