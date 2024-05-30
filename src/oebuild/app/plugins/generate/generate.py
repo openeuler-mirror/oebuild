@@ -57,6 +57,7 @@ class Generate(OebuildCommand):
         self.toolchain_dir = None
         self.llvm_toolchain_dir = None
         self.sstate_mirrors = None
+        self.sstate_dir = None
         self.tmp_dir = None
         self.oebuild_kconfig_path = os.path.expanduser(
             '~') + '/.local/oebuild_kconfig/'
@@ -145,6 +146,9 @@ class Generate(OebuildCommand):
         if args.sstate_mirrors is not None:
             self.sstate_mirrors = args.sstate_mirrors
 
+        if args.sstate_dir is not None:
+            self.sstate_dir = args.sstate_dir
+
         if args.tmp_dir is not None:
             self.tmp_dir = args.tmp_dir
 
@@ -200,6 +204,7 @@ class Generate(OebuildCommand):
         param['llvm_toolchain_dir'] = self.llvm_toolchain_dir
         param['build_in'] = args.build_in
         param['sstate_mirrors'] = self.sstate_mirrors
+        param['sstate_dir'] = self.sstate_dir
         param['tmp_dir'] = self.tmp_dir
         param['datetime'] = args.datetime
         param['no_fetch'] = args.no_fetch
@@ -633,14 +638,14 @@ endif
         config COMMON_SSTATE-MIRRORS
             string "sstate_mirrors (this param is for SSTATE_MIRRORS)"
             default "None"
-            depends on IMAGE && BUILD_IN-HOST
+            depends on IMAGE
                        """)
         # add sstate_dir
         common_str += ("""
         config COMMON_SSTATE-DIR
             string "sstate_dir (this param is for SSTATE_DIR)"
             default "None"
-            depends on IMAGE && BUILD_IN-HOST
+            depends on IMAGE
                        """)
         # add tmp_dir
         common_str += ("""

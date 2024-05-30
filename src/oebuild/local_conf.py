@@ -129,7 +129,7 @@ class LocalConf:
             if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
                 # check if exists TXTERNAL_TOOLCHAIN_GCC, replace it or replace TXTERNAL_TOOLCHAIN
                 replace_toolchain_str = f'''
-{oebuild_const.EXTERNAL_LLVM} = "{oebuild_const.NATIVE_LLVM_DIR}"'''
+{oebuild_const.EXTERNAL_LLVM} = "{oebuild_const.NATIVE_LLVM_MAP}"'''
             else:
                 replace_toolchain_str = f'''
 {oebuild_const.EXTERNAL_LLVM} = "{compile_param.llvm_toolchain_dir}"'''
@@ -152,7 +152,7 @@ class LocalConf:
                 new_str = f"file://.* {compile_param.sstate_mirrors}/PATH;downloadfilename=PATH"
             else:
                 if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
-                    new_str = f"file://.* file://{oebuild_const.SSTATE_MIRRORS}/PATH"
+                    new_str = f"file://.* file://{oebuild_const.SSTATE_MIRRORS_MAP}/PATH"
                 else:
                     new_str = f"file://.* file://{compile_param.sstate_mirrors}/PATH"
             pre_content += f'{oebuild_const.SSTATE_MIRRORS} = "{new_str}"\n'
@@ -181,10 +181,10 @@ class LocalConf:
                         oebuild_const.EXTERNAL,
                         oebuild_const.EXTERNAL_GCC)
                     replace_toolchain_str = f'''
-{toolchain_type} = "{oebuild_const.NATIVE_GCC_DIR}"'''
+{toolchain_type} = "{oebuild_const.NATIVE_GCC_MAP}"'''
                 else:
                     replace_toolchain_str = f'''
-{compile_param.toolchain_type} = "{oebuild_const.NATIVE_GCC_DIR}"'''
+{compile_param.toolchain_type} = "{oebuild_const.NATIVE_GCC_MAP}"'''
             else:
                 if len(re.findall(f'^({oebuild_const.EXTERNAL_GCC})*', self.content)) > 0:
                     toolchain_type = compile_param.toolchain_type.replace(

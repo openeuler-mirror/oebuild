@@ -33,9 +33,10 @@ SSTATE_MIRRORS = "SSTATE_MIRRORS"
 SSTATE_DIR = "SSTATE_DIR"
 TMP_DIR = "TMPDIR"
 
-NATIVE_GCC_DIR = '/usr1/openeuler/native_gcc'
-NATIVE_LLVM_DIR = '/usr1/openeuler/native_llvm'
-SSTATE_MIRRORS = '/usr1/openeuler/sstate-cache'
+NATIVE_GCC_MAP = '/usr1/openeuler/native_gcc'
+NATIVE_LLVM_MAP = '/usr1/openeuler/native_llvm'
+SSTATE_MIRRORS_MAP = '/usr1/openeuler/sstate-mirrors'
+SSTATE_DIR_MAP = '/usr1/openeuler/sstate-dir'
 
 EXTERNAL_LLVM = "EXTERNAL_TOOLCHAIN_LLVM"
 EXTERNAL_GCC = "EXTERNAL_TOOLCHAIN_GCC"

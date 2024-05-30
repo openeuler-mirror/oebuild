@@ -189,6 +189,7 @@ class ParseTemplate:
             llvm_toolchain_dir=None
             build_in: str = oebuild_const.BUILD_IN_DOCKER,
             sstate_mirrors=None,
+            sstate_dir=None,
             tmp_dir=None,
             datetime=None,
             no_fetch=False,
@@ -250,7 +251,8 @@ class ParseTemplate:
                 "compile_dir": param['compile_dir'],
                 "toolchain_dir": param['toolchain_dir'],
                 "llvm_toolchain_dir": param['llvm_toolchain_dir'],
-                "sstate_mirrors": param['sstate_mirrors']
+                "sstate_mirrors": param['sstate_mirrors'],
+                "sstate_dir": param['sstate_dir']
             }
         )
 
@@ -265,6 +267,8 @@ class ParseTemplate:
             compile_conf['llvm_toolchain_dir'] = param['llvm_toolchain_dir']
         if param['sstate_mirrors'] is not None:
             compile_conf['sstate_mirrors'] = param['sstate_mirrors']
+        if param['sstate_dir'] is not None:
+            compile_conf['sstate_dir'] = param['sstate_dir']
         if param['tmp_dir'] is not None:
             compile_conf['tmp_dir'] = param['tmp_dir']
         return compile_conf
@@ -293,6 +297,7 @@ def get_docker_param_dict(docker_image, dir_list):
     toolchain_dir
     llvm_toolchain_dir
     sstate_mirrors
+    sstate_dir
     '''
     parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS
     volumns = []
@@ -303,11 +308,13 @@ def get_docker_param_dict(docker_image, dir_list):
         volumns.append(dir_list['compile_dir'] + ":" + os.path.join(
             oebuild_const.CONTAINER_BUILD, os.path.basename(dir_list['compile_dir'])))
     if dir_list['toolchain_dir'] is not None:
-        volumns.append(dir_list['toolchain_dir'] + ":" + oebuild_const.NATIVE_GCC_DIR)
+        volumns.append(dir_list['toolchain_dir'] + ":" + oebuild_const.NATIVE_GCC_MAP)
     if dir_list['llvm_toolchain_dir'] is not None:
-        volumns.append(dir_list['llvm_toolchain_dir'] + ":" + oebuild_const.NATIVE_LLVM_DIR)
+        volumns.append(dir_list['llvm_toolchain_dir'] + ":" + oebuild_const.NATIVE_LLVM_MAP)
     if dir_list['sstate_mirrors'] is not None:
         volumns.append(dir_list['sstate_mirrors'] + ":" + oebuild_const.SSTATE_MIRRORS)
+    if dir_list['sstate_dir'] is not None:
+        volumns.append(dir_list['sstate_dir'] + ":" + oebuild_const.SSTATE_DIR)
 
     docker_param = {}
     docker_param['image'] = docker_image

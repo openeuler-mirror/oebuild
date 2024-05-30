@@ -70,7 +70,7 @@ class InContainer(BaseBuild):
         volumns.append(os.getcwd() + ':' +
                        os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(os.getcwd())))
         if toolchain_dir is not None:
-            volumns.append(toolchain_dir + ":" + oebuild_const.NATIVE_GCC_DIR)
+            volumns.append(toolchain_dir + ":" + oebuild_const.NATIVE_GCC_MAP)
         if sstate_mirrors is not None:
             volumns.append(sstate_mirrors + ":" + oebuild_const.SSTATE_MIRRORS)
 
