@@ -37,7 +37,10 @@ class Manifest(OebuildCommand):
     description = textwrap.dedent('''\
             manifest provides the manifest function of generating dependent
             source repositories in the build working directory, and can restore
-            relevant source repositories based on the manifest file
+            relevant source repositories based on the manifest file, also you can
+            download single repo, for zlib example:
+
+                oebuild manifest download zlib
             ''')
 
     def __init__(self):
@@ -49,7 +52,7 @@ class Manifest(OebuildCommand):
         parser = self._parser(parser_adder,
                               usage='''
 
-  %(prog)s [create / download] [-f MANIFEST_DIR]
+  %(prog)s [create / download] [repo] [-f MANIFEST_DIR]
 
 ''')
 
@@ -67,11 +70,16 @@ class Manifest(OebuildCommand):
             logger.error('Your current directory had not finished init')
             sys.exit(-1)
 
+        subrepo = ""
+        command = ""
         if not (unknown and unknown[0] in self.manifest_command):
             unknown = ['-h']
         else:
             command = unknown[0]
             unknown = unknown[1:]
+            if len(unknown) > 0 and not unknown[0].startswith("-"):
+                subrepo = unknown[0]
+                unknown = unknown[1:]
 
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
@@ -86,7 +94,7 @@ class Manifest(OebuildCommand):
             if not os.path.exists(manifest_dir):
                 logger.error('The path is invalid, please check the path')
                 sys.exit(1)
-            self._restore_manifest(manifest_dir)
+            self._restore_manifest(manifest_dir, subrepo)
 
     def _create_manifest(self, manifest_dir):
         src_list = os.listdir(self.configure.source_dir())
@@ -136,10 +144,16 @@ class Manifest(OebuildCommand):
         with open(manifest_dir, 'w', encoding='utf-8') as w_f:
             w_f.write(manifest_content)
 
-    def _restore_manifest(self, manifest_dir):
+    def _restore_manifest(self, manifest_dir, subrepo):
         manifest_data = oebuild_util.read_yaml(pathlib.Path(manifest_dir))
         manifest_list = manifest_data.get('manifest_list', {})
         src_dir = self.configure.source_dir()
+        if subrepo != "":
+            if subrepo in manifest_list:
+                self._download_repo(src_dir, subrepo, manifest_list[subrepo])
+                return
+            logger.error("%s not in manifest.yaml", subrepo)
+            sys.exit(-1)
         final_res = []
         for key, value in manifest_list.items():
             if not self._download_repo(src_dir, key, value):
