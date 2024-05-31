@@ -60,6 +60,7 @@ class CompileParamComm:
     build_in: str
     machine: str
     toolchain_type: str
+    no_layer: Optional[bool]
     repos: Optional[list]
     layers: Optional[list]
     local_conf: Optional[LiteralScalarString]

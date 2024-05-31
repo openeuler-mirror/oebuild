@@ -97,10 +97,11 @@ class Bitbake(OebuildCommand):
         yocto_dir = os.path.join(self.configure.source_dir(),
                                  "yocto-meta-openeuler")
         manifest_path = os.path.join(yocto_dir, ".oebuild/manifest.yaml")
-        oebuild_util.download_repo_from_manifest(
-            repo_list=compile_param.repos,
-            src_dir=self.configure.source_dir(),
-            manifest_path=manifest_path)
+        if compile_param.no_layer is None or compile_param.no_layer is not True:
+            oebuild_util.download_repo_from_manifest(
+                repo_list=compile_param.repos,
+                src_dir=self.configure.source_dir(),
+                manifest_path=manifest_path)
         parse_env = ParseEnv(env_dir='.env')
 
         if compile_param.build_in == oebuild_const.BUILD_IN_HOST:

@@ -83,6 +83,7 @@ class ParseCompileParam:
         build_in: str
         machine: str
         toolchain_type: str
+        no_layer: Optional[bool]
         repos: Optional[list]
         layers: Optional[list]
         local_conf: Optional[LiteralScalarString]
@@ -126,6 +127,7 @@ class ParseCompileParam:
                                          oebuild_const.BUILD_IN_DOCKER),
             machine=get_value_from_dict('machine', compile_param_dict, None),
             toolchain_type=get_value_from_dict('toolchain_type', compile_param_dict, None),
+            no_layer=get_value_from_dict('no_layer', compile_param_dict, None),
             toolchain_dir=get_value_from_dict('toolchain_dir', compile_param_dict, None),
             llvm_toolchain_dir=get_value_from_dict('llvm_toolchain_dir', compile_param_dict, None),
             nativesdk_dir=get_value_from_dict('nativesdk_dir', compile_param_dict, None),
@@ -147,6 +149,8 @@ class ParseCompileParam:
         compile_obj['build_in'] = compile_param.build_in
         compile_obj['machine'] = compile_param.machine
         compile_obj['toolchain_type'] = compile_param.toolchain_type
+        if compile_param.no_layer is not None:
+            compile_obj['no_layer'] = compile_param.no_layer
         if compile_param.toolchain_dir is not None:
             compile_obj['toolchain_dir'] = compile_param.toolchain_dir
         if compile_param.llvm_toolchain_dir is not None:
