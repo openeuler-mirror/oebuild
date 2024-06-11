@@ -83,7 +83,6 @@ class OGit:
                 remote.fetch(self._branch, progress=CustomRemote(), depth=1)
             else:
                 repo.commit(version)
-                return True
         except ValueError:
             try:
                 remote.fetch(version, progress=CustomRemote(), depth=1)
