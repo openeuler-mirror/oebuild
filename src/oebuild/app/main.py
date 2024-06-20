@@ -94,7 +94,12 @@ class OebuildApp:
         '''
 
         parser = OebuildArgumentParser(
-            prog='oebuild', description='The openEuler Embedded meta-tool.',
+            prog='oebuild',
+            description='''The openEuler Embedded meta-tool. you can directly run
+oebuild <path_build.yaml> in oebuild workspace to perform the build, for example:
+
+oebuild qemu-aarch64-ros.yaml
+            ''',
             epilog='''Run "oebuild <command> -h" for help on each <command>.''',
             add_help=False, oebuild_app=self
         )
@@ -220,7 +225,11 @@ class QuickBuild():
         self.workdir = Configure().oebuild_topdir()
 
         self._check_yaml()
-        self.build_dir = self.compile_param.machine
+        if "compile.yaml" in os.listdir():
+            self.build_dir = os.path.basename(os.getcwd())
+        else:
+            build_name = self.build_yaml_path.name.replace(".yaml", "").replace(".yml", "")
+            self.build_dir = os.path.basename(build_name)
 
         self.generate()
 
