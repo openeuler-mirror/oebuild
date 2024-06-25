@@ -98,7 +98,7 @@ class OebuildApp:
             description='''The openEuler Embedded meta-tool. you can directly run
 oebuild <path_build.yaml> in oebuild workspace to perform the build, for example:
 
-oebuild qemu-aarch64-ros.yaml
+oebuild <path_compile.yaml>
             ''',
             epilog='''Run "oebuild <command> -h" for help on each <command>.''',
             add_help=False, oebuild_app=self
@@ -301,10 +301,11 @@ class QuickBuild():
         '''
         xxx
         '''
-        os.chdir(self.build_dir)
+        os.chdir(os.path.abspath(self.build_dir))
         if self.compile_param.bitbake_cmds is None:
             print("================================================\n\n"
-                  f"please enter {self.build_dir} for next steps!!!\n\n"
+                  "please enter follow directory for next steps!!!\n\n"
+                  f"{os.path.abspath(self.build_dir)}\n\n"
                   "================================================\n")
             return
         for bitbake_cmd in self.compile_param.bitbake_cmds:
@@ -314,6 +315,14 @@ class QuickBuild():
                 bitbake_cmd.lstrip("bitbake")
             ]
             self.app.run(argv or sys.argv[1:])
+        logger.info("""
+======================================================================
+the build directory is show in line, please run:
+                    
+    cd %s
+                
+to enter the build directory
+""", os.path.abspath(self.build_dir))
 
 
 def main(argv=None):
