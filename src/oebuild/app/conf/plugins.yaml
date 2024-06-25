@@ -38,3 +38,6 @@ plugins:
 - name: dcommit
   class: Dcommit
   path: plugins/dcommit/dcommit.py
+- name: samples
+  class: Samples
+  path: plugins/samples/samples.py

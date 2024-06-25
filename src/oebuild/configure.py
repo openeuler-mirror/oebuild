@@ -140,6 +140,13 @@ class Configure:
         return os.path.join(Configure.source_yocto_dir(), ".oebuild/manifest.yaml")
 
     @staticmethod
+    def yocto_samples_dir():
+        '''
+        return .oebuild/samples
+        '''
+        return os.path.join(Configure.source_yocto_dir(), ".oebuild/samples")
+
+    @staticmethod
     def source_poky_dir():
         '''
         return src/yocto-poky path
