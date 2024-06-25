@@ -21,7 +21,6 @@ import oebuild.const as oebuild_const
 from oebuild.m_log import logger
 from oebuild.parse_param import ParseCompileParam
 from oebuild.configure import Configure
-from oebuild.auto_completion import AutoCompletion
 from oebuild.version import __version__
 from oebuild.spec import get_spec, _ExtCommand
 from oebuild.command import OebuildCommand
@@ -332,7 +331,8 @@ def main(argv=None):
     if not check_user():
         return
 
-    AutoCompletion().run()
+    # the auto compiletion will be disabled, when get more good idea and enable it
+    # AutoCompletion().run()
     if (len(sys.argv) > 1) and 'yaml' in sys.argv[1]:
         build = QuickBuild(build_yaml_path=sys.argv[1])
         build.run()
