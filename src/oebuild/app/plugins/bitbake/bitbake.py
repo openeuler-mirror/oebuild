@@ -54,7 +54,10 @@ class Bitbake(OebuildCommand):
         parser = self._parser(parser_adder,
                               usage='''
 
-  %(prog)s [command]
+  %(prog)s [command] [--with-dm]
+  --with-dm     dm for docker image, that is pointed which docker image will be
+                started, and the docker_param->image will be modified from compile.yaml
+                the command example like:    oebuild bitbake --with-dm=demo:latest
 ''')
 
         parser_adder.add_argument(
@@ -79,6 +82,7 @@ class Bitbake(OebuildCommand):
             sys.exit(0)
         set_log_to_file()
 
+        oe_params, unknown = self._get_oebuild_param(unknown)
         command = self._get_command(unknow=unknown)
 
         if not self.check_support_bitbake():
@@ -92,6 +96,7 @@ class Bitbake(OebuildCommand):
         compile_param_dict = oebuild_util.read_yaml(self.compile_conf_dir)
         compile_param: CompileParam = ParseCompileParam.parse_to_obj(
             compile_param_dict)
+        compile_param = self._deal_oe_params(oe_params, compile_param)
 
         # if has manifest.yaml, init layer repo with it
         yocto_dir = os.path.join(self.configure.source_dir(),
@@ -132,3 +137,31 @@ class Bitbake(OebuildCommand):
             return None
 
         return 'bitbake ' + ' '.join(unknow)
+
+    def _get_oebuild_param(self, unknow: list):
+        if len(unknow) == 0:
+            return [],[]
+        oe_params = []
+        new_unknow = []
+        for item in unknow:
+            if item.startswith("--with-dm"):
+                oe_params.append(item)
+            else:
+                new_unknow.append(item)
+        return oe_params, new_unknow
+
+    def _deal_oe_params(self, oe_params, compile_param: CompileParam):
+        is_modify = False
+        for item in oe_params:
+            if item.startswith("--with-dm"):
+                item_split = item.split("=")
+                if len(item_split) < 2:
+                    logger.error("the format is --with-dm=xxx")
+                    sys.exit(-1)
+                if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
+                    compile_param.docker_param.image = item_split[1]
+                    is_modify = True
+        if is_modify:
+            oebuild_util.write_yaml(self.compile_conf_dir,
+                                    ParseCompileParam().parse_to_dict(compile_param))
+        return compile_param

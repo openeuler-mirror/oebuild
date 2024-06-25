@@ -343,10 +343,16 @@ def deal_env_container(env: ParseEnv, docker_param: DockerParam):
     are inconsistent, you need to create a new container, otherwise
     directly enable the sleeping container
     '''
+    def check_container_img_eq(container_id, docker_image):
+        c_mid = docker_proxy.get_container_img_id(container_id=container_id)
+        d_mid = docker_proxy.get_image(docker_image).id
+        return c_mid == d_mid
+
     docker_proxy = DockerProxy()
     if env.container is None \
             or env.container.short_id is None \
-            or not docker_proxy.is_container_exists(env.container.short_id):
+            or not docker_proxy.is_container_exists(env.container.short_id) \
+            or not check_container_img_eq(env.container.short_id, docker_param.image):
         # judge which container
         container: Container = docker_proxy.create_container(
             image=docker_param.image,

@@ -45,6 +45,18 @@ class DockerProxy:
         except ImageNotFound:
             return False
 
+    def get_container_img_id(self, container_id):
+        '''
+        determize if container exists
+        args:
+            container_id (str): docker container short_id or id
+        '''
+        try:
+            container = self._docker.containers.get(container_id=container_id)
+            return container.image.id
+        except NotFound:
+            return None
+
     def is_container_exists(self, container_id):
         '''
         determize if container exists
