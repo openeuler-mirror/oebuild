@@ -316,12 +316,10 @@ class QuickBuild():
             self.app.run(argv or sys.argv[1:])
         logger.info("""
 ======================================================================
-the build directory is show in line, please run:
-                    
+Please enter the building directory according to the command prompt below:
+
     cd %s
-                
-to enter the build directory
-""", os.path.abspath(self.build_dir))
+""", os.path.dirname(os.path.abspath(self.build_dir)))
 
 
 def main(argv=None):

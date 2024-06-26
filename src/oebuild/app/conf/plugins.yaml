@@ -35,9 +35,9 @@ plugins:
 - name: toolchain
   class: Toolchain
   path: plugins/toolchain/toolchain.py
-- name: dcommit
-  class: Dcommit
-  path: plugins/dcommit/dcommit.py
+- name: docker-save
+  class: DockerSave
+  path: plugins/docker-save/docker_save.py
 - name: samples
   class: Samples
   path: plugins/samples/samples.py

@@ -24,14 +24,14 @@ from oebuild.parse_env import ParseEnv
 from oebuild.docker_proxy import DockerProxy
 
 
-class Dcommit(OebuildCommand):
+class DockerSave(OebuildCommand):
     '''
     This class is designed to rapidly generate a customized container image, aiming
     to address scenarios where the compilation environment has been specially tailored
     but reuse of the container environment is required.
     '''
 
-    help_msg = 'help to commit a docker image'
+    help_msg = 'help to save a docker image'
     description = textwrap.dedent('''
             This is designed to rapidly generate a customized container image, aiming
             to address scenarios where the compilation environment has been specially tailored
@@ -41,7 +41,7 @@ class Dcommit(OebuildCommand):
     def __init__(self):
         self.configure = Configure()
         self.client = DockerProxy()
-        super().__init__('dcommit', self.help_msg, self.description)
+        super().__init__('docker-save', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
         parser = self._parser(parser_adder,
@@ -84,6 +84,6 @@ class Dcommit(OebuildCommand):
         try:
             container.commit(docker_image_split[0], docker_image_split[1])
         except APIError:
-            logger.error("the commit %s failed")
+            logger.error("save %s failed")
             sys.exit(-1)
         logger.info("the new docker image %s is generated", docker_image)

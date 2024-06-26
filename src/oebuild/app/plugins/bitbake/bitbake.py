@@ -54,10 +54,12 @@ class Bitbake(OebuildCommand):
         parser = self._parser(parser_adder,
                               usage='''
 
-  %(prog)s [command] [--with-dm]
-  --with-dm     dm for docker image, that is pointed which docker image will be
-                started, and the docker_param->image will be modified from compile.yaml
-                the command example like:    oebuild bitbake --with-dm=demo:latest
+  %(prog)s [command] [--with-docker-image]
+  --with-docker-image
+        that is pointed which docker image will be started, and the
+        docker_param->image will be modified from compile.yaml
+        the command example like:
+            oebuild bitbake --with-docker-image=demo:latest
 ''')
 
         parser_adder.add_argument(
@@ -140,11 +142,11 @@ class Bitbake(OebuildCommand):
 
     def _get_oebuild_param(self, unknow: list):
         if len(unknow) == 0:
-            return [],[]
+            return [], []
         oe_params = []
         new_unknow = []
         for item in unknow:
-            if item.startswith("--with-dm"):
+            if item.startswith("--with-docker-image"):
                 oe_params.append(item)
             else:
                 new_unknow.append(item)
@@ -153,10 +155,10 @@ class Bitbake(OebuildCommand):
     def _deal_oe_params(self, oe_params, compile_param: CompileParam):
         is_modify = False
         for item in oe_params:
-            if item.startswith("--with-dm"):
+            if item.startswith("--with-docker-image"):
                 item_split = item.split("=")
                 if len(item_split) < 2:
-                    logger.error("the format is --with-dm=xxx")
+                    logger.error("the format is --with-docker-image=xxx:yyy")
                     sys.exit(-1)
                 if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
                     compile_param.docker_param.image = item_split[1]
