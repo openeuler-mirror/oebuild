@@ -33,7 +33,7 @@ class MPlugin(OebuildCommand):
     developped, you can use it through oebuild.
     """
 
-    help_msg = 'Update the basic environment required for the build'
+    help_msg = 'manage the oebuild plugin'
     description = textwrap.dedent('''
             This is a plugin management function that supports users to customize plugin and
             add them to the oebuild for use. plugin only affect locally installed oebuilds,
