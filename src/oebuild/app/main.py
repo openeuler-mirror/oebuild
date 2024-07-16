@@ -258,7 +258,8 @@ class QuickBuild():
                     f"{self.workdir}/src:{oebuild_const.CONTAINER_SRC}"
                 )
             if not compile_volumn_flag:
-                volumn_dir = os.path.join(oebuild_const.CONTAINER_BUILD, self.build_dir)
+                volumn_dir = os.path.join(oebuild_const.CONTAINER_BUILD,
+                                          os.path.basename(self.build_dir))
                 self.compile_param.docker_param.volumns.append(
                     f"{os.path.abspath(self.build_dir)}:{volumn_dir}"
                 )
