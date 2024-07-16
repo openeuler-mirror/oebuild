@@ -65,10 +65,21 @@ class Samples(OebuildCommand):
         self.do_exec(samples=samples)
 
     def _get_samples(self):
-        list_samples = os.listdir(self.configure.yocto_samples_dir())
+        list_samples = []
+
+        def recursive_listdir(path):
+            files = os.listdir(path)
+            for file in files:
+                file_path = os.path.join(path, file)
+                if os.path.isfile(file_path):
+                    list_samples.append(file_path)
+                if os.path.isdir(file_path):
+                    recursive_listdir(file_path)
+        recursive_listdir(self.configure.yocto_samples_dir())
+
         res = {}
         for index, sample in enumerate(list_samples):
-            res[str(index + 1)] = sample
+            res[str(index + 1)] = sample.replace(self.configure.yocto_samples_dir(), "").lstrip("/")
         return res
 
     def do_exec(self, samples: dict):
