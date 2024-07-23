@@ -238,6 +238,20 @@ class QuickBuild():
         '''
         xxx
         '''
+        # judge if exist src/yocto-meta-openeuler, one-click function need yocto-meta-openeuler
+        if not os.path.exists(Configure().source_yocto_dir()):
+            logger.error("""
+please clone yocto-meta-openeuler in src directory, you can exec as follows steps:
+
+    oebuild update yocto
+or
+    cd src
+    git clone <remote-yocto>
+
+""")
+            sys.exit(-1)
+
+        os.makedirs(Configure().build_dir(), exist_ok=True)
         os.chdir(Configure().build_dir())
         self._init_build_dir()
         if self.compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
