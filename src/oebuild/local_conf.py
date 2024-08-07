@@ -107,6 +107,12 @@ class LocalConf:
         with open(local_conf_path, 'r', encoding='utf-8') as r_f:
             self.content = r_f.read()
 
+    def __del__(self):
+        # The local file specifies that each line cannot start with a space.
+        # Therefore, after each modification to the local file, the spaces at
+        # the beginning of lines that start with spaces are removed.
+        os.system(rf"sed -i 's/^ \+//' {self.local_path}")
+
     def update(self, compile_param: CompileParam, src_dir=None):
         '''
         update local.conf by ParseCompile
