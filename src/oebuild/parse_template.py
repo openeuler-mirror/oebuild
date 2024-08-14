@@ -279,11 +279,13 @@ class ParseTemplate:
         parse repo json object to OebuildRepo
         '''
         repo_cict = {}
-        print(repos)
         for name, repo in repos.items():
-            repo_cict[name] = RepoParam(
-                remote_url=repo['url'],
-                version=repo['refspec'])
+            try:
+                repo_cict[name] = RepoParam(
+                    remote_url=repo['url'],
+                    version=repo['refspec'])
+            except AttributeError:
+                repo_cict[name] = ""
 
         return repo_cict
 
@@ -302,18 +304,18 @@ def get_docker_param_dict(docker_image, dir_list):
     parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS
     volumns = []
     volumns.append("/dev/net/tun:/dev/net/tun")
-    if dir_list['src_dir'] is not None:
+    if 'src_dir' in dir_list and dir_list['src_dir'] is not None:
         volumns.append(dir_list['src_dir'] + ':' + oebuild_const.CONTAINER_SRC)
-    if dir_list['compile_dir'] is not None:
+    if 'compile_dir' in dir_list and dir_list['compile_dir'] is not None:
         volumns.append(dir_list['compile_dir'] + ":" + os.path.join(
             oebuild_const.CONTAINER_BUILD, os.path.basename(dir_list['compile_dir'])))
-    if dir_list['toolchain_dir'] is not None:
+    if 'toolchain_dir' in dir_list and dir_list['toolchain_dir'] is not None:
         volumns.append(dir_list['toolchain_dir'] + ":" + oebuild_const.NATIVE_GCC_MAP)
-    if dir_list['llvm_toolchain_dir'] is not None:
+    if 'llvm_toolchain_dir' in dir_list and dir_list['llvm_toolchain_dir'] is not None:
         volumns.append(dir_list['llvm_toolchain_dir'] + ":" + oebuild_const.NATIVE_LLVM_MAP)
-    if dir_list['sstate_mirrors'] is not None:
+    if 'sstate_mirrors' in dir_list and dir_list['sstate_mirrors'] is not None:
         volumns.append(dir_list['sstate_mirrors'] + ":" + oebuild_const.SSTATE_MIRRORS)
-    if dir_list['sstate_dir'] is not None:
+    if 'sstate_dir' in dir_list and dir_list['sstate_dir'] is not None:
         volumns.append(dir_list['sstate_dir'] + ":" + oebuild_const.SSTATE_DIR)
 
     docker_param = {}
