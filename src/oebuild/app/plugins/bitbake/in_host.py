@@ -115,7 +115,8 @@ initialization operations''')
                 if s_p.stderr is not None:
                     for line in s_p.stderr:
                         logger.error(line.strip('\n'))
-            sys.exit(res)
+            if res != 0:
+                sys.exit(res)
 
     def _mk_build_sh(self, nativesdk_dir, build_dir):
         # get nativesdk environment path automatic for next step

@@ -114,7 +114,9 @@ class Bitbake(OebuildCommand):
         if compile_param.build_in == oebuild_const.BUILD_IN_HOST:
             in_host = InHost(self.configure)
             in_host.exec(compile_param=compile_param, command=command)
-            sys.exit(0)
+            # note: Use return instead of sys.exit because the command should exit the
+            # function rather than terminating the entire process when it is done executing.
+            return
 
         try:
             oebuild_util.check_docker()
