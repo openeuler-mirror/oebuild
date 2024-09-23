@@ -41,3 +41,6 @@ plugins:
 - name: samples
   class: Samples
   path: plugins/samples/samples.py
+- name: mugentest
+  class: MugenTest
+  path: plugins/mugentest/mugentest.py
