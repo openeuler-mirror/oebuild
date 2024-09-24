@@ -364,6 +364,36 @@ oebuild deploy-target/undeploy-target <package> name@ip
 
 该命令是对poky的deploy-target与undeploy-target的封装，这个功能的使用需要提前准备好目标机，并且目标机和主机之间IP要联通。
 
+#### oebuild mugentest
+
+测试命令,用于对openeuler embedded进行本地测试。
+
+```
+oebuild mugentest --mugen-path /path/to/mugen --ip $ip --user $user --password $password --port $port
+```
+
+\--mugen-path: mugen的安装路径。
+
+\--ip: 用于测试的机器的ip地址。
+
+\--user: 用户名称。
+
+\--password: 用户密码。
+
+\--port: 机器端口。
+
+在使用完本命令后,会让用户选择(1-4)进行哪一项测试:
+
+1、 Tiny 镜像测试。
+
+2、 OS 基础测试。
+
+3、 嵌入式安全配置测试。
+
+4、 嵌入式基础开发测试。
+
+通过上面的命令可以直接调用mugen对openeuler embedded进行本地测试。
+
 #### 配置文件介绍
 
 oebuild在生成后有多个配置文件，每个配置文件的作用域不同，下面将介绍各配置文件存放位置以及内容
