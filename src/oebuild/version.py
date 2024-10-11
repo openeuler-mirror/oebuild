@@ -10,4 +10,12 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 '''
 
-__version__ = '0.0.45.21'
+# release log:
+# 1, Mugentest is an open-source Linux-OS testing framework developed by openEuler.
+# Oebuild integrates Mugentest, making it more convenient to test the operating system.
+# 2, The handling of the openEuler build template has been optimized. The original
+# repos field contained necessary repository download information for the build
+# environment. However, since all repository information related to the build is now
+# managed by manifest.yaml, the processing of the repos field will be done in list
+# form rather than as a dictionary.
+__version__ = '0.1.0.7'
