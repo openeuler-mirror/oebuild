@@ -19,8 +19,8 @@ class RepoParam:
     '''
     object repo is to record template repo info, repo struct is:
     repo_name:
-        url: str
-        refspec: str
+        remote_url: str
+        version: str
     object repo transfer string to struct to use it next easily
     '''
     remote_url: str
@@ -53,7 +53,7 @@ class CompileLocalParam:
 
 
 @dataclass
-class CompileParamComm:
+class CompileParamComm1:
     '''
     this is for common param to compile.yaml
     '''
@@ -61,6 +61,13 @@ class CompileParamComm:
     machine: str
     toolchain_type: str
     no_layer: Optional[bool]
+
+
+@dataclass
+class CompileParamComm2:
+    '''
+    this is for common param to compile.yaml
+    '''
     repos: Optional[list]
     layers: Optional[list]
     local_conf: Optional[LiteralScalarString]
@@ -88,7 +95,11 @@ class CompileParamBitbakeCmds:
 
 
 @dataclass
-class CompileParam(CompileParamComm, CompileLocalParam, CompileParamSDK, CompileParamBitbakeCmds):
+class CompileParam(CompileParamComm1,
+                   CompileParamComm2,
+                   CompileLocalParam,
+                   CompileParamSDK,
+                   CompileParamBitbakeCmds):
     '''
     Compile is the parsed object of compile.yaml and is used to manipulate the build file
     '''

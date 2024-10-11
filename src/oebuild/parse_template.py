@@ -20,7 +20,6 @@ from ruamel.yaml.scalarstring import LiteralScalarString
 
 import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
-from oebuild.struct import RepoParam
 
 
 @dataclass
@@ -114,8 +113,7 @@ class ParseTemplate:
             data = oebuild_util.read_yaml(config_dir)
             repo_list = None
             if 'repos' in data:
-                repo_list = oebuild_util.trans_dict_key_to_list(
-                    self.parse_oebuild_repo(data['repos']))
+                repo_list = self.parse_repos_list(data['repos'])
 
             layers = None if 'layers' not in data else data['layers']
             local_conf = None if 'local_conf' not in data else data['local_conf']
@@ -274,20 +272,17 @@ class ParseTemplate:
         return compile_conf
 
     @staticmethod
-    def parse_oebuild_repo(repos):
+    def parse_repos_list(repos):
         '''
         parse repo json object to OebuildRepo
         '''
-        repo_cict = {}
-        for name, repo in repos.items():
-            try:
-                repo_cict[name] = RepoParam(
-                    remote_url=repo['url'],
-                    version=repo['refspec'])
-            except AttributeError:
-                repo_cict[name] = ""
+        if isinstance(repos, list):
+            return repos
+        repo_list = []
+        for name, _ in repos.items():
+            repo_list.append(name)
 
-        return repo_cict
+        return repo_list
 
 
 def get_docker_param_dict(docker_image, dir_list):
