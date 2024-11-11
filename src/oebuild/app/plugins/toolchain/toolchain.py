@@ -38,6 +38,19 @@ class Toolchain(OebuildCommand):
     description = textwrap.dedent('''\
             The toolchain provides similar functionality to bitbake, allowing
             for the construction of an openEuler cross-toolchain.
+
+            auto        oebuild can fully automate the construction of a cross-compilation
+                        chain, however, you need to specify the architecture of the
+                        cross-compilation chain to be built in toolchain.yaml.
+            setlib      it's for llvm toolchain because it rely on gcc lib
+            upenv       it will cp cross-compile files to toolchain build directory
+            downsource  it will download repos which relies by toolchain
+
+            if you want to build cross compile, follow steps:
+                1, oebuild generate(select build target with gcc)
+                2, cd toolchain build directory
+                3, oebuild toolchain downsource(download relative repos)
+                4, oebuild toolchain aarch64
             ''')
 
     def __init__(self):
@@ -311,6 +324,12 @@ ln -sf ld.lld aarch64-openeuler-linux-gnu-ld
             logger.info("cp cross-tools data to ./")
             src_cross_dir = os.path.join(Configure().source_yocto_dir(), ".oebuild/cross-tools")
             subprocess.run(f'cp -ru  {src_cross_dir}/* ./', shell=True, check=False)
+            # replace MANIFEST param in configs/config.xml
+            replace_manifest = ('sed -i "`grep -n \'MANIFEST=\' configs/config.xml '
+                                '| awk -F \':\' \'{print $1}\'`c MANIFEST=/usr1/openeuler'
+                                '/src/yocto-meta-openeuler/.oebuild/manifest.yaml"'
+                                'configs/config.xml')
+            subprocess.run(replace_manifest, shell=True, check=False)
         else:
             # cp all llvm-toolchain files to build_dir
             logger.info("cp llvm-toolchain data to ./")
