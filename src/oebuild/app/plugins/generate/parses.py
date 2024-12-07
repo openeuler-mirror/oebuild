@@ -145,6 +145,13 @@ def parsers(parser):
                 This parameter is used to indicate whether to build an SDK
                 ''')
 
+    parser.add_argument('--cache_src_dir',
+                        dest='cache_src_dir',
+                        help='''
+        if you want to get src repo from a directory otherwise remote, you can set
+        this parameter
+                ''')
+
     parser.add_argument('--gcc',
                         dest='gcc',
                         action="store_true",

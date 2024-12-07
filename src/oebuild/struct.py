@@ -50,6 +50,7 @@ class CompileLocalParam:
     sstate_mirrors: Optional[str]
     sstate_dir: Optional[str]
     tmp_dir: Optional[str]
+    cache_src_dir: Optional[str]
 
 
 @dataclass

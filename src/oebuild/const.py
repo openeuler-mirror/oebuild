@@ -37,10 +37,12 @@ NATIVE_GCC_MAP = '/usr1/openeuler/native_gcc'
 NATIVE_LLVM_MAP = '/usr1/openeuler/native_llvm'
 SSTATE_MIRRORS_MAP = '/usr1/openeuler/sstate-mirrors'
 SSTATE_DIR_MAP = '/usr1/openeuler/sstate-dir'
+CACHE_SRC_DIR_MAP = '/usr1/openeuler/cache_src'
 
 EXTERNAL_LLVM = "EXTERNAL_TOOLCHAIN_LLVM"
 EXTERNAL_GCC = "EXTERNAL_TOOLCHAIN_GCC"
 EXTERNAL = "EXTERNAL_TOOLCHAIN"
+CACHE_SRC_DIR = "CACHE_SRC_DIR"
 
 # used for bitbake/in_container.py
 BASH_BANNER = '''

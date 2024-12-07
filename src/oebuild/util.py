@@ -298,6 +298,21 @@ def download_repo_from_manifest(repo_list, src_dir, manifest_path):
             repo_git.check_out_version(version=repo_obj.version)
 
 
+def sync_repo_from_cache(repo_list, src_dir, cache_src_dir):
+    '''
+    sync repos from src cache if need
+    '''
+    for repo_name in repo_list:
+        if os.path.exists(f"{src_dir}/{repo_name}"):
+            continue
+        subprocess.run(f"mkdir -p {src_dir}/{repo_name}",
+                       shell=True,
+                       check=True)
+        subprocess.run(f"rsync -a {cache_src_dir}/{repo_name}/ {src_dir}/{repo_name}/",
+                       shell=True,
+                       check=True)
+
+
 def get_docker_image_from_yocto(yocto_dir):
     '''
     determine yocto-meta-openeuler's supported docker image in env.yaml

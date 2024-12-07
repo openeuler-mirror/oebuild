@@ -134,6 +134,7 @@ class ParseCompileParam:
             sstate_mirrors=get_value_from_dict('sstate_mirrors', compile_param_dict, None),
             sstate_dir=get_value_from_dict('sstate_dir', compile_param_dict, None),
             tmp_dir=get_value_from_dict('tmp_dir', compile_param_dict, None),
+            cache_src_dir=get_value_from_dict('cache_src_dir', compile_param_dict, None),
             repos=None if len(repos) == 0 else repos,
             local_conf=get_value_from_dict('local_conf', compile_param_dict, None),
             layers=get_value_from_dict('layers', compile_param_dict, None),

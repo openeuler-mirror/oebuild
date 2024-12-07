@@ -105,6 +105,11 @@ class Bitbake(OebuildCommand):
                                  "yocto-meta-openeuler")
         manifest_path = os.path.join(yocto_dir, ".oebuild/manifest.yaml")
         if compile_param.no_layer is None or compile_param.no_layer is not True:
+            if compile_param.cache_src_dir is not None:
+                oebuild_util.sync_repo_from_cache(
+                    repo_list=compile_param.repos,
+                    src_dir=self.configure.source_dir(),
+                    cache_src_dir=compile_param.cache_src_dir)
             oebuild_util.download_repo_from_manifest(
                 repo_list=compile_param.repos,
                 src_dir=self.configure.source_dir(),

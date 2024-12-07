@@ -17,7 +17,7 @@ from docker.models.containers import Container, ExecResult
 from oebuild.parse_env import ParseEnv
 from oebuild.docker_proxy import DockerProxy
 from oebuild.configure import Configure
-from oebuild.struct import CompileParam, DockerParam
+from oebuild.struct import CompileParam
 from oebuild.m_log import logger
 from oebuild.app.plugins.bitbake.base_build import BaseBuild
 from oebuild.bashrc import Bashrc
@@ -55,32 +55,6 @@ class InContainer(BaseBuild):
         self.bashrc = Bashrc()
         self.bashrc.set_container(container=self.client.get_container(self.container_id))
         self.exec_compile(compile_param=compile_param, command=command)
-
-    def _trans_docker_param(self,
-                            docker_image: str,
-                            toolchain_dir: str = None,
-                            sstate_mirrors: str = None) -> DockerParam:
-        '''
-        this function is to adapt the old compile.yaml
-        '''
-        parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS
-        volumns = []
-        volumns.append("/dev/net/tun:/dev/net/tun")
-        volumns.append(self.configure.source_dir() + ':' + oebuild_const.CONTAINER_SRC)
-        volumns.append(os.getcwd() + ':' +
-                       os.path.join(oebuild_const.CONTAINER_BUILD, os.path.basename(os.getcwd())))
-        if toolchain_dir is not None:
-            volumns.append(toolchain_dir + ":" + oebuild_const.NATIVE_GCC_MAP)
-        if sstate_mirrors is not None:
-            volumns.append(sstate_mirrors + ":" + oebuild_const.SSTATE_MIRRORS)
-
-        docker_param = DockerParam(
-            image=docker_image,
-            parameters=parameters,
-            volumns=volumns,
-            command="bash"
-        )
-        return docker_param
 
     def exec_compile(self, compile_param: CompileParam, command: str = ""):
         '''

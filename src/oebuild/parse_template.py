@@ -194,7 +194,8 @@ class ParseTemplate:
             no_layer=False,
             docker_image: str = None,
             src_dir: str = None,
-            compile_dir: str = None
+            compile_dir: str = None,
+            cache_src_dir: str = None
         '''
         # first param common yaml
         if self.platform_template is None:
@@ -233,6 +234,7 @@ class ParseTemplate:
         compile_conf['build_in'] = param['build_in']
         compile_conf['machine'] = self.platform_template.machine
         compile_conf['toolchain_type'] = self.platform_template.toolchain_type
+        compile_conf['cache_src_dir'] = param['cache_src_dir']
         compile_conf = self._deal_non_essential_compile_conf_param(param, compile_conf)
         compile_conf['no_layer'] = param['no_layer']
         compile_conf['repos'] = repos
@@ -246,6 +248,7 @@ class ParseTemplate:
             docker_image=param['docker_image'],
             dir_list={
                 "src_dir": param['src_dir'],
+                "cache_src_dir": param['cache_src_dir'],
                 "compile_dir": param['compile_dir'],
                 "toolchain_dir": param['toolchain_dir'],
                 "llvm_toolchain_dir": param['llvm_toolchain_dir'],
@@ -312,6 +315,8 @@ def get_docker_param_dict(docker_image, dir_list):
         volumns.append(dir_list['sstate_mirrors'] + ":" + oebuild_const.SSTATE_MIRRORS)
     if 'sstate_dir' in dir_list and dir_list['sstate_dir'] is not None:
         volumns.append(dir_list['sstate_dir'] + ":" + oebuild_const.SSTATE_DIR)
+    if 'cache_src_dir' in dir_list and dir_list['cache_src_dir'] is not None:
+        volumns.append(dir_list['cache_src_dir'] + ":" + oebuild_const.CACHE_SRC_DIR_MAP)
 
     docker_param = {}
     docker_param['image'] = docker_image

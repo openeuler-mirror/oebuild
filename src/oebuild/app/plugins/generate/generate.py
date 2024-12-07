@@ -53,12 +53,15 @@ class Generate(OebuildCommand):
 
     def __init__(self):
         self.configure = Configure()
-        self.nativesdk_dir = None
-        self.toolchain_dir = None
-        self.llvm_toolchain_dir = None
-        self.sstate_mirrors = None
-        self.sstate_dir = None
-        self.tmp_dir = None
+        # params is use for record generate command param, had follow params
+        # nativesdk_dir
+        # toolchain_dir
+        # llvm_toolchain_dir
+        # sstate_mirrors
+        # sstate_dir
+        # tmp_dir
+        # cache_src_dir
+        self.params = {}
         self.oebuild_kconfig_path = os.path.expanduser(
             '~') + '/.local/oebuild_kconfig/'
         super().__init__('generate', self.help_msg, self.description)
@@ -138,19 +141,22 @@ class Generate(OebuildCommand):
             sys.exit(0)
 
         if args.toolchain_dir != '':
-            self.toolchain_dir = args.toolchain_dir
+            self.params['toolchain_dir'] = args.toolchain_dir
 
         if args.llvm_toolchain_dir != '':
-            self.llvm_toolchain_dir = args.llvm_toolchain_dir
+            self.params['llvm_toolchain_dir'] = args.llvm_toolchain_dir
 
         if args.sstate_mirrors is not None:
-            self.sstate_mirrors = args.sstate_mirrors
+            self.params['sstate_mirrors'] = args.sstate_mirrors
 
         if args.sstate_dir is not None:
-            self.sstate_dir = args.sstate_dir
+            self.params['sstate_dir'] = args.sstate_dir
 
         if args.tmp_dir is not None:
-            self.tmp_dir = args.tmp_dir
+            self.params['tmp_dir'] = args.tmp_dir
+
+        if args.cache_src_dir is not None and args.cache_src_dir != '':
+            self.params['cache_src_dir'] = args.cache_src_dir
 
         if args.list:
             self.list_info()
@@ -199,19 +205,20 @@ class Generate(OebuildCommand):
         out_dir = pathlib.Path(os.path.join(build_dir, 'compile.yaml'))
 
         param = parser_template.get_default_generate_compile_conf_param()
-        param['nativesdk_dir'] = self.nativesdk_dir
-        param['toolchain_dir'] = self.toolchain_dir
-        param['llvm_toolchain_dir'] = self.llvm_toolchain_dir
+        param['nativesdk_dir'] = self.params['nativesdk_dir']
+        param['toolchain_dir'] = self.params['toolchain_dir']
+        param['llvm_toolchain_dir'] = self.params['llvm_toolchain_dir']
         param['build_in'] = args.build_in
-        param['sstate_mirrors'] = self.sstate_mirrors
-        param['sstate_dir'] = self.sstate_dir
-        param['tmp_dir'] = self.tmp_dir
+        param['sstate_mirrors'] = self.params['sstate_mirrors']
+        param['sstate_dir'] = self.params['sstate_dir']
+        param['tmp_dir'] = self.params['tmp_dir']
         param['datetime'] = args.datetime
         param['no_fetch'] = args.no_fetch
         param['no_layer'] = args.no_layer
         param['docker_image'] = docker_image
         param['src_dir'] = self.configure.source_dir()
         param['compile_dir'] = build_dir
+        param['cache_src_dir'] = self.params['cache_src_dir']
         oebuild_util.write_yaml(
             out_dir,
             parser_template.generate_compile_conf(param))
@@ -679,6 +686,13 @@ endif
         common_str += ("""
         config COMMON_DATETIME
             string "datetime"
+            default "None"
+            depends on IMAGE
+                       """)
+        # add cache_src_dir directory
+        common_str += ("""
+        config COMMON_CACHE_SRC_DIR
+            string "cache_src_dir     (this param is cache src directory)"
             default "None"
             depends on IMAGE
                        """)

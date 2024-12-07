@@ -122,14 +122,7 @@ class LocalConf:
         compile_param.local_conf = f'{pre_content}\n{compile_param.local_conf}'
         self._add_content_to_local_conf(local_conf=compile_param.local_conf)
 
-    def _deal_other_local_param(self, compile_param: CompileParam, src_dir):
-        pre_content = ""
-        # add MACHINE
-        if compile_param.machine is not None:
-            pre_content += f'MACHINE = "{compile_param.machine}"\n'
-
-        pre_content = self._deal_toolchain_replace(compile_param, pre_content)
-
+    def _deal_llvm_toolchain_dir(self, compile_param: CompileParam):
         # replace llvm toolchain
         if compile_param.llvm_toolchain_dir is not None:
             if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
@@ -139,7 +132,47 @@ class LocalConf:
             else:
                 replace_toolchain_str = f'''
 {oebuild_const.EXTERNAL_LLVM} = "{compile_param.llvm_toolchain_dir}"'''
-            pre_content += replace_toolchain_str + "\n"
+            return replace_toolchain_str
+        return ""
+
+    def _deal_cache_src_dir(self, compile_param: CompileParam):
+        if compile_param.cache_src_dir is not None:
+            if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
+                # check if exists cache_src_dir, map it to build environment
+                replace_cache_src_str = f'''
+{oebuild_const.CACHE_SRC_DIR} = "{oebuild_const.CACHE_SRC_DIR_MAP}"'''
+            else:
+                replace_cache_src_str = f'''
+{oebuild_const.CACHE_SRC_DIR} = "{compile_param.cache_src_dir}"'''
+            return replace_cache_src_str
+        return ""
+
+    def _deal_sstate_mirrors(self, compile_param: CompileParam):
+        # replace sstate_cache
+        if compile_param.sstate_mirrors is not None:
+            if os.path.islink(compile_param.sstate_mirrors):
+                new_str = f"file://.* {compile_param.sstate_mirrors}/PATH;downloadfilename=PATH"
+            else:
+                if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
+                    new_str = f"file://.* file://{oebuild_const.SSTATE_MIRRORS_MAP}/PATH"
+                else:
+                    new_str = f"file://.* file://{compile_param.sstate_mirrors}/PATH"
+            return f'{oebuild_const.SSTATE_MIRRORS} = "{new_str}"'
+        return ""
+
+    def _deal_other_local_param(self, compile_param: CompileParam, src_dir):
+        pre_content = ""
+        # add MACHINE
+        if compile_param.machine is not None:
+            pre_content += f'MACHINE = "{compile_param.machine}"\n'
+
+        pre_content = self._deal_toolchain_replace(compile_param, pre_content)
+
+        pre_content += self._deal_llvm_toolchain_dir(compile_param) + "\n"
+
+        pre_content += self._deal_cache_src_dir(compile_param) + "\n"
+
+        pre_content += self._deal_sstate_mirrors(compile_param) + "\n"
 
         # replace nativesdk OPENEULER_SP_DIR
         if compile_param.build_in == oebuild_const.BUILD_IN_HOST:
@@ -151,17 +184,6 @@ class LocalConf:
 
             pre_content += f'{oebuild_const.NATIVESDK_DIR_NAME} = "{nativesdk_sys_dir}"\n'
             pre_content += f'{oebuild_const.OPENEULER_SP_DIR} = "{src_dir}"\n'
-
-        # replace sstate_cache
-        if compile_param.sstate_mirrors is not None:
-            if os.path.islink(compile_param.sstate_mirrors):
-                new_str = f"file://.* {compile_param.sstate_mirrors}/PATH;downloadfilename=PATH"
-            else:
-                if compile_param.build_in == oebuild_const.BUILD_IN_DOCKER:
-                    new_str = f"file://.* file://{oebuild_const.SSTATE_MIRRORS_MAP}/PATH"
-                else:
-                    new_str = f"file://.* file://{compile_param.sstate_mirrors}/PATH"
-            pre_content += f'{oebuild_const.SSTATE_MIRRORS} = "{new_str}"\n'
 
         # replace sstate_dir
         if compile_param.sstate_dir is not None:
