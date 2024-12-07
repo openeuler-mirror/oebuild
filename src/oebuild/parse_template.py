@@ -300,6 +300,20 @@ def get_docker_param_dict(docker_image, dir_list):
     sstate_dir
     '''
     parameters = oebuild_const.DEFAULT_CONTAINER_PARAMS
+
+    docker_param = {}
+    docker_param['image'] = docker_image
+    docker_param['parameters'] = parameters
+    docker_param['volumns'] = get_docker_volumns(dir_list)
+    docker_param['command'] = "bash"
+
+    return docker_param
+
+
+def get_docker_volumns(dir_list):
+    '''
+    translate the dir_dict to volumns list
+    '''
     volumns = []
     volumns.append("/dev/net/tun:/dev/net/tun")
     if 'src_dir' in dir_list and dir_list['src_dir'] is not None:
@@ -317,14 +331,7 @@ def get_docker_param_dict(docker_image, dir_list):
         volumns.append(dir_list['sstate_dir'] + ":" + oebuild_const.SSTATE_DIR)
     if 'cache_src_dir' in dir_list and dir_list['cache_src_dir'] is not None:
         volumns.append(dir_list['cache_src_dir'] + ":" + oebuild_const.CACHE_SRC_DIR_MAP)
-
-    docker_param = {}
-    docker_param['image'] = docker_image
-    docker_param['parameters'] = parameters
-    docker_param['volumns'] = volumns
-    docker_param['command'] = "bash"
-
-    return docker_param
+    return volumns
 
 
 def parse_repos_layers_local_obj(common_yaml_path):

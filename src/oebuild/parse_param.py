@@ -83,6 +83,7 @@ class ParseCompileParam:
         build_in: str
         machine: str
         toolchain_type: str
+        cache_src_dir: str
         no_layer: Optional[bool]
         repos: Optional[list]
         layers: Optional[list]
@@ -150,6 +151,8 @@ class ParseCompileParam:
         compile_obj['build_in'] = compile_param.build_in
         compile_obj['machine'] = compile_param.machine
         compile_obj['toolchain_type'] = compile_param.toolchain_type
+        if compile_param.cache_src_dir is not None:
+            compile_obj['cache_src_dir'] = compile_param.cache_src_dir
         if compile_param.no_layer is not None:
             compile_obj['no_layer'] = compile_param.no_layer
         if compile_param.toolchain_dir is not None:

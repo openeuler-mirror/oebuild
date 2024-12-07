@@ -140,6 +140,9 @@ class Generate(OebuildCommand):
             self._print_toolchain(build_dir=build_dir)
             sys.exit(0)
 
+        if args.nativesdk_dir != '':
+            self.params['nativesdk_dir'] = args.nativesdk_dir
+
         if args.toolchain_dir != '':
             self.params['toolchain_dir'] = args.toolchain_dir
 
@@ -205,20 +208,20 @@ class Generate(OebuildCommand):
         out_dir = pathlib.Path(os.path.join(build_dir, 'compile.yaml'))
 
         param = parser_template.get_default_generate_compile_conf_param()
-        param['nativesdk_dir'] = self.params['nativesdk_dir']
-        param['toolchain_dir'] = self.params['toolchain_dir']
-        param['llvm_toolchain_dir'] = self.params['llvm_toolchain_dir']
+        param['nativesdk_dir'] = self.params.get('nativesdk_dir', None)
+        param['toolchain_dir'] = self.params.get('toolchain_dir', None)
+        param['llvm_toolchain_dir'] = self.params.get('llvm_toolchain_dir', None)
         param['build_in'] = args.build_in
-        param['sstate_mirrors'] = self.params['sstate_mirrors']
-        param['sstate_dir'] = self.params['sstate_dir']
-        param['tmp_dir'] = self.params['tmp_dir']
+        param['sstate_mirrors'] = self.params.get('sstate_mirrors', None)
+        param['sstate_dir'] = self.params.get('sstate_dir', None)
+        param['tmp_dir'] = self.params.get('tmp_dir', None)
         param['datetime'] = args.datetime
         param['no_fetch'] = args.no_fetch
         param['no_layer'] = args.no_layer
         param['docker_image'] = docker_image
         param['src_dir'] = self.configure.source_dir()
         param['compile_dir'] = build_dir
-        param['cache_src_dir'] = self.params['cache_src_dir']
+        param['cache_src_dir'] = self.params.get('cache_src_dir', None)
         oebuild_util.write_yaml(
             out_dir,
             parser_template.generate_compile_conf(param))

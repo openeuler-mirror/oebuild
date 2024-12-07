@@ -25,6 +25,7 @@ from oebuild.version import __version__
 from oebuild.spec import get_spec, _ExtCommand
 from oebuild.command import OebuildCommand
 from oebuild.oebuild_parser import OebuildArgumentParser, OebuildHelpAction
+from oebuild.parse_template import get_docker_volumns
 
 APP = "app"
 
@@ -277,6 +278,13 @@ or
                 self.compile_param.docker_param.volumns.append(
                     f"{os.path.abspath(self.build_dir)}:{volumn_dir}"
                 )
+            self.compile_param.docker_param.volumns.extend(get_docker_volumns({
+                "cache_src_dir": self.compile_param.cache_src_dir,
+                "toolchain_dir": self.compile_param.toolchain_dir,
+                "llvm_toolchain_dir": self.compile_param.llvm_toolchain_dir,
+                "sstate_mirrors": self.compile_param.sstate_mirrors,
+                "sstate_dir": self.compile_param.sstate_dir
+            }))
         compile_param_dict = ParseCompileParam().parse_to_dict(compile_param=self.compile_param)
         compile_yaml_path = os.path.join(self.build_dir, "compile.yaml")
         oebuild_util.write_yaml(yaml_path=compile_yaml_path, data=compile_param_dict)
