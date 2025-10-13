@@ -165,13 +165,7 @@ class Generate(OebuildCommand):
             self.list_info()
             sys.exit(0)
 
-        build_dir = self._init_build_dir(args=args)
-
-        if build_dir is None:
-            sys.exit(1)
-
         parser_template = ParseTemplate(yocto_dir=yocto_dir)
-
         yocto_oebuild_dir = os.path.join(yocto_dir, '.oebuild')
 
         try:
@@ -196,6 +190,11 @@ class Generate(OebuildCommand):
         except ValueError as v_e:
             logger.error(str(v_e))
             sys.exit(-1)
+
+        build_dir = self._init_build_dir(args=args)
+
+        if build_dir is None:
+            sys.exit(1)
 
         if os.path.exists(os.path.join(build_dir, 'compile.yaml')):
             os.remove(os.path.join(build_dir, 'compile.yaml'))
