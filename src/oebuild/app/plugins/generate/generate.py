@@ -82,7 +82,8 @@ class Generate(OebuildCommand):
         yocto_dir = self.configure.source_yocto_dir()
         if not self.check_support_oebuild(yocto_dir):
             logger.error(
-                'yocto-meta-openeuler does not container valid oebuild metadata '
+                'yocto-meta-openeuler does not container valid '
+                'oebuild metadata '
                 'Update .oebuild/config and re-run `oebuild update`.')
             sys.exit(-1)
 
@@ -204,7 +205,8 @@ class Generate(OebuildCommand):
         param = parser_template.get_default_generate_compile_conf_param()
         param['nativesdk_dir'] = self.params.get('nativesdk_dir', None)
         param['toolchain_dir'] = self.params.get('toolchain_dir', None)
-        param['llvm_toolchain_dir'] = self.params.get('llvm_toolchain_dir', None)
+        param['llvm_toolchain_dir'] = self.params.get(
+            'llvm_toolchain_dir', None)
         param['build_in'] = args.build_in
         param['sstate_mirrors'] = self.params.get('sstate_mirrors', None)
         param['sstate_dir'] = self.params.get('sstate_dir', None)
@@ -267,7 +269,8 @@ oebuild toolchain
     def _add_platform_template(self, args, yocto_oebuild_dir,
                                parser_template: ParseTemplate):
         platform_path = pathlib.Path(yocto_oebuild_dir, 'platform')
-        platform_files = [f.name for f in platform_path.iterdir() if f.is_file()]
+        platform_files = [
+            f.name for f in platform_path.iterdir() if f.is_file()]
         if args.platform + '.yaml' in platform_files:
             try:
                 platform_file = platform_path / (args.platform + '.yaml')
@@ -276,14 +279,16 @@ oebuild toolchain
                 raise e_p
         else:
             logger.error(
-                "Invalid platform. Run `oebuild generate -l` to list supported platforms.")
+                "Invalid platform. Run `oebuild generate -l` "
+                "to list supported platforms.")
             sys.exit(-1)
 
     def _add_features_template(self, args, yocto_oebuild_dir,
                                parser_template: ParseTemplate):
         if args.features:
             features_path = pathlib.Path(yocto_oebuild_dir, 'features')
-            feature_files = [f.name for f in features_path.iterdir() if f.is_file()]
+            feature_files = [
+                f.name for f in features_path.iterdir() if f.is_file()]
             for feature in args.features:
                 if feature + '.yaml' in feature_files:
                     try:
@@ -293,7 +298,8 @@ oebuild toolchain
                         raise b_t
                 else:
                     logger.error(
-                        "Invalid feature. Run `oebuild generate -l` to list features.")
+                        "Invalid feature. Run `oebuild generate -l` "
+                        "to list features.")
                     sys.exit(-1)
 
     def _init_build_dir(self, args):
@@ -306,7 +312,8 @@ oebuild toolchain
         else:
             build_dir = build_dir_path / args.directory
 
-        if not pathlib.Path(build_dir).absolute().is_relative_to(build_dir_path.absolute()):
+        if not pathlib.Path(build_dir).absolute().is_relative_to(
+                build_dir_path.absolute()):
             logger.error("Build path must in oebuild workspace")
             return None
 
@@ -315,9 +322,11 @@ oebuild toolchain
             logger.warning("the build directory %s already exists", build_dir)
             while not args.yes:
                 in_res = input(f"""
-    Overwrite {build_dir.name}? This will replace compile.yaml/toolchain.yaml and delete conf/
+    Overwrite {build_dir.name}? This will replace "
+    "compile.yaml/toolchain.yaml and delete conf/
     Enter Y=yes, N=no, C=create : """)
-                if in_res not in ["Y", "y", "yes", "N", "n", "no", "C", "c", "create"]:
+                if in_res not in ["Y", "y", "yes", "N", "n", "no",
+                                  "C", "c", "create"]:
                     print("Invalid input")
                     continue
                 if in_res in ['N', 'n', 'no']:
@@ -351,7 +360,8 @@ oebuild toolchain
         yocto_oebuild_dir = pathlib.Path(yocto_dir, ".oebuild")
         platform_path = pathlib.Path(yocto_oebuild_dir, 'platform')
         list_platform = [f for f in platform_path.iterdir() if f.is_file()]
-        table = self._build_table(['Platform Name'], terminal_width, title='Available Platforms')
+        table = self._build_table(
+            ['Platform Name'], terminal_width, title='Available Platforms')
         for platform in list_platform:
             if platform.suffix in ['.yml', '.yaml']:
                 table.add_row([platform.stem])
@@ -370,7 +380,8 @@ oebuild toolchain
             table.add_row([feature_name, feature_data.get('support') or "all"])
         print(table)
         logger.info(
-            """* 'Supported Arch' defaults to 'all' if not specified in the feature's .yaml file."""
+            """* 'Supported Arch' defaults to 'all' if not "
+            "specified in the feature's .yaml file."""
         )
 
     def _build_table(self, headers, terminal_width, title=None):
@@ -384,7 +395,8 @@ oebuild toolchain
         for header in headers:
             table.max_width[header] = col_width
 
-        is_narrow = terminal_width < narrow_charnum or col_width < narrow_colnum
+        is_narrow = (terminal_width < narrow_charnum or
+                     col_width < narrow_colnum)
         if is_narrow:
             table.set_style(TableStyle.MSWORD_FRIENDLY)
             table.hrules = HRuleStyle.FRAME
@@ -435,7 +447,8 @@ oebuild toolchain
         gcc = re.search(r"(?<=CONFIG_GCC-TOOLCHAIN).*(?==y)", content)
         gcc_list = re.findall(r"(?<=CONFIG_GCC-TOOLCHAIN_).*(?==y)", content)
         llvm = re.search(r"(?<=CONFIG_LLVM-TOOLCHAIN).*(?==y)", content)
-        llvm_lib = re.search(r"(?<=CONFIG_LLVM-TOOLCHAIN_AARCH64-LIB).*", content)
+        llvm_lib = re.search(
+            r"(?<=CONFIG_LLVM-TOOLCHAIN_AARCH64-LIB).*", content)
         auto_build = re.search(r"(?<=CONFIG_AUTO-BUILD).*(?==y)", content)
         g_command = []
         for basic in common_list:
@@ -493,7 +506,8 @@ oebuild toolchain
         compile_yaml_path = f"{compile_dir}/compile.yaml"
         common_yaml_path = os.path.join(
             self.configure.source_yocto_dir(), '.oebuild/common.yaml')
-        repos, layers, local_conf = parse_repos_layers_local_obj(common_yaml_path)
+        repos, layers, local_conf = parse_repos_layers_local_obj(
+            common_yaml_path)
         info = {
             'repos': repos,
             'layers': layers,
@@ -526,7 +540,9 @@ oebuild toolchain
         oebuild_util.write_yaml(compile_yaml_path, info)
         if auto_build:
             os.chdir(compile_dir)
-            subprocess.run('oebuild bitbake buildtools-extended-tarball', shell=True, check=False)
+            subprocess.run(
+                'oebuild bitbake buildtools-extended-tarball',
+                shell=True, check=False)
 
     def build_gcc(self, build_dir, gcc_name_list, auto_build):
         """
@@ -538,14 +554,17 @@ oebuild toolchain
         Returns:
 
         """
-        source_cross_dir = pathlib.Path(self.configure.source_yocto_dir(), ".oebuild/cross-tools")
+        source_cross_dir = pathlib.Path(
+            self.configure.source_yocto_dir(), ".oebuild/cross-tools")
         if not source_cross_dir.exists():
-            logger.error('Build dependency not downloaded, not supported for build. Please '
-                         'download the latest yocto meta openeuler repository')
+            logger.error('Build dependency not downloaded, not supported '
+                         'for build. Please download the latest yocto '
+                         'meta openeuler repository')
             sys.exit(-1)
         # add toolchain.yaml to compile
         docker_param = get_docker_param_dict(
-            docker_image=get_sdk_docker_image(yocto_dir=self.configure.source_yocto_dir()),
+            docker_image=get_sdk_docker_image(
+                yocto_dir=self.configure.source_yocto_dir()),
             dir_list={
                 "src_dir": self.configure.source_dir(),
                 "compile_dir": build_dir,
@@ -601,14 +620,17 @@ oebuild toolchain
         Returns:
 
         """
-        source_llvm_dir = pathlib.Path(self.configure.source_yocto_dir(), ".oebuild/llvm-toolchain")
+        source_llvm_dir = pathlib.Path(
+            self.configure.source_yocto_dir(), ".oebuild/llvm-toolchain")
         if not source_llvm_dir.exists():
-            logger.error('Build dependency not downloaded, not supported for build. Please '
-                         'download the latest yocto meta openeuler repository')
+            logger.error('Build dependency not downloaded, not supported '
+                         'for build. Please download the latest yocto '
+                         'meta openeuler repository')
             sys.exit(-1)
         # add toolchain.yaml to compile
         docker_param = get_docker_param_dict(
-            docker_image=get_sdk_docker_image(yocto_dir=self.configure.source_yocto_dir()),
+            docker_image=get_sdk_docker_image(
+                yocto_dir=self.configure.source_yocto_dir()),
             dir_list={
                 "src_dir": self.configure.source_dir(),
                 "compile_dir": build_dir,
@@ -651,9 +673,11 @@ oebuild toolchain
 
 def get_docker_image(yocto_dir, docker_tag, configure: Configure):
     '''
-    Resolve docker image from env, config defaults, or user selection, ordered by priority
+    Resolve docker image from env, config defaults, or user "
+    "selection, ordered by priority
     '''
-    docker_image = oebuild_util.get_docker_image_from_yocto(yocto_dir=yocto_dir)
+    docker_image = oebuild_util.get_docker_image_from_yocto(
+        yocto_dir=yocto_dir)
     if docker_image is None:
         check_docker_tag = CheckDockerTag(docker_tag, configure)
         oebuild_config = configure.parse_oebuild_config()
@@ -687,7 +711,8 @@ def get_sdk_docker_image(yocto_dir):
     '''
     get toolchain docker image
     '''
-    docker_image = oebuild_util.get_sdk_docker_image_from_yocto(yocto_dir=yocto_dir)
+    docker_image = oebuild_util.get_sdk_docker_image_from_yocto(
+        yocto_dir=yocto_dir)
     if docker_image is None:
         docker_image = oebuild_const.DEFAULT_SDK_DOCKER
     return docker_image
