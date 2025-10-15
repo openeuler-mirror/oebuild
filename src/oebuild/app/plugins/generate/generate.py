@@ -165,8 +165,10 @@ class Generate(OebuildCommand):
             self.list_info()
             sys.exit(0)
 
+
         parser_template = ParseTemplate(yocto_dir=yocto_dir)
-        yocto_oebuild_dir = os.path.join(yocto_dir, '.oebuild')
+
+        yocto_oebuild_dir = pathlib.Path(yocto_dir, '.oebuild')
 
         try:
             self._add_platform_template(args=args,
@@ -196,15 +198,14 @@ class Generate(OebuildCommand):
         if build_dir is None:
             sys.exit(1)
 
-        if os.path.exists(os.path.join(build_dir, 'compile.yaml')):
-            os.remove(os.path.join(build_dir, 'compile.yaml'))
+        compile_yaml_path = pathlib.Path(build_dir, 'compile.yaml')
+        if compile_yaml_path.exists():
+            compile_yaml_path.unlink()
 
         docker_image = get_docker_image(
                 yocto_dir=self.configure.source_yocto_dir(),
                 docker_tag='',
                 configure=self.configure)
-
-        out_dir = pathlib.Path(os.path.join(build_dir, 'compile.yaml'))
 
         param = parser_template.get_default_generate_compile_conf_param()
         param['nativesdk_dir'] = self.params.get('nativesdk_dir', None)
@@ -222,7 +223,7 @@ class Generate(OebuildCommand):
         param['compile_dir'] = build_dir
         param['cache_src_dir'] = self.params.get('cache_src_dir', None)
         oebuild_util.write_yaml(
-            out_dir,
+            compile_yaml_path,
             parser_template.generate_compile_conf(param))
 
         self._print_generate(build_dir=build_dir)
@@ -271,12 +272,12 @@ oebuild toolchain
 
     def _add_platform_template(self, args, yocto_oebuild_dir,
                                parser_template: ParseTemplate):
-        if args.platform + '.yaml' in os.listdir(
-                os.path.join(yocto_oebuild_dir, 'platform')):
+        platform_path = pathlib.Path(yocto_oebuild_dir, 'platform')
+        platform_files = [f.name for f in platform_path.iterdir() if f.is_file()]
+        if args.platform + '.yaml' in platform_files:
             try:
-                parser_template.add_template(
-                    os.path.join(yocto_oebuild_dir, 'platform',
-                                 args.platform + '.yaml'))
+                platform_file = platform_path / (args.platform + '.yaml')
+                parser_template.add_template(platform_file)
             except BaseParseTemplate as e_p:
                 raise e_p
         else:
@@ -287,13 +288,13 @@ wrong platform, please run `oebuild generate -l` to view support platform""")
     def _add_features_template(self, args, yocto_oebuild_dir,
                                parser_template: ParseTemplate):
         if args.features:
+            features_path = pathlib.Path(yocto_oebuild_dir, 'features')
+            feature_files = [f.name for f in features_path.iterdir() if f.is_file()]
             for feature in args.features:
-                if feature + '.yaml' in os.listdir(
-                        os.path.join(yocto_oebuild_dir, 'features')):
+                if feature + '.yaml' in feature_files:
                     try:
-                        parser_template.add_template(
-                            os.path.join(yocto_oebuild_dir, 'features',
-                                         feature + '.yaml'))
+                        feature_file = features_path / (feature + '.yaml')
+                        parser_template.add_template(feature_file)
                     except BaseParseTemplate as b_t:
                         raise b_t
                 else:
@@ -302,26 +303,25 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
                     sys.exit(-1)
 
     def _init_build_dir(self, args):
-        if not os.path.exists(self.configure.build_dir()):
-            os.makedirs(self.configure.build_dir())
+        build_dir_path = pathlib.Path(self.configure.build_dir())
+        if not build_dir_path.exists():
+            build_dir_path.mkdir(parents=True)
 
         if args.directory is None or args.directory == '':
-            build_dir = os.path.join(self.configure.build_dir(), args.platform)
+            build_dir = build_dir_path / args.platform
         else:
-            build_dir = os.path.join(self.configure.build_dir(),
-                                     args.directory)
+            build_dir = build_dir_path / args.directory
 
-        if not os.path.abspath(build_dir).startswith(
-                self.configure.build_dir()):
+        if not pathlib.Path(build_dir).absolute().is_relative_to(build_dir_path.absolute()):
             logger.error("Build path must in oebuild workspace")
             return None
 
         # detects if a build directory already exists
-        if os.path.exists(build_dir):
+        if build_dir.exists():
             logger.warning("the build directory %s already exists", build_dir)
             while not args.yes:
                 in_res = input(f"""
-    do you want to overwrite it({os.path.basename(build_dir)})? the overwrite action
+    do you want to overwrite it({build_dir.name})? the overwrite action
     will replace the compile.yaml or toolchain.yaml to new and delete conf directory,
     enter Y for yes, N for no, C for create:""")
                 if in_res not in ["Y", "y", "yes", "N", "n", "no", "C", "c", "create"]:
@@ -333,16 +333,17 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
                 if in_res in ['C', 'c', 'create']:
                     in_res = input("""
     please enter now build name, we will create it under build directory:""")
-                    build_dir = os.path.join(self.configure.build_dir(), in_res)
-                    if os.path.exists(build_dir):
+                    build_dir = build_dir_path / in_res
+                    if build_dir.exists():
                         continue
                 break
-            if os.path.exists(os.path.join(build_dir, "conf")):
-                rmtree(os.path.join(build_dir, "conf"))
-            elif os.path.exists(build_dir):
+            conf_dir = build_dir / "conf"
+            if conf_dir.exists():
+                rmtree(conf_dir)
+            elif build_dir.exists():
                 rmtree(build_dir)
-        os.makedirs(build_dir, exist_ok=True)
-        return build_dir
+        build_dir.mkdir(parents=True, exist_ok=True)
+        return str(build_dir)
 
     def list_info(self, ):
         '''
@@ -354,44 +355,81 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
     def _list_platform(self):
         logger.info("=============================================")
         yocto_dir = self.configure.source_yocto_dir()
-        yocto_oebuild_dir = os.path.join(yocto_dir, ".oebuild")
-        list_platform = os.listdir(os.path.join(yocto_oebuild_dir, 'platform'))
+        yocto_oebuild_dir = pathlib.Path(yocto_dir, ".oebuild")
+        platform_path = pathlib.Path(yocto_oebuild_dir, 'platform')
+        list_platform = [f for f in platform_path.iterdir() if f.is_file()]
         print("the platform list is:")
         table = PrettyTable(['platform name'])
         table.align = "l"
         for platform in list_platform:
-            if platform.endswith('.yml'):
-                table.add_row([platform.replace('.yml', '')])
-            if platform.endswith('.yaml'):
-                table.add_row([platform.replace('.yaml', '')])
+            if platform.suffix in ['.yml', '.yaml']:
+                table.add_row([platform.stem])
         print(table)
 
-    def _list_feature(self, ):
+    def _list_feature(self):
         yocto_dir = self.configure.source_yocto_dir()
-        yocto_oebuild_dir = os.path.join(yocto_dir, ".oebuild")
-        list_feature = os.listdir(os.path.join(yocto_oebuild_dir, 'features'))
+        yocto_oebuild_dir = pathlib.Path(yocto_dir, ".oebuild")
+        feature_triples = self.resolve_feature_files(yocto_oebuild_dir)
         print("the feature list is:")
         table = PrettyTable(['feature name', 'support arch'])
         table.align = "l"
-        for feature in list_feature:
-            feature_name = feature.replace('.yml', '')
-            if feature.endswith('.yaml'):
-                feature_name = feature.replace('.yaml', '')
-            feat = oebuild_util.read_yaml(
-                pathlib.Path(
-                    os.path.join(yocto_oebuild_dir, 'features', feature)))
-            if "support" in feat:
-                table.add_row([feature_name, feat.get('support')])
-            else:
-                table.add_row([feature_name, "all"])
+        for feature_name, _, feature_data in feature_triples:
+            table.add_row([feature_name, feature_data.get('support') or "all"])
         print(table)
+
+    @staticmethod
+    def resolve_feature_files(oebuild_dir):
+        """
+        both yaml and yml are supported, but yaml is preferred
+        """
+
+        feature_dir = pathlib.Path(oebuild_dir, 'features')
+        if not feature_dir.exists():
+            logger.error("features directory does not exist under oebuild meta directory ")
+            sys.exit(-1)
+        
+        # Group files by base name to handle priority
+        file_groups = {}
+        
+        for ft_path in feature_dir.iterdir():
+            if ft_path.is_file():
+                if ft_path.suffix == '.yaml':
+                    feature_name = ft_path.stem
+                    if feature_name not in file_groups:
+                        file_groups[feature_name] = {'yaml': None, 'yml': None}
+                    file_groups[feature_name]['yaml'] = ft_path
+                elif ft_path.suffix == '.yml':
+                    feature_name = ft_path.stem
+                    if feature_name not in file_groups:
+                        file_groups[feature_name] = {'yaml': None, 'yml': None}
+                    file_groups[feature_name]['yml'] = ft_path
+        
+        features = []
+        for feature_name, extensions in file_groups.items():
+            # Prefer .yaml over .yml
+            selected_file = extensions['yaml'] or extensions['yml']
+            if selected_file:
+                try:
+                    feature_data = oebuild_util.read_yaml(selected_file)
+                    if not isinstance(feature_data, dict):
+                        logger.warning(f"not valid yaml key:value format {feature_name}")
+                        continue
+                    features.append((feature_name, selected_file, feature_data))
+                except Exception as e:
+                    fname = selected_file.name
+                    logger.warning(f"""
+    parse feature file '{fname}' failed, error {e}. 
+    """)
+                    continue
+        
+        return features
 
     def check_support_oebuild(self, yocto_dir):
         '''
         Determine if OeBuild is supported by checking if .oebuild
         exists in the yocto-meta-openeuler directory
         '''
-        return os.path.exists(os.path.join(yocto_dir, '.oebuild'))
+        return pathlib.Path(yocto_dir, '.oebuild').exists()
 
     def create_kconfig(self, yocto_dir):
         """
@@ -399,7 +437,7 @@ Wrong platform, please run `oebuild generate -l` to view support feature""")
         Returns:
 
         """
-        yocto_oebuild_dir = os.path.join(yocto_dir, '.oebuild')
+        yocto_oebuild_dir = pathlib.Path(yocto_dir, '.oebuild')
         write_data = ""
 
         target_list_data, gcc_toolchain_data, llvm_toolchain_data = \
@@ -433,7 +471,7 @@ endif
 
         with open(kconfig_path, 'w', encoding='utf-8') as kconfig_file:
             kconfig_file.write(write_data)
-        kconf = Kconfig(filename=kconfig_path)
+        kconf = Kconfig(filename=str(kconfig_path))
         os.environ["MENUCONFIG_STYLE"] = "aquatic selection=fg:white,bg:blue"
         with oebuild_util.suppress_print():
             menuconfig(kconf)
@@ -478,9 +516,10 @@ endif
         Returns:
 
         """
-        platform_path = os.path.join(yocto_oebuild_dir, 'platform')
-        if os.path.exists(platform_path):
-            platform_list = os.listdir(platform_path)
+        platform_path = pathlib.Path(yocto_oebuild_dir, 'platform')
+        if platform_path.exists():
+            platform_files = [f for f in platform_path.iterdir() 
+            if f.is_file() and f.suffix in ['.yml', '.yaml']]
         else:
             logger.error('platform dir is not exists')
             sys.exit(-1)
@@ -494,8 +533,8 @@ endif
         platform_end = """
         endchoice
         endif"""
-        for platform in platform_list:
-            platform_name = os.path.splitext(platform)[0].strip("\n")
+        for platform in platform_files:
+            platform_name = platform.stem.strip("\n")
             platform_info = (
                 f"""    config PLATFORM_{platform_name.upper()}\n"""
                 f"""        bool "{platform_name}"\n\n""")
@@ -512,32 +551,39 @@ endif
         Returns:
 
         """
-        feature_path = os.path.join(yocto_oebuild_dir, 'features')
-        if os.path.exists(feature_path):
-            feature_list = os.listdir(feature_path)
-        else:
-            logger.error('feature dir is not exists')
-            sys.exit(-1)
+
         feature_start = """
         if IMAGE
         comment "this is choose OS features"
         """
-        for feature in feature_list:
+
+        feature_triples = self.resolve_feature_files(yocto_oebuild_dir)
+        for feature_name, _, feature_data in feature_triples:
             support_str = ""
-            feature_path = pathlib.Path(yocto_oebuild_dir, 'features', feature)
-            feature_data = oebuild_util.read_yaml(feature_path)
-            feature_name = os.path.splitext(feature)[0].strip("\n")
             if 'support' in feature_data:
-                support_str = ("if PLATFORM_" +
-                               feature_data['support'].upper().replace(
-                                   '|', '||PLATFORM_'))
+                raw_supports = feature_data['support']
+                validated_support_str = self._validate_and_format_platforms(
+                    raw_supports)
+                if validated_support_str:
+                    support_str = validated_support_str
+                else:
+                    logger.warning(f"""{feature_name} support platform 
+                                   {raw_supports} is invalid""")
 
             feature_info = (f"""\nconfig FEATURE_{feature_name.upper()}\n"""
                             f"""    bool "{feature_name}" {support_str}\n\n""")
             feature_start += feature_info
         feature_start += "endif"
-
         return feature_start
+
+    def _validate_and_format_platforms(self, raw_str: str):
+        import re
+        platforms = re.split(r'[|,，\s]+', raw_str)
+        platforms = [p.strip() for p in platforms if p.strip()]
+        if not platforms:
+            return ""
+        platform_cond = [f"PLATFORM_{p.upper()}" for p in platforms]
+        return "if " + "||".join(platform_cond)
 
     def _kconfig_add_gcc_toolchain(self, yocto_oebuild_dir):
         """
@@ -549,20 +595,22 @@ endif
 
         """
         toolchain_start = ""
-        cross_dir = os.path.join(yocto_oebuild_dir, "cross-tools")
-        if os.path.exists(cross_dir):
-            toolchain_list = os.listdir(os.path.join(cross_dir, 'configs'))
-            toolchain_start += """
+        cross_dir = pathlib.Path(yocto_oebuild_dir, "cross-tools")
+        if cross_dir.exists():
+            configs_dir = cross_dir / 'configs'
+            if configs_dir.exists():
+                toolchain_list = os.listdir(configs_dir)
+                toolchain_start += """
             if GCC-TOOLCHAIN
             """
-            for config in toolchain_list:
-                if not re.search('xml', config):
-                    toolchain_info = (
-                        f"""\nconfig GCC-TOOLCHAIN_{config.upper().lstrip("CONFIG_")}\n"""
-                        f"""    bool "{config.upper().lstrip("CONFIG_")}"\n"""
-                        """     depends on GCC-TOOLCHAIN\n""")
-                    toolchain_start += toolchain_info
-            toolchain_start += "endif"
+                for config in toolchain_list:
+                    if not re.search('xml', config):
+                        toolchain_info = (
+                            f"""\nconfig GCC-TOOLCHAIN_{config.upper().lstrip("CONFIG_")}\n"""
+                            f"""    bool "{config.upper().lstrip("CONFIG_")}"\n"""
+                            """     depends on GCC-TOOLCHAIN\n""")
+                        toolchain_start += toolchain_info
+                toolchain_start += "endif"
         return toolchain_start
 
     def _kconfig_add_llvm_toolchain(self, yocto_oebuild_dir):
@@ -575,8 +623,8 @@ endif
 
         """
         toolchain_start = ""
-        llvm_dir = os.path.join(yocto_oebuild_dir, "llvm-toolchain")
-        if os.path.exists(llvm_dir):
+        llvm_dir = pathlib.Path(yocto_oebuild_dir, "llvm-toolchain")
+        if llvm_dir.exists():
             toolchain_start += """
                 config LLVM-TOOLCHAIN_AARCH64-LIB
                     string "aarch64 lib dir"
@@ -594,8 +642,8 @@ endif
         Returns:
 
         """
-        nativesdk_dir = os.path.join(yocto_oebuild_dir, "nativesdk")
-        return os.path.exists(nativesdk_dir)
+        nativesdk_dir = pathlib.Path(yocto_oebuild_dir, "nativesdk")
+        return nativesdk_dir.exists()
 
     def _kconfig_add_common_config(self,):
         """
@@ -830,8 +878,8 @@ endif
         Returns:
 
         """
-        source_cross_dir = os.path.join(self.configure.source_yocto_dir(), ".oebuild/cross-tools")
-        if not os.path.exists(source_cross_dir):
+        source_cross_dir = pathlib.Path(self.configure.source_yocto_dir(), ".oebuild/cross-tools")
+        if not source_cross_dir.exists():
             logger.error('Build dependency not downloaded, not supported for build. Please '
                          'download the latest yocto meta openeuler repository')
             sys.exit(-1)
@@ -853,7 +901,7 @@ endif
                 continue
             config_list.append("config_" + gcc_name)
         oebuild_util.write_yaml(
-            yaml_path=os.path.join(build_dir, 'toolchain.yaml'),
+            yaml_path=pathlib.Path(build_dir, 'toolchain.yaml'),
             data={
                 'kind': oebuild_const.GCC_TOOLCHAIN,
                 'gcc_configs': config_list,
@@ -893,8 +941,8 @@ endif
         Returns:
 
         """
-        source_llvm_dir = os.path.join(self.configure.source_yocto_dir(), ".oebuild/llvm-toolchain")
-        if not os.path.exists(source_llvm_dir):
+        source_llvm_dir = pathlib.Path(self.configure.source_yocto_dir(), ".oebuild/llvm-toolchain")
+        if not source_llvm_dir.exists():
             logger.error('Build dependency not downloaded, not supported for build. Please '
                          'download the latest yocto meta openeuler repository')
             sys.exit(-1)
@@ -910,7 +958,7 @@ endif
                 }
             )
         oebuild_util.write_yaml(
-            yaml_path=os.path.join(build_dir, 'toolchain.yaml'),
+            yaml_path=pathlib.Path(build_dir, 'toolchain.yaml'),
             data={
                 'kind': oebuild_const.LLVM_TOOLCHAIN,
                 'llvm_lib': llvm_lib,
