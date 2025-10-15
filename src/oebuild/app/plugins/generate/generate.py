@@ -518,8 +518,8 @@ endif
         """
         platform_path = pathlib.Path(yocto_oebuild_dir, 'platform')
         if platform_path.exists():
-            platform_files = [f for f in platform_path.iterdir() 
-            if f.is_file() and f.suffix in ['.yml', '.yaml']]
+            platform_files = [f for f in platform_path.iterdir()
+                             if f.is_file() and f.suffix in ['.yml', '.yaml']]
         else:
             logger.error('platform dir is not exists')
             sys.exit(-1)
