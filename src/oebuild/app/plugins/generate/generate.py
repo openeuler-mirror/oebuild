@@ -19,7 +19,7 @@ import sys
 import pathlib
 from shutil import rmtree
 
-from prettytable import PrettyTable
+from prettytable import PrettyTable, TableStyle, HRuleStyle, VRuleStyle
 from ruamel.yaml.scalarstring import LiteralScalarString
 
 from oebuild.command import OebuildCommand
@@ -82,7 +82,7 @@ class Generate(OebuildCommand):
         yocto_dir = self.configure.source_yocto_dir()
         if not self.check_support_oebuild(yocto_dir):
             logger.error(
-                'yocto-meta-openeuler does not support oebuild. '
+                'yocto-meta-openeuler does not container valid oebuild metadata '
                 'Update .oebuild/config and re-run `oebuild update`.')
             sys.exit(-1)
 
@@ -351,11 +351,12 @@ oebuild toolchain
         yocto_oebuild_dir = pathlib.Path(yocto_dir, ".oebuild")
         platform_path = pathlib.Path(yocto_oebuild_dir, 'platform')
         list_platform = [f for f in platform_path.iterdir() if f.is_file()]
-        table = PrettyTable(['Platform Name'])
-        table.align = "l"
+        terminal_width = self._get_terminal_width()
+        table = self._build_table(['Platform Name'], terminal_width, title='Available Platforms')
         for platform in list_platform:
             if platform.suffix in ['.yml', '.yaml']:
                 table.add_row([platform.stem])
+        table.sortby = 'Platform Name'
         print(table)
 
     def _list_feature(self):
@@ -363,14 +364,50 @@ oebuild toolchain
         yocto_dir = self.configure.source_yocto_dir()
         yocto_oebuild_dir = pathlib.Path(yocto_dir, ".oebuild")
         feature_triples = parse_feature_files(yocto_oebuild_dir)
-        table = PrettyTable(['Feature Name', 'Supported Arch'])
-        table.align = "l"
+        terminal_width = self._get_terminal_width()
+        table = self._build_table(['Feature Name', 'Supported Arch'],
+                                  terminal_width, title='Available Features')
         for feature_name, _, feature_data in feature_triples:
             table.add_row([feature_name, feature_data.get('support') or "all"])
         print(table)
         logger.info(
             """* 'Supported Arch' defaults to 'all' if not specified in the feature's .yaml file."""
         )
+
+    def _build_table(self, headers, terminal_width, title=None):
+        narrow_charnum, narrow_colnum = 60, 10
+        max_width = max(int(terminal_width * 0.9), 20)
+        table = PrettyTable(headers, max_width=max_width)
+        table.align = "l"
+        table.header = True
+
+        col_width = max(10, max_width // max(len(headers), 1))
+        for header in headers:
+            table.max_width[header] = col_width
+
+        is_narrow = terminal_width < narrow_charnum or col_width < narrow_colnum
+        if is_narrow:
+            table.set_style(TableStyle.PLAIN_COLUMNS)
+            table.hrules = HRuleStyle.NONE
+            table.vrules = VRuleStyle.NONE
+            table.left_padding_width = 0
+            table.right_padding_width = 0
+        else:
+            table.set_style(TableStyle.SINGLE_BORDER)
+            table.hrules = HRuleStyle.FRAME
+            table.vrules = VRuleStyle.FRAME
+            table.left_padding_width = 1
+            table.right_padding_width = 1
+            if title:
+                table.title = title
+        return table
+
+    @staticmethod
+    def _get_terminal_width():
+        try:
+            return os.get_terminal_size().columns
+        except OSError:
+            return 80
 
     def check_support_oebuild(self, yocto_dir):
         '''

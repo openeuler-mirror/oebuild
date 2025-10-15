@@ -24,6 +24,7 @@ import oebuild.util as oebuild_util
 from oebuild.m_log import logger
 from oebuild.app.plugins.generate.parses import parse_feature_files
 
+
 class KconfigGenerator:
     """Handles Kconfig file generation and menuconfig interaction."""
 

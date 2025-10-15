@@ -18,6 +18,7 @@ import oebuild.const as oebuild_const
 from oebuild.m_log import logger
 import oebuild.util as oebuild_util
 
+
 def parsers(parser):
     '''
     for generate param parser
@@ -240,4 +241,5 @@ def parse_feature_files(oebuild_dir):
                 fname = selected_file.name
                 logger.warning("Failed to parse feature file '%s': %s", fname, e)
                 continue
+    features.sort(key=lambda x: x[0])
     return features
