@@ -160,7 +160,6 @@ class Generate(OebuildCommand):
             self.list_info()
             sys.exit(0)
 
-
         parser_template = ParseTemplate(yocto_dir=yocto_dir)
 
         yocto_oebuild_dir = pathlib.Path(yocto_dir, '.oebuild')
@@ -346,12 +345,12 @@ oebuild toolchain
         self._list_feature()
 
     def _list_platform(self):
-        logger.info("\n================= Available Platforms =================")
+        terminal_width = self._get_terminal_width()
+        print(int(terminal_width * 0.9) * '=')
         yocto_dir = self.configure.source_yocto_dir()
         yocto_oebuild_dir = pathlib.Path(yocto_dir, ".oebuild")
         platform_path = pathlib.Path(yocto_oebuild_dir, 'platform')
         list_platform = [f for f in platform_path.iterdir() if f.is_file()]
-        terminal_width = self._get_terminal_width()
         table = self._build_table(['Platform Name'], terminal_width, title='Available Platforms')
         for platform in list_platform:
             if platform.suffix in ['.yml', '.yaml']:
@@ -360,11 +359,11 @@ oebuild toolchain
         print(table)
 
     def _list_feature(self):
-        logger.info("\n================= Available Features ==================")
+        terminal_width = self._get_terminal_width()
+        print(int(terminal_width * 0.9) * '=')
         yocto_dir = self.configure.source_yocto_dir()
         yocto_oebuild_dir = pathlib.Path(yocto_dir, ".oebuild")
         feature_triples = parse_feature_files(yocto_oebuild_dir)
-        terminal_width = self._get_terminal_width()
         table = self._build_table(['Feature Name', 'Supported Arch'],
                                   terminal_width, title='Available Features')
         for feature_name, _, feature_data in feature_triples:
@@ -376,7 +375,7 @@ oebuild toolchain
 
     def _build_table(self, headers, terminal_width, title=None):
         narrow_charnum, narrow_colnum = 60, 10
-        max_width = max(int(terminal_width * 0.9), 20)
+        max_width = max(int(terminal_width), 20)
         table = PrettyTable(headers, max_width=max_width)
         table.align = "l"
         table.header = True
@@ -387,19 +386,24 @@ oebuild toolchain
 
         is_narrow = terminal_width < narrow_charnum or col_width < narrow_colnum
         if is_narrow:
-            table.set_style(TableStyle.PLAIN_COLUMNS)
-            table.hrules = HRuleStyle.NONE
+            table.set_style(TableStyle.MSWORD_FRIENDLY)
+            table.hrules = HRuleStyle.FRAME
             table.vrules = VRuleStyle.NONE
             table.left_padding_width = 0
             table.right_padding_width = 0
-        else:
-            table.set_style(TableStyle.SINGLE_BORDER)
-            table.hrules = HRuleStyle.FRAME
-            table.vrules = VRuleStyle.FRAME
-            table.left_padding_width = 1
-            table.right_padding_width = 1
             if title:
                 table.title = title
+            table.header_style = 'title'
+        else:
+            table.set_style(TableStyle.MARKDOWN)
+            table.hrules = HRuleStyle.FRAME
+            table.vrules = VRuleStyle.ALL
+            table.left_padding_width = 1
+            table.right_padding_width = 2
+            if title:
+                table.title = title
+            table.header_style = 'title'
+
         return table
 
     @staticmethod
