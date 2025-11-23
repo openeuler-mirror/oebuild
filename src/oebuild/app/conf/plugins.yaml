@@ -1,46 +1,49 @@
 plugins:
-- name: init
-  class: Init
-  path: plugins/init/init.py
-- name: update
-  class: Update
-  path: plugins/update/update.py
-- name: generate
-  class: Generate
-  path: plugins/generate/generate.py
-- name: bitbake
-  class: Bitbake
-  path: plugins/bitbake/bitbake.py
-- name: manifest
-  class: Manifest
-  path: plugins/manifest/manifest.py
-- name: clear
-  class: Clear
-  path: plugins/clear/clear.py
-- name: runqemu
-  class: RunQemu
-  path: plugins/run_qemu/run_qemu.py
-- name: menv
-  class: Menv
-  path: plugins/m_env/m_env.py
-- name: deploy-target
-  class: DeployTarget
-  path: plugins/deploy/deploy_target.py
-- name: undeploy-target
-  class: UnDeployTarget
-  path: plugins/deploy/deploy_target.py
-- name: mplugin
-  class: MPlugin
-  path: plugins/m_plugin/m_plugin.py
-- name: toolchain
-  class: Toolchain
-  path: plugins/toolchain/toolchain.py
-- name: docker-save
-  class: DockerSave
-  path: plugins/docker-save/docker_save.py
-- name: samples
-  class: Samples
-  path: plugins/samples/samples.py
-- name: mugentest
-  class: MugenTest
-  path: plugins/mugentest/mugentest.py
+  - name: init
+    class: Init
+    path: plugins/init/init.py
+  - name: update
+    class: Update
+    path: plugins/update/update.py
+  - name: generate
+    class: Generate
+    path: plugins/generate/generate.py
+  - name: neo-generate
+    class: NeoGenerate
+    path: plugins/neo-generate/neo_generate.py
+  - name: bitbake
+    class: Bitbake
+    path: plugins/bitbake/bitbake.py
+  - name: manifest
+    class: Manifest
+    path: plugins/manifest/manifest.py
+  - name: clear
+    class: Clear
+    path: plugins/clear/clear.py
+  - name: runqemu
+    class: RunQemu
+    path: plugins/run_qemu/run_qemu.py
+  - name: menv
+    class: Menv
+    path: plugins/m_env/m_env.py
+  - name: deploy-target
+    class: DeployTarget
+    path: plugins/deploy/deploy_target.py
+  - name: undeploy-target
+    class: UnDeployTarget
+    path: plugins/deploy/deploy_target.py
+  - name: mplugin
+    class: MPlugin
+    path: plugins/m_plugin/m_plugin.py
+  - name: toolchain
+    class: Toolchain
+    path: plugins/toolchain/toolchain.py
+  - name: docker-save
+    class: DockerSave
+    path: plugins/docker-save/docker_save.py
+  - name: samples
+    class: Samples
+    path: plugins/samples/samples.py
+  - name: mugentest
+    class: MugenTest
+    path: plugins/mugentest/mugentest.py

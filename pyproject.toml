@@ -1,0 +1,28 @@
+[project]
+name = "oebuild"
+version = "0.1.0"
+description = "openEuler Embedded workspace generator"
+readme = "README.md"
+requires-python = ">=3.8"
+
+[project.scripts]
+oebuild = "oebuild.app.main:main"
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # flake8
+    "I",  # isort
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E402",  # module level import not at top of file
+]

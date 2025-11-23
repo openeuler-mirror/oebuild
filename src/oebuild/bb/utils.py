@@ -110,10 +110,14 @@ def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
     for var in variables:
         if var.endswith('()'):
             var_res[var] = re.compile(
-                r'^(%s%s)[ \\t]*\([ \\t]*\)[ \\t]*{' % (var[:-2].rstrip(), override_re))
+                r'^(%s%s)[ \\t]*\([ \\t]*\)[ \\t]*{'
+                % (var[:-2].rstrip(), override_re)
+            )
         else:
             var_res[var] = re.compile(
-                r'^(%s%s)[ \\t]*[?+:.]*=[+.]*[ \\t]*(["\'])' % (var, override_re))
+                r'^(%s%s)[ \\t]*[?+:.]*=[+.]*[ \\t]*(["\'])'
+                % (var, override_re)
+            )
 
     updated = False
     varset_start = ''
@@ -126,8 +130,10 @@ def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
     def handle_var_end():
         prerun_newlines = newlines[:]
         op = varset_start[len(in_var):].strip()
-        (newvalue, newop, indent, minbreak) = varfunc(in_var, full_value, op, newlines)
-        changed = (prerun_newlines != newlines)
+        (newvalue, newop, indent, minbreak) = varfunc(
+            in_var, full_value, op, newlines
+        )
+        changed = prerun_newlines != newlines
 
         if newvalue is None:
             # Drop the value
@@ -135,7 +141,7 @@ def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
         elif newvalue != full_value or (newop not in [None, op]):
             if newop not in [None, op]:
                 # Callback changed the operator
-                varset_new = "%s %s" % (in_var, newop)
+                varset_new = '%s %s' % (in_var, newop)
             else:
                 varset_new = varset_start
 
@@ -149,8 +155,14 @@ def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
             if in_var.endswith('()'):
                 # A function definition
                 if isinstance(newvalue, list):
-                    newlines.append('%s {\n%s%s\n}\n' % (varset_new, indentspc,
-                                    ('\n%s' % indentspc).join(newvalue)))
+                    newlines.append(
+                        '%s {\n%s%s\n}\n'
+                        % (
+                            varset_new,
+                            indentspc,
+                            ('\n%s' % indentspc).join(newvalue),
+                        )
+                    )
                 else:
                     if not newvalue.startswith('\n'):
                         newvalue = '\n' + newvalue
@@ -166,11 +178,17 @@ def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
                     elif minbreak:
                         # First item on first line
                         if len(newvalue) == 1:
-                            newlines.append('%s "%s"\n' % (varset_new, newvalue[0]))
+                            newlines.append(
+                                '%s "%s"\n' % (varset_new, newvalue[0])
+                            )
                         else:
-                            newlines.append('%s "%s \\\n' % (varset_new, newvalue[0]))
+                            newlines.append(
+                                '%s "%s \\\n' % (varset_new, newvalue[0])
+                            )
                             for item in newvalue[1:]:
-                                newlines.append('%s%s \\\n' % (indentspc, item))
+                                newlines.append(
+                                    '%s%s \\\n' % (indentspc, item)
+                                )
                             newlines.append('%s"\n' % indentspc)
                     else:
                         # No item on first line
@@ -208,7 +226,7 @@ def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
                 in_var = None
         else:
             skip = False
-            for (varname, var_re) in var_res.items():
+            for varname, var_re in var_res.items():
                 res = var_re.match(line)
                 if res:
                     isfunc = varname.endswith('()')
@@ -307,7 +325,10 @@ def edit_bblayers_conf(bblayers_conf, add, remove, edit_cb=None):
         if removelayers:
             for removelayer in removelayers:
                 for layer in bblayers:
-                    if fnmatch.fnmatch(canonicalise_path(layer), canonicalise_path(removelayer)):
+                    if fnmatch.fnmatch(
+                        canonicalise_path(layer),
+                        canonicalise_path(removelayer),
+                    ):
                         updated = True
                         bblayers.remove(layer)
                         removed.append(removelayer)
@@ -338,7 +359,9 @@ def edit_bblayers_conf(bblayers_conf, add, remove, edit_cb=None):
             return (origvalue, None, 2, False)
 
     with open(bblayers_conf, 'r') as f:
-        (_, newlines) = edit_metadata(f, ['BBLAYERS'], handle_bblayers_firstpass)
+        (_, newlines) = edit_metadata(
+            f, ['BBLAYERS'], handle_bblayers_firstpass
+        )
 
     if not bblayercalls:
         raise Exception('Unable to find BBLAYERS in %s' % bblayers_conf)
@@ -352,12 +375,21 @@ def edit_bblayers_conf(bblayers_conf, add, remove, edit_cb=None):
     notadded = []
     for layer in addlayers:
         layer_canon = canonicalise_path(layer)
-        if layer_canon in orig_bblayers and not layer_canon in removelayers_canon:
+        if (
+            layer_canon in orig_bblayers
+            and layer_canon not in removelayers_canon
+        ):
             notadded.append(layer)
     notadded_canon = [canonicalise_path(layer) for layer in notadded]
-    addlayers[:] = [layer for layer in addlayers if canonicalise_path(layer) not in notadded_canon]
+    addlayers[:] = [
+        layer
+        for layer in addlayers
+        if canonicalise_path(layer) not in notadded_canon
+    ]
 
-    (updated, newlines) = edit_metadata(newlines, ['BBLAYERS'], handle_bblayers)
+    (updated, newlines) = edit_metadata(
+        newlines, ['BBLAYERS'], handle_bblayers
+    )
     if addlayers:
         # Still need to add these
         for addlayer in addlayers:

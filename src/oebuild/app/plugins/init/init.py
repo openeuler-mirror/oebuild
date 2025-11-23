@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2023 openEuler Embedded
 oebuild is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -8,7 +8,7 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-'''
+"""
 
 import argparse
 import shutil
@@ -25,14 +25,14 @@ import oebuild.const as oebuild_const
 
 
 class Init(OebuildCommand):
-    '''
+    """
     Directory initialization directive, mainly used to initialize
     the OEbuild project directory, running this directive needs
     to be followed by the directory name to be initialized
-    '''
+    """
 
     help_msg = 'Initialize an OEBUILD working directory'
-    description = textwrap.dedent('''\
+    description = textwrap.dedent("""\
             Initialize the OEbuild working directory, and after executing this command,
             a new directory will be created as the OEBUILD working directory based on the
             current path. After initialization, the working directory will create an .oebuild
@@ -44,7 +44,7 @@ class Init(OebuildCommand):
             certain changes according to their own needs。 This file is to meet the user's global
             consideration of the build configuration of OEbuild, and can be easily called by third
             parties
-            ''')
+            """)
 
     def __init__(self):
         self.configure = Configure()
@@ -56,32 +56,36 @@ class Init(OebuildCommand):
     def do_add_parser(self, parser_adder):
         self._parser(
             parser_adder,
-            usage='''%(prog)s [directory] [-u yocto_remote_url] [-b branch]''')
+            usage="""%(prog)s [directory] [-u yocto_remote_url] [-b branch]""",
+        )
 
         parser_adder.add_argument(
             '-u',
             '--yocto_remote_url',
             dest='yocto_remote_url',
-            help='''Specifies the remote of yocto-meta-openeuler''')
+            help="""Specifies the remote of yocto-meta-openeuler""",
+        )
 
         parser_adder.add_argument(
             '-b',
             '--branch',
             dest='branch',
-            help='''Specifies the branch of yocto-meta-openeuler''')
+            help="""Specifies the branch of yocto-meta-openeuler""",
+        )
 
         parser_adder.add_argument(
             'directory',
             nargs='?',
             default=None,
-            help='''The name of the directory that will be initialized''')
+            help="""The name of the directory that will be initialized""",
+        )
 
         return parser_adder
 
     def do_run(self, args: argparse.ArgumentParser, unknown=None):
-        '''
+        """
         detach target dicrectory if finished init, if inited, just put out err msg and exit
-        '''
+        """
 
         # perpare parse help command
         if self.pre_parse_help(args, unknown):
@@ -98,43 +102,47 @@ class Init(OebuildCommand):
 
         if args.directory is None:
             logger.error("'oebuild init' need param directory")
-            logger.info("\noebuild init help:")
+            logger.info('\noebuild init help:')
             self.print_help_msg()
             sys.exit(1)
 
         # check if oebuild workspace exist, if exist, given notice
         if Configure().is_oebuild_dir(pathlib.Path(args.directory)):
-            logger.info("the %s has already been initialized",
-                        str(pathlib.Path(args.directory).absolute()))
+            logger.info(
+                'the %s has already been initialized',
+                str(pathlib.Path(args.directory).absolute()),
+            )
             self._print_notice(args.directory)
             return
 
         if not self.init_workspace(args.directory):
-            logger.error("mkdir %s failed", args.directory)
+            logger.error('mkdir %s failed', args.directory)
             sys.exit(-1)
 
         curr_dir = os.getcwd()
         os.chdir(args.directory)
         oebuild_config: Config = self.configure.parse_oebuild_config()
 
-        yocto_config: ConfigBasicRepo = \
-            oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER]
+        yocto_config: ConfigBasicRepo = oebuild_config.basic_repo[
+            oebuild_const.YOCTO_META_OPENEULER
+        ]
 
         if args.yocto_remote_url is not None:
             yocto_config.remote_url = args.yocto_remote_url
         if args.branch is not None:
             yocto_config.branch = args.branch
-        oebuild_config.basic_repo[
-            oebuild_const.YOCTO_META_OPENEULER] = yocto_config
+        oebuild_config.basic_repo[oebuild_const.YOCTO_META_OPENEULER] = (
+            yocto_config
+        )
 
         self.configure.update_oebuild_config(oebuild_config)
 
-        logger.info("init %s successful", args.directory)
+        logger.info('init %s successful', args.directory)
         os.chdir(curr_dir)
         self._print_notice(args.directory)
 
     def _print_notice(self, directory):
-        format_msg = f'''
+        format_msg = f"""
 There is a build configuration example file under {directory}/.oebuild/compile.yaml.sample,
 if you want to block complex generate instructions, you can directly copy a configuration file,
 and then modify it according to your own needs, and then execute
@@ -143,13 +151,13 @@ please execute the follow commands next
 
     cd {pathlib.Path(directory).absolute()}
     oebuild update
-        '''
+        """
         print(format_msg)
 
     def init_workspace(self, directory):
-        '''
+        """
         init workspace will copy config file and make new src directory
-        '''
+        """
         try:
             os.mkdir(pathlib.Path(directory).absolute())
         except FileExistsError:
@@ -163,49 +171,50 @@ please execute the follow commands next
 
     @staticmethod
     def create_oebuild_directory(updir: str):
-        '''
+        """
         create oebuild config directory
-        '''
+        """
         try:
-            oebuild_dir = os.path.join(updir, ".oebuild")
+            oebuild_dir = os.path.join(updir, '.oebuild')
             os.mkdir(oebuild_dir)
             return oebuild_dir
         except FileExistsError:
-            logger.error("mkdir .oebuild failed")
-            return ""
+            logger.error('mkdir .oebuild failed')
+            return ''
 
     @staticmethod
     def create_src_directory(updir: str):
-        '''
+        """
         this is desctiption
-        '''
+        """
         try:
-            src_dir = os.path.join(updir, "src")
+            src_dir = os.path.join(updir, 'src')
             os.makedirs(src_dir)
             return src_dir
         except FileExistsError:
-            logger.error("mkdir src failed")
+            logger.error('mkdir src failed')
             return None
 
     @staticmethod
     def copy_config_file(updir: str):
-        '''
+        """
         copy oebuild config to some directory
-        '''
+        """
         try:
             config = oebuild_util.get_config_yaml_dir()
             shutil.copyfile(config, os.path.join(updir, oebuild_const.CONFIG))
         except FileNotFoundError:
-            logger.error("mkdir config faild")
+            logger.error('mkdir config faild')
 
     @staticmethod
     def copy_compile_file(updir: str):
-        '''
+        """
         copy oebuild compile.yaml.sample to some directory
-        '''
+        """
         try:
             compil = oebuild_util.get_compile_yaml_dir()
-            shutil.copyfile(compil,
-                            os.path.join(updir, oebuild_const.COMPILE_YAML))
+            shutil.copyfile(
+                compil, os.path.join(updir, oebuild_const.COMPILE_YAML)
+            )
         except FileNotFoundError:
-            logger.error("mkdir compile.yaml.sample failed")
+            logger.error('mkdir compile.yaml.sample failed')

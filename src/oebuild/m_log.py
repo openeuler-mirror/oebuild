@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2023 openEuler Embedded
 oebuild is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -8,7 +8,8 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-'''
+"""
+
 import sys
 import logging
 
@@ -26,9 +27,9 @@ logger.addHandler(ch)
 
 
 def set_log_to_file():
-    '''
+    """
     set log to log file
-    '''
+    """
     fh = logging.FileHandler('oebuild.log')
     fh.setLevel(logging.INFO)
     fh.setFormatter(formatter)

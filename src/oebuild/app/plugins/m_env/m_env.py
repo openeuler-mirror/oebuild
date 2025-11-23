@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2023 openEuler Embedded
 oebuild is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -8,7 +8,7 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-'''
+"""
 
 import argparse
 import fcntl
@@ -30,60 +30,70 @@ from oebuild.m_log import logger
 
 
 class Menv(OebuildCommand):
-    '''
+    """
     the class is used to manager sdk environment, the sdk environment refers to openEuler
     Embedded image sdk, you can use the sdk to develop some apps that can run in openEuler
     Embedded system you built. for example, the sdk with qt image can be used to develop apps
     runned in qt system, the sdk with ros image can be used to develop apps runned in ros system
-    '''
+    """
 
     help_msg = 'Update the basic environment required for the build'
-    description = textwrap.dedent('''
+    description = textwrap.dedent("""
             This is an environment management function that allows you to configure the environment
             through SDK files or unzipped setup files, and you can view, delete, and activate the
             corresponding environment. These operations will not have any impact on
             your current machine
-            ''')
+            """)
 
     def __init__(self):
         self.configure = Configure()
-        self.oebuild_env_path = os.path.expanduser(
-            '~') + '/.local/oebuild_env/'
+        self.oebuild_env_path = (
+            os.path.expanduser('~') + '/.local/oebuild_env/'
+        )
         self.oebuild_env_yaml_path = pathlib.Path(
-            os.path.join(self.oebuild_env_path, 'oebuild_env.yaml'))
+            os.path.join(self.oebuild_env_path, 'oebuild_env.yaml')
+        )
         self.oebuild_env_command = ['list', 'create', 'activate', 'remove']
         super().__init__('menv', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
-        parser = self._parser(parser_adder,
-                              usage='''
+        parser = self._parser(
+            parser_adder,
+            usage="""
   %(prog)s [create list remove activate][command]
   create: [-d -f]  Create an environment  -n env_name
   list:  View existing environment
   remove: -n  Delete specified environment
   activate: -n  Activate specified environment
-''')
+""",
+        )
 
-        parser.add_argument('-d',
-                            '--directory',
-                            dest='directory',
-                            help='''
+        parser.add_argument(
+            '-d',
+            '--directory',
+            dest='directory',
+            help="""
                 this param is build directory
-                ''')
+                """,
+        )
 
-        parser.add_argument('-f',
-                            '--file',
-                            dest='file',
-                            help='''
+        parser.add_argument(
+            '-f',
+            '--file',
+            dest='file',
+            help="""
                 this param is build file
-                ''')
+                """,
+        )
 
-        parser.add_argument('-n',
-                            '--env_name',
-                            dest='env_name',
-                            help='''
+        parser.add_argument(
+            '-n',
+            '--env_name',
+            dest='env_name',
+            help="""
                         this param is env_name
-                        ''')
+                        """,
+        )
 
         # Secondary command
         return parser
@@ -91,9 +101,11 @@ class Menv(OebuildCommand):
     def do_run(self, args: argparse.Namespace, unknown=None):
         # perpare parse help command
         if unknown[0] not in self.oebuild_env_command or (
-                len(set(unknown[1:]).intersection({'-d', '-f', '-n'})) == 0
-                and unknown[0] != 'list'):
+            len(set(unknown[1:]).intersection({'-d', '-f', '-n'})) == 0
+            and unknown[0] != 'list'
+        ):
             unknown = ['-h']
+            command = None
         else:
             command = unknown[0]
             unknown = unknown[1:]
@@ -104,9 +116,9 @@ class Menv(OebuildCommand):
 
         if command == 'create':
             if not args.env_name:
-                print('''
+                print("""
 Please enter the correct command: oebuild menv create [-d -f] Create an environment -n env_name
-                      ''')
+                      """)
                 sys.exit(1)
             self.create_environment(args=args)
         elif command == 'activate':
@@ -137,16 +149,22 @@ Please enter the correct command: oebuild menv create [-d -f] Create an environm
                 'Please enter the correct command: oebuild menv remove -n env_name'
             )
             sys.exit(1)
+        else:
+            # This handles the case where command is None (help was shown)
+            sys.exit(0)
 
     def create_environment(self, args):
-        '''
+        """
         create environment file in ~/.local/oebuild_env/ and do something in next step
-        '''
+        """
         # Check if the file path exists
         if args.directory and os.path.isdir(args.directory):
             setup_file_path = os.path.abspath(args.directory)
-            sdk_name = args.env_name if args.env_name else args.directory.split(
-                '/')[-1]
+            sdk_name = (
+                args.env_name
+                if args.env_name
+                else args.directory.split('/')[-1]
+            )
             self.create_or_update_env_yaml(sdk_name, args.directory)
             print(
                 f' Created Environment successfully \n {sdk_name.ljust(30)}{setup_file_path}'
@@ -155,8 +173,15 @@ Please enter the correct command: oebuild menv create [-d -f] Create an environm
 
         #  Creating an environment
         if args.file and os.path.exists(args.file):
-            sdk_name = args.env_name if args.env_name else (args.file.split(
-                '/')[-1].replace('.sh', '') if args.file else None)
+            sdk_name = (
+                args.env_name
+                if args.env_name
+                else (
+                    args.file.split('/')[-1].replace('.sh', '')
+                    if args.file
+                    else None
+                )
+            )
             setup_file_path = self.oebuild_env_path + sdk_name
             self.create_or_update_env_yaml(sdk_name, setup_file_path)
             self.execute_sdk_file(args.file, setup_file_path)
@@ -187,43 +212,63 @@ Please enter the correct command: oebuild menv create [-d -f] Create an environm
             try:
                 file_path = os.path.join(
                     setup_file_path,
-                    re.search('environment-setup.*?(?=\')', file_list).group())
+                    re.search("environment-setup.*?(?=')", file_list).group(),
+                )
                 absolute_file_path = os.path.abspath(file_path)
                 # Splice Execution Command
                 shell_command = '. ' + absolute_file_path
 
                 print(shell_command)
                 print('setup_file matching successful')
-                subprocess.check_output('cp ~/.bashrc ~/.bashrc_back',
-                                        shell=True)
+                subprocess.check_output(
+                    'cp ~/.bashrc ~/.bashrc_back', shell=True
+                )
                 # Obtain the current terminal height and length
-                terminal_info = fcntl.ioctl(sys.stdout.fileno(),
-                                            termios.TIOCGWINSZ, "1234")
+                terminal_info = fcntl.ioctl(
+                    sys.stdout.fileno(), termios.TIOCGWINSZ, '1234'
+                )
                 rows_and_cloumns = struct.unpack('HH', terminal_info)
                 rows_command = f'stty rows {rows_and_cloumns[0]} columns {rows_and_cloumns[1]}'
                 subprocess.check_output(
-                    rf"sed -i '$a\{rows_command}' ~/.bashrc", shell=True)
+                    rf"sed -i '$a\{rows_command}' ~/.bashrc", shell=True
+                )
                 # Add the command to execute the setup file in the .bashrc file in the
                 # working directory
                 subprocess.check_output(
-                    rf"sed -i '$a\{shell_command}' ~/.bashrc", shell=True)
+                    rf"sed -i '$a\{shell_command}' ~/.bashrc", shell=True
+                )
                 # Replace Console Prompt
                 subprocess.check_output(
                     rf"sed -i 's/\$ /({env_name})>>>>> /g' ~/.bashrc",
-                    shell=True)
+                    shell=True,
+                )
                 subprocess.check_output(
                     r"sed -i '$a\mv ~/.bashrc_back ~/.bashrc -f' ~/.bashrc",
-                    shell=True)
+                    shell=True,
+                )
                 # Add prompt words
-                separator = "===================================================="
-                prompt_one = "Your environment is ready"
-                prompt_two = "Please proceed with the subsequent operations here"
+                separator = (
+                    '===================================================='
+                )
+                prompt_one = 'Your environment is ready'
+                prompt_two = (
+                    'Please proceed with the subsequent operations here'
+                )
                 wrap = '\\n###!###\\n'
-                prompt_words = separator + wrap + prompt_one + wrap + prompt_two + wrap + separator
+                prompt_words = (
+                    separator
+                    + wrap
+                    + prompt_one
+                    + wrap
+                    + prompt_two
+                    + wrap
+                    + separator
+                )
                 subprocess.check_output(
                     rf'''sed -i '$a\echo "{prompt_words}"' ~/.bashrc''',
-                    shell=True)
-                pty.spawn("/bin/bash")
+                    shell=True,
+                )
+                pty.spawn('/bin/bash')
             except SubprocessError as s_e:
                 print('Please provide the valid folder path')
                 logger.error(str(s_e))
@@ -254,9 +299,11 @@ Please enter the correct command: oebuild menv create [-d -f] Create an environm
             else:
                 print('Extracting sdk...............')
                 subprocess.check_output(
-                    f'sh {sdk_file} -d {setup_file_path} -y', shell=True)
-                subprocess.check_output(f'chmod -R 755 {setup_file_path}',
-                                        shell=True)
+                    f'sh {sdk_file} -d {setup_file_path} -y', shell=True
+                )
+                subprocess.check_output(
+                    f'chmod -R 755 {setup_file_path}', shell=True
+                )
         except SubprocessError as s_e:
             print('Please provide the valid folder path')
             logger.error(str(s_e))
@@ -274,23 +321,25 @@ Please enter the correct command: oebuild menv create [-d -f] Create an environm
         """
         if not os.path.exists(self.oebuild_env_yaml_path.absolute()):
             if not os.path.exists(
-                    os.path.dirname(self.oebuild_env_yaml_path.absolute())):
+                os.path.dirname(self.oebuild_env_yaml_path.absolute())
+            ):
                 os.makedirs(
-                    os.path.dirname(self.oebuild_env_yaml_path.absolute()))
+                    os.path.dirname(self.oebuild_env_yaml_path.absolute())
+                )
             os.mknod(self.oebuild_env_yaml_path)
         env_dict = oebuild_util.read_yaml(self.oebuild_env_yaml_path)
         if env_dict and 'env_config' in env_dict:
-            env_list = self.input_or_update_dict(env_name, setup_file_path,
-                                                 env_dict['env_config'])
+            env_list = self.input_or_update_dict(
+                env_name, setup_file_path, env_dict['env_config']
+            )
             env_dict['env_config'] = env_list
             oebuild_util.write_yaml(self.oebuild_env_yaml_path, env_dict)
             return
 
         env_dict = {
-            'env_config': [{
-                'env_name': env_name,
-                'env_value': setup_file_path
-            }]
+            'env_config': [
+                {'env_name': env_name, 'env_value': setup_file_path}
+            ]
         }
         oebuild_util.write_yaml(self.oebuild_env_yaml_path, env_dict)
 
@@ -326,10 +375,10 @@ Do you want to overwrite the path of the original environment configuration(Y/N)
         return env_list
 
     def activate_environment(self, env_name):
-        '''
+        """
         activate the sdk environment, is means that environment shell will be sourced, and
         open a new pty, so that developer can compile app with sdk environment
-        '''
+        """
         env_dict = oebuild_util.read_yaml(self.oebuild_env_yaml_path)
         if env_dict and 'env_config' in env_dict:
             setup_file_path = self._get_environment(env_name, env_dict)
@@ -371,13 +420,13 @@ Do you want to overwrite the path of the original environment configuration(Y/N)
         if env_dict and 'env_config' in env_dict:
             env_list = []
             for env_data in env_dict['env_config']:
-
                 if env_data['env_name'] != env_name:
                     env_list.append(env_data)
                 elif '/.local/oebuild_env/' in env_data['env_value']:
                     try:
                         subprocess.check_output(
-                            f'rm -rf {env_data["env_value"]}', shell=True)
+                            f'rm -rf {env_data["env_value"]}', shell=True
+                        )
                     except SubprocessError as s_e:
                         print('Fail deleted')
                         logger.error(str(s_e))
@@ -385,7 +434,8 @@ Do you want to overwrite the path of the original environment configuration(Y/N)
 
             if len(env_list) == len(env_dict['env_config']):
                 logger.error(
-                    'The environment does not exist, please check the input')
+                    'The environment does not exist, please check the input'
+                )
                 sys.exit(-1)
             env_dict['env_config'] = env_list
         oebuild_util.write_yaml(self.oebuild_env_yaml_path, env_dict)

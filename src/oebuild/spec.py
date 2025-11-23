@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2023 openEuler Embedded
 oebuild is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -8,7 +8,7 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-'''
+"""
 
 import importlib.util
 import os
@@ -17,9 +17,9 @@ import sys
 
 
 class CommandError(RuntimeError):
-    '''
+    """
     Indicates that a command failed.
-    '''
+    """
 
     def __init__(self, returncode=1):
         super().__init__()
@@ -27,12 +27,12 @@ class CommandError(RuntimeError):
 
 
 class CommandContextError(CommandError):
-    '''Indicates that a context-dependent command could not be run.'''
+    """Indicates that a context-dependent command could not be run."""
 
 
 class ExtensionCommandError(CommandError):
-    '''Exception class indicating an extension command was badly
-    defined and could not be created.'''
+    """Exception class indicating an extension command was badly
+    defined and could not be created."""
 
     def __init__(self, **kwargs):
         self.hint = kwargs.pop('hint', None)
@@ -41,7 +41,6 @@ class ExtensionCommandError(CommandError):
 
 @dataclass
 class _CmdFactory:
-
     py_file: str
     name: str
     attr: str
@@ -58,21 +57,23 @@ class _CmdFactory:
             mod = _commands_module_from_file(self.py_file, self.attr)
         except ImportError as i_e:
             raise ExtensionCommandError(
-                hint=f'could not import {self.py_file}') from i_e
+                hint=f'could not import {self.py_file}'
+            ) from i_e
 
         # Get the attribute which provides the OebuildCommand subclass.
         try:
             return getattr(mod, self.attr)
         except AttributeError as a_e:
             raise ExtensionCommandError(
-                hint=f'no attribute {self.attr} in {self.py_file}') from a_e
+                hint=f'no attribute {self.attr} in {self.py_file}'
+            ) from a_e
 
 
 @dataclass
 class OebuildExtCommandSpec:
-    '''
+    """
     An object which allows instantiating a oebuild extension.
-    '''
+    """
 
     # Command name, as known to the user
     name: str
@@ -89,9 +90,10 @@ class OebuildExtCommandSpec:
 
 @dataclass
 class _ExtCommand:
-    '''
+    """
     record extern command basic info, it's useful when app initialize
-    '''
+    """
+
     name: str
 
     class_name: str
@@ -100,31 +102,34 @@ class _ExtCommand:
 
 
 def get_spec(pre_dir, command_ext: _ExtCommand):
-    '''
+    """
     xxx
-    '''
+    """
 
-    py_file = os.path.join(
-        os.path.dirname(__file__), pre_dir,
-        command_ext.path) if ('/.local/oebuild_plugins/'
-                              not in command_ext.path) else command_ext.path
-    factory = _CmdFactory(py_file=py_file,
-                          name=command_ext.name,
-                          attr=command_ext.class_name)
+    py_file = (
+        os.path.join(os.path.dirname(__file__), pre_dir, command_ext.path)
+        if ('/.local/oebuild_plugins/' not in command_ext.path)
+        else command_ext.path
+    )
+    factory = _CmdFactory(
+        py_file=py_file, name=command_ext.name, attr=command_ext.class_name
+    )
 
-    return OebuildExtCommandSpec(name=command_ext.name,
-                                 description=factory().description,
-                                 help=factory().help_msg,
-                                 factory=factory)
+    return OebuildExtCommandSpec(
+        name=command_ext.name,
+        description=factory().description,
+        help=factory().help_msg,
+        factory=factory,
+    )
 
 
 def _commands_module_from_file(file, mod_name):
-    '''
+    """
     Python magic for importing a module containing oebuild extension
     commands. To avoid polluting the sys.modules key space, we put
     these modules in an (otherwise unpopulated) oebuild.commands.ext
     package.
-    '''
+    """
     spec = importlib.util.spec_from_file_location(mod_name, file)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

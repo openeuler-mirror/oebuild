@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2023 openEuler Embedded
 oebuild is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -8,7 +8,7 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-'''
+"""
 
 import argparse
 import textwrap
@@ -26,16 +26,16 @@ from oebuild.m_log import logger
 
 
 class Clear(OebuildCommand):
-    '''
+    """
     for some clear task
-    '''
+    """
 
     help_msg = 'clear someone which oebuild generate'
-    description = textwrap.dedent('''\
+    description = textwrap.dedent("""\
             During the construction process using oebuild, a lot of temporary products
             will be generated, such as containers,so this command can remove unimportant
             products, such as containers
-            ''')
+            """)
 
     def __init__(self):
         self.configure = Configure()
@@ -43,16 +43,20 @@ class Clear(OebuildCommand):
         super().__init__('clear', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
-        parser = self._parser(parser_adder, usage='''
+        parser = self._parser(
+            parser_adder,
+            usage="""
 
   %(prog)s [docker]
-''')
+""",
+        )
 
         parser.add_argument(
             'item',
             nargs='?',
             default=None,
-            help='''The name of the directory that will be initialized''')
+            help="""The name of the directory that will be initialized""",
+        )
 
         return parser
 
@@ -63,26 +67,28 @@ class Clear(OebuildCommand):
 
         args = args.parse_args(unknown)
 
-        if args.item == "docker":
+        if args.item == 'docker':
             try:
                 self.client = DockerProxy()
             except DockerException:
-                logger.error("Please install docker first!!!")
+                logger.error('Please install docker first!!!')
                 sys.exit(-1)
             self.clear_docker()
 
-    def clear_docker(self, ):
-        '''
+    def clear_docker(
+        self,
+    ):
+        """
         clear container
-        '''
+        """
         # get all build directory and get .env from every build directory
-        logger.info("Clearing container, please waiting ...")
+        logger.info('Clearing container, please waiting ...')
         env_list = []
         build_list = os.listdir(self.configure.build_dir())
         for build_dir in build_list:
             build_dir = os.path.join(self.configure.build_dir(), build_dir)
-            if os.path.exists(os.path.join(build_dir, ".env")):
-                env_list.append(os.path.join(build_dir, ".env"))
+            if os.path.exists(os.path.join(build_dir, '.env')):
+                env_list.append(os.path.join(build_dir, '.env'))
 
         # traversal every env file and get container_id, and then try to stop it and rm it
         for env in env_list:
@@ -90,11 +96,13 @@ class Clear(OebuildCommand):
             try:
                 container_id = env_conf['container']['short_id']
                 container = self.client.get_container(
-                    container_id=container_id)
+                    container_id=container_id
+                )
                 DockerProxy().stop_container(container=container)
                 DockerProxy().delete_container(container=container)
-                logger.info("Delete container: %s successful",
-                            container.short_id)
+                logger.info(
+                    'Delete container: %s successful', container.short_id
+                )
             except DockerException:
                 continue
             except KeyError:
@@ -113,4 +121,4 @@ class Clear(OebuildCommand):
         #         except:
         #             continue
 
-        logger.info("clear container finished")
+        logger.info('clear container finished')

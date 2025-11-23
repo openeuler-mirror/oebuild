@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2023 openEuler Embedded
 oebuild is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -8,7 +8,7 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-'''
+"""
 
 import argparse
 import textwrap
@@ -22,29 +22,31 @@ logger = logging.getLogger()
 
 
 class DeployTarget(OebuildCommand):
-    '''
+    """
     we use package in a
-    '''
+    """
 
     help_msg = 'deploy software on line'
-    description = textwrap.dedent('''\
+    description = textwrap.dedent("""\
             Deploys a recipe's build output (i.e. the output of the do_install task)
             to a live target machine over ssh. By default, any existing files will be
             preserved instead of being overwritten and will be restored if you run
             devtool undeploy-target. Note: this only deploys the recipe itself and
             not any runtime dependencies, so it is assumed that those have been
             installed on the target beforehand.
-            ''')
+            """)
 
     def __init__(self) -> None:
         super().__init__('{}', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
-        parser = self._parser(parser_adder,
-                              usage='''
+        parser = self._parser(
+            parser_adder,
+            usage="""
 oebuild deploy-target [-h] [-c] [-s] [-n] [-p] [--no-check-space] [-e SSH_EXEC]
 [-P PORT] [-I KEY] [-S | --no-strip] recipename target
-''')
+""",
+        )
 
         return parser
 
@@ -54,9 +56,11 @@ oebuild deploy-target [-h] [-c] [-s] [-n] [-p] [--no-check-space] [-e SSH_EXEC]
             sys.exit(0)
         str_args = ' '.join(unknown)
         com_target = ComTarget()
-        com_target.exec(str_args=str_args, fun="deploy-target")
+        com_target.exec(str_args=str_args, fun='deploy-target')
 
-    def print_help_msg(self, ):
+    def print_help_msg(
+        self,
+    ):
         print("""
 usage: oebuild deploy-target [-h] [-c] [-s] [-n] [-p] [--no-check-space] [-e SSH_EXEC]
               [-P PORT] [-I KEY] [-S | --no-strip] recipename target
@@ -91,25 +95,27 @@ options:
 
 
 class UnDeployTarget(OebuildCommand):
-    '''
+    """
     we use package in a
-    '''
+    """
 
     help_msg = 'undeploy software on line'
-    description = textwrap.dedent('''\
+    description = textwrap.dedent("""\
             Un-deploys recipe output files previously deployed to a live target machine
                                   by devtool deploy-target.
-            ''')
+            """)
 
     def __init__(self) -> None:
         super().__init__('{}', self.help_msg, self.description)
 
     def do_add_parser(self, parser_adder) -> argparse.ArgumentParser:
-        parser = self._parser(parser_adder,
-                              usage='''
+        parser = self._parser(
+            parser_adder,
+            usage="""
 oebuild undeploy-target [-h] [-c] [-s] [-a] [-n] [-e SSH_EXEC]
 [-P PORT] [-I KEY] [recipename] target
-''')
+""",
+        )
 
         return parser
 
@@ -119,7 +125,7 @@ oebuild undeploy-target [-h] [-c] [-s] [-a] [-n] [-e SSH_EXEC]
             sys.exit(0)
         str_args = ' '.join(unknown)
         com_target = ComTarget()
-        com_target.exec(str_args=str_args, fun="undeploy-target")
+        com_target.exec(str_args=str_args, fun='undeploy-target')
 
     def print_help_msg(self):
         print("""

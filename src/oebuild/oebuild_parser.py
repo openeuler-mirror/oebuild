@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2023 openEuler Embedded
 oebuild is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -8,7 +8,7 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-'''
+"""
 
 import argparse
 import sys
@@ -18,9 +18,9 @@ import textwrap
 
 
 class OebuildHelpAction(argparse.Action):
-    '''
+    """
     set argparse help is true
-    '''
+    """
 
     def __call__(self, parser, namespace, values, option_string=None):
         # Just mark that help was requested.
@@ -28,7 +28,7 @@ class OebuildHelpAction(argparse.Action):
 
 
 class OebuildArgumentParser(argparse.ArgumentParser):
-    '''
+    """
     The argparse module is infuriatingly coy about its parser and
     help formatting APIs, marking almost everything you need to
     customize help output an "implementation detail". Even accessing
@@ -40,7 +40,7 @@ class OebuildArgumentParser(argparse.ArgumentParser):
     possible headaches by overriding some "proper" argparse APIs
     here instead of monkey-patching the module or breaking
     abstraction barriers. This is duplicative but more future-proof.
-    '''
+    """
 
     def __init__(self, *args, **kwargs):
         # The super constructor calls add_argument(), so this has to
@@ -50,8 +50,7 @@ class OebuildArgumentParser(argparse.ArgumentParser):
         super(OebuildArgumentParser, self).__init__(*args, **kwargs)
 
     def print_help(self, file=None):
-        print(self.format_help(), end='',
-              file=file or sys.stdout)
+        print(self.format_help(), end='', file=file or sys.stdout)
 
     def format_help(self):
         # When top_level is True, we override the parent method to
@@ -79,9 +78,7 @@ class OebuildArgumentParser(argparse.ArgumentParser):
                 for s_t in strings:
                     print(s_t, file=sio)
 
-            append(self.format_usage(),
-                   self.description,
-                   '')
+            append(self.format_usage(), self.description, '')
 
             append('optional arguments:')
             for w_o in self.oebuild_optionals:
@@ -100,7 +97,7 @@ class OebuildArgumentParser(argparse.ArgumentParser):
     def _format_oebuild_optional(self, append, w_o, width):
         metavar = w_o['metavar']
         options = w_o['options']
-        help_msg = w_o.get('help', "")
+        help_msg = w_o.get('help', '')
 
         # Join the various options together as a comma-separated list,
         # with the metavar if there is one. That's our "thing".
@@ -131,9 +128,12 @@ class OebuildArgumentParser(argparse.ArgumentParser):
             # Reflow the lines in help to the desired with, using
             # the help_offset as an initial indent.
             help_msg = ' '.join(help_msg.split())
-            help_lines = textwrap.wrap(help_msg, width=width,
-                                       initial_indent=help_indent,
-                                       subsequent_indent=help_indent)
+            help_lines = textwrap.wrap(
+                help_msg,
+                width=width,
+                initial_indent=help_indent,
+                subsequent_indent=help_indent,
+            )
 
             if thinglen > help_offset - 1:
                 # If the "thing" (plus room for a space) is longer
@@ -154,8 +154,12 @@ class OebuildArgumentParser(argparse.ArgumentParser):
         # module calls kwargs.pop(), so can't call super first without
         # losing data.
         optional = {'options': [], 'metavar': kwargs.get('metavar', None)}
-        need_metavar = (optional['metavar'] is None and
-                        kwargs.get('action') in (None, 'store'))
+        need_metavar = optional['metavar'] is None and kwargs.get(
+            'action'
+        ) in (
+            None,
+            'store',
+        )
         for arg in args:
             if not arg.startswith('-'):
                 break
@@ -164,8 +168,9 @@ class OebuildArgumentParser(argparse.ArgumentParser):
             # used. By convention, long options go last, so this
             # matches the default argparse behavior.
             if need_metavar:
-                optional['metavar'] = arg.lstrip('-').translate(
-                    {ord('-'): '_'}).upper()
+                optional['metavar'] = (
+                    arg.lstrip('-').translate({ord('-'): '_'}).upper()
+                )
         optional['help'] = kwargs.get('help')
         self.oebuild_optionals.append(optional)
 

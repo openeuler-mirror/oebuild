@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2023 openEuler Embedded
 oebuild is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -8,7 +8,8 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-'''
+"""
+
 import os
 import sys
 
@@ -26,9 +27,9 @@ import oebuild.const as oebuild_const
 
 
 class InContainer(BaseBuild):
-    '''
+    """
     bitbake command execute in container
-    '''
+    """
 
     def __init__(self, configure: Configure):
         self.configure = configure
@@ -37,33 +38,37 @@ class InContainer(BaseBuild):
         self.bashrc = None
 
     def exec(self, parse_env: ParseEnv, compile_param: CompileParam, command):
-        '''
+        """
         execute bitbake command
-        '''
-        logger.info("Bitbake starting ...")
+        """
+        logger.info('Bitbake starting ...')
 
         # check docker image if exists
         docker_proxy = DockerProxy()
         docker_param = compile_param.docker_param
         if not docker_proxy.is_image_exists(docker_param.image):
-            logger.error('''The docker image does not exists, please run fellow command:
-    `oebuild update docker`''')
+            logger.error("""The docker image does not exists, please run fellow command:
+    `oebuild update docker`""")
             sys.exit(-1)
 
         self.container_id = oebuild_util.deal_env_container(
-            env=parse_env, docker_param=docker_param)
+            env=parse_env, docker_param=docker_param
+        )
         self.bashrc = Bashrc()
-        self.bashrc.set_container(container=self.client.get_container(self.container_id))
+        self.bashrc.set_container(
+            container=self.client.get_container(self.container_id)
+        )
         self.exec_compile(compile_param=compile_param, command=command)
 
-    def exec_compile(self, compile_param: CompileParam, command: str = ""):
-        '''
+    def exec_compile(self, compile_param: CompileParam, command: str = ''):
+        """
         execute compile task
-        '''
+        """
         container: Container = self.client.get_container(self.container_id)  # type: ignore
 
-        self.init_bash(container=container,
-                       build_dir_name=os.path.basename(os.getcwd()))
+        self.init_bash(
+            container=container, build_dir_name=os.path.basename(os.getcwd())
+        )
 
         try:
             self.init_bitbake(container=container)
@@ -72,32 +77,34 @@ class InContainer(BaseBuild):
             return
 
         # add bblayers, this action must before replace local_conf
-        bblayers_dir = os.path.join(os.getcwd(), "conf", "bblayers.conf")
+        bblayers_dir = os.path.join(os.getcwd(), 'conf', 'bblayers.conf')
         self.add_bblayers(
             bblayers_dir=bblayers_dir,
             pre_dir=oebuild_const.CONTAINER_SRC,
             base_dir=self.configure.source_dir(),
-            layers=compile_param.layers)
+            layers=compile_param.layers,
+        )
 
         # replace local_conf
         local_path = os.path.join(os.getcwd(), 'conf', 'local.conf')
         self.replace_local_conf(
-            compile_param=compile_param,
-            local_path=local_path)
+            compile_param=compile_param, local_path=local_path
+        )
 
         # add auto execute command for example: bitbake busybox
-        if command is not None and command != "":
+        if command is not None and command != '':
             content = self.bashrc.get_bashrc_content()
             new_content = self.bashrc.add_bashrc(content=content, line=command)
             self.bashrc.update_bashrc(content=new_content)
             res: ExecResult = self.client.container_exec_command(
                 container=container,
-                command="bash .bashrc",
+                command='bash .bashrc',
                 user=oebuild_const.CONTAINER_USER,
                 params={
-                    "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
-                    "demux": True
-                })
+                    'work_space': f'/home/{oebuild_const.CONTAINER_USER}',
+                    'demux': True,
+                },
+            )
             exit_code = 0
             for line in res.output:
                 if line[1] is not None:
@@ -110,33 +117,35 @@ class InContainer(BaseBuild):
         else:
             content = self.bashrc.get_bashrc_content()
             for b_s in oebuild_const.BASH_BANNER.split('\n'):
-                b_s = f"echo {b_s}"
+                b_s = f'echo {b_s}'
                 content = self.bashrc.add_bashrc(content=content, line=b_s)
             self.bashrc.update_bashrc(content=content)
             os.system(
-                f"docker exec -it -u {oebuild_const.CONTAINER_USER} {container.short_id} bash")
+                f'docker exec -it -u {oebuild_const.CONTAINER_USER} {container.short_id} bash'
+            )
 
         self.bashrc.restore_bashrc()
 
     def init_bitbake(self, container: Container):
-        '''
+        """
         init_bitbake will start a container with pty and then check
         bblayers.conf and local.conf if exists in 10 seconds, otherwise
         raise init bitbake faild
-        '''
+        """
         self.client.check_change_ugid(
-            container=container,
-            container_user=oebuild_const.CONTAINER_USER)
+            container=container, container_user=oebuild_const.CONTAINER_USER
+        )
         self._install_sudo(container=container)
 
         res = self.client.container_exec_command(
             container=container,
-            command=f"bash /home/{oebuild_const.CONTAINER_USER}/.bashrc",
+            command=f'bash /home/{oebuild_const.CONTAINER_USER}/.bashrc',
             user=oebuild_const.CONTAINER_USER,
             params={
-                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
-                "stream": False
-            })
+                'work_space': f'/home/{oebuild_const.CONTAINER_USER}',
+                'stream': False,
+            },
+        )
         if res.exit_code != 0:
             raise ValueError(res.output.decode())
             # raise ValueError("bitbake init faild")
@@ -147,15 +156,17 @@ class InContainer(BaseBuild):
         resp = self.client.container_exec_command(
             container=container,
             user='root',
-            command="which sudo",
+            command='which sudo',
             params={
-                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
-                "stream": False
-            })
+                'work_space': f'/home/{oebuild_const.CONTAINER_USER}',
+                'stream': False,
+            },
+        )
         if resp.exit_code != 0:
             logger.info(
-                "=========================install sudo===============================")
-            self._install_software(container=container, software="sudo")
+                '=========================install sudo==============================='
+            )
+            self._install_software(container=container, software='sudo')
 
     def _replace_yum_mirror(self, container: Container):
         """
@@ -174,28 +185,30 @@ class InContainer(BaseBuild):
 sed -i 's/repo.openeuler.org/mirrors.huaweicloud.com\/openeuler/g' /etc/yum.repos.d/openEuler.repo
             """,
             params={
-                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
-                "stream": False
-            })
+                'work_space': f'/home/{oebuild_const.CONTAINER_USER}',
+                'stream': False,
+            },
+        )
 
     def _install_software(self, container: Container, software: str):
         resp = self.client.container_exec_command(
             container=container,
             user='root',
-            command=f"yum install {software} -y",
+            command=f'yum install {software} -y',
             params={
-                "work_space": f"/home/{oebuild_const.CONTAINER_USER}",
-                "stream": True
-            })
+                'work_space': f'/home/{oebuild_const.CONTAINER_USER}',
+                'stream': True,
+            },
+        )
         for line in resp.output:
             logger.info(line.decode().strip('\n'))
 
     def init_bash(self, container: Container, build_dir_name):
-        '''
+        """
         Bitbake will initialize the compilation environment by reading
         the user initialization script first, then making directional
         substitutions, and finally writing the initialization script
-        '''
+        """
         # read container default user .bashrc content
         content = self.bashrc.get_bashrc_content()
 
@@ -204,23 +217,36 @@ sed -i 's/repo.openeuler.org/mirrors.huaweicloud.com\/openeuler/g' /etc/yum.repo
         init_proxy_command = self._set_container_proxy(host_proxy=host_proxy)
 
         # get nativesdk environment path automatic for next step
-        sdk_env_path = oebuild_util.get_nativesdk_environment(container=container)
+        sdk_env_path = oebuild_util.get_nativesdk_environment(
+            container=container
+        )
         init_sdk_command = f'. {oebuild_const.NATIVESDK_DIR}/{sdk_env_path}'
         # get template dir for initialize yocto build environment
-        template_dir = f"{oebuild_const.CONTAINER_SRC}/yocto-meta-openeuler/.oebuild"
+        template_dir = (
+            f'{oebuild_const.CONTAINER_SRC}/yocto-meta-openeuler/.oebuild'
+        )
         set_template = f'export TEMPLATECONF="{template_dir}"'
 
-        init_oe_comand = f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
+        init_oe_comand = (
+            f'. {oebuild_const.CONTAINER_SRC}/yocto-poky/oe-init-build-env \
             {oebuild_const.CONTAINER_BUILD}/{build_dir_name}'
-        init_command = [init_proxy_command, init_sdk_command, set_template, init_oe_comand]
+        )
+        init_command = [
+            init_proxy_command,
+            init_sdk_command,
+            set_template,
+            init_oe_comand,
+        ]
         new_content = self.bashrc.init_bashrc_content(content, init_command)
 
         self.bashrc.update_bashrc(content=new_content)
 
     def _set_container_proxy(self, host_proxy):
-        init_proxy_command = ""
+        init_proxy_command = ''
         for key, value in host_proxy.items():
             key_git = key.replace('_', '.')
-            command = f'export {key}={value}; git config --global {key_git} {value};'
+            command = (
+                f'export {key}={value}; git config --global {key_git} {value};'
+            )
             init_proxy_command = f'{init_proxy_command} {command}'
         return init_proxy_command
