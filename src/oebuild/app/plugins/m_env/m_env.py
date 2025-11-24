@@ -114,44 +114,55 @@ class Menv(OebuildCommand):
             sys.exit(0)
         args = args.parse_args(unknown)
 
+        self._handle_command(command, args)
+
+    def _handle_command(self, command, args):
+        """Handle the environment command."""
         if command == 'create':
-            if not args.env_name:
-                print("""
-Please enter the correct command: oebuild menv create [-d -f] Create an environment -n env_name
-                      """)
-                sys.exit(1)
-            self.create_environment(args=args)
+            self._handle_create(args)
         elif command == 'activate':
-            # Activate Environment
-            if args.env_name:
-                self.activate_environment(args.env_name)
-                sys.exit(0)
-            print(
-                'Please enter the correct command: oebuild menv activate -n env_name'
-            )
-            sys.exit(1)
-
+            self._handle_activate(args)
         elif command == 'list':
-            env_dict = oebuild_util.read_yaml(self.oebuild_env_yaml_path)
-            if env_dict and 'env_config' in env_dict:
-                self.list_environment(env_dict)
-                sys.exit(0)
-            else:
-                print('No environment has been created yet')
-                sys.exit(-1)
-
-        # delete environment
+            self._handle_list()
         elif command == 'remove':
-            if args.env_name:
-                self.delete_environment(args.env_name)
-                sys.exit(0)
-            print(
-                'Please enter the correct command: oebuild menv remove -n env_name'
-            )
-            sys.exit(1)
+            self._handle_remove(args)
         else:
             # This handles the case where command is None (help was shown)
             sys.exit(0)
+
+    def _handle_create(self, args):
+        """Handle the create environment command."""
+        if not args.env_name:
+            print("""
+Please enter the correct command: oebuild menv create [-d -f] Create an environment -n env_name
+                      """)
+            sys.exit(1)
+        self.create_environment(args=args)
+
+    def _handle_activate(self, args):
+        """Handle the activate environment command."""
+        if args.env_name:
+            self.activate_environment(args.env_name)
+            sys.exit(0)
+        print('Please enter the correct command: oebuild menv activate -n env_name')
+        sys.exit(1)
+
+    def _handle_list(self):
+        """Handle the list environment command."""
+        env_dict = oebuild_util.read_yaml(self.oebuild_env_yaml_path)
+        if env_dict and 'env_config' in env_dict:
+            self.list_environment(env_dict)
+            sys.exit(0)
+        print('No environment has been created yet')
+        sys.exit(-1)
+
+    def _handle_remove(self, args):
+        """Handle the remove environment command."""
+        if args.env_name:
+            self.delete_environment(args.env_name)
+            sys.exit(0)
+        print('Please enter the correct command: oebuild menv remove -n env_name')
+        sys.exit(1)
 
     def create_environment(self, args):
         """

@@ -163,7 +163,7 @@ def get_compile_yaml_dir():
     return compile.yaml.sample yaml dir
     """
     return os.path.join(
-        get_base_oebuild(), 'app/conf', oebuild_const.COMPILE_YAML
+        get_base_oebuild(), 'app/conf', oebuild_const.COMPILE_YAML_SAMPLE
     )
 
 

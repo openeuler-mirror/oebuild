@@ -14,7 +14,7 @@ See the Mulan PSL v2 for more details.
 CONFIG_YAML = 'config.yaml'
 PLUGINS_YAML = 'plugins.yaml'
 UPGRADE_YAML = 'upgrade.yaml'
-COMPILE_YAML = 'compile.yaml.sample'
+COMPILE_YAML_SAMPLE = 'compile.yaml.sample'
 BASH_END_FLAG = '  ###!!!###'
 CONTAINER_USER = 'openeuler'
 CONTAINER_BUILD = '/home/openeuler/build'
@@ -24,7 +24,6 @@ DEFAULT_SDK_DOCKER = (
     'swr.cn-north-4.myhuaweicloud.com/openeuler-embedded/openeuler-sdk:latest'
 )
 CONTAINER_SRC = '/usr1/openeuler/src'
-CONTAINER_USER = 'openeuler'
 NATIVESDK_DIR = '/opt/buildtools/nativesdk'
 PROXY_LIST = ['http_proxy', 'https_proxy']
 
@@ -69,7 +68,7 @@ TOOLCHAIN_BASH_BANNER = """
 YOCTO_META_OPENEULER = 'yocto_meta_openeuler'
 YOCTO_POKY = 'yocto-poky'
 CONFIG = 'config'
-COMPILE_YAML = 'compile.yaml.sample'
+COMPILE_YAML_SAMPLE = 'compile.yaml.sample'
 
 # used for parse_templete.py
 PLATFORM = 'platform'

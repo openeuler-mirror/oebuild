@@ -7,28 +7,30 @@
 """Devtool plugin containing the deploy subcommands"""
 
 import logging
+import math
 import os
 import shutil
 import subprocess
 import tempfile
 
-import argparse_oe
-import oe.types
-from devtool import DevtoolError, exec_fakeroot, setup_tinfoil
+import argparse_oe  # pylint: disable=import-error
+import oe.types  # pylint: disable=import-error
+import oe_package  # pylint: disable=import-error
+from devtool import DevtoolError, exec_fakeroot, setup_tinfoil  # pylint: disable=import-error
 
 logger = logging.getLogger('devtool')
 
 DEPLOYLIST_PATH = '/.devtool'
 
 
-def _prepare_remote_script(
-    deploy,
+def _prepare_remote_script(  # pylint: disable=too-many-positional-arguments, too-many-arguments
+    should_deploy,
     verbose=False,
     dryrun=False,
     undeployall=False,
     nopreserve=False,
     nocheckspace=False,
-):
+):  # pylint: disable=too-many-branches, too-many-statements
     """
     Prepare a shell script for running on the target to
     deploy/undeploy files. We have to be careful what we put in this
@@ -41,14 +43,14 @@ def _prepare_remote_script(
     lines.append('set -e')
     if undeployall:
         # Yes, I know this is crude - but it does work
-        lines.append('for entry in %s/*.list; do' % DEPLOYLIST_PATH)
+        lines.append(f'for entry in {DEPLOYLIST_PATH}/*.list; do')
         lines.append('[ ! -f $entry ] && exit')
         lines.append('set `basename $entry | sed "s/.list//"`')
     if dryrun:
-        if not deploy:
+        if not should_deploy:
             lines.append('echo "Previously deployed files for $1:"')
-    lines.append('manifest="%s/$1.list"' % DEPLOYLIST_PATH)
-    lines.append('preservedir="%s/$1.preserve"' % DEPLOYLIST_PATH)
+    lines.append(f'manifest="{DEPLOYLIST_PATH}/$1.list"')
+    lines.append(f'preservedir="{DEPLOYLIST_PATH}/$1.preserve"')
     lines.append('if [ -f $manifest ] ; then')
     # Read manifest in reverse and delete files / remove empty dirs
     lines.append("    sed '1!G;h;$!d' $manifest | while read file")
@@ -59,7 +61,6 @@ def _prepare_remote_script(
         lines.append('        fi')
     else:
         lines.append('        if [ -d $file ] ; then')
-        # Avoid deleting a preserved directory in case it has special perms
         lines.append('            if [ ! -d $preservedir/$file ] ; then')
         lines.append('                rmdir $file > /dev/null 2>&1 || true')
         lines.append('            fi')
@@ -69,15 +70,15 @@ def _prepare_remote_script(
     lines.append('    done')
     if not dryrun:
         lines.append('    rm $manifest')
-    if not deploy and not dryrun:
+    if not should_deploy and not dryrun:
         # May as well remove all traces
         lines.append('    rmdir `dirname $manifest` > /dev/null 2>&1 || true')
     lines.append('fi')
 
-    if deploy:
+    if should_deploy:
         if not nocheckspace:
             # Check for available space
-            # FIXME This doesn't take into account files spread across multiple
+            # NOTE: This doesn't take into account files spread across multiple
             # partitions, but doing that is non-trivial
             # Find the part of the destination path that exists
             lines.append('checkpath="$2"')
@@ -147,13 +148,10 @@ def _prepare_remote_script(
     return '\n'.join(lines)
 
 
-def deploy(args, config, basepath, workspace):
+def deploy(
+    args, config, basepath, workspace
+):  # pylint: disable=unused-argument, too-many-statements, too-many-branches
     """Entry point for the devtool 'deploy' subcommand"""
-    import math
-
-    import oe.package
-    import oe.recipeutils
-
     # check_workspace_recipe(workspace, args.recipename, checksrc=False)
 
     try:
@@ -171,14 +169,14 @@ def deploy(args, config, basepath, workspace):
             rd = tinfoil.parse_recipe(args.recipename)
         except Exception as e:
             raise DevtoolError(
-                'Exception parsing recipe %s: %s' % (args.recipename, e)
-            )
+                f'Exception parsing recipe {args.recipename}: {e}'
+            ) from e
         recipe_outdir = rd.getVar('D')
         if not os.path.exists(recipe_outdir) or not os.listdir(recipe_outdir):
             raise DevtoolError(
-                'No files to deploy - have you built the %s '
+                f'No files to deploy - have you built the {args.recipename} '
                 'recipe? If so, the install step has not installed '
-                'any files.' % args.recipename
+                'any files.'
             )
 
         if args.strip and not args.dry_run:
@@ -188,16 +186,16 @@ def deploy(args, config, basepath, workspace):
                 rd.getVar('WORKDIR'), 'devtool-deploy-target-stripped'
             )
             if os.path.isdir(recipe_outdir):
-                exec_fakeroot(rd, 'rm -rf %s' % recipe_outdir, shell=True)
+                exec_fakeroot(rd, f'rm -rf {recipe_outdir}', shell=True)
             exec_fakeroot(
                 rd,
-                'cp -af %s %s' % (os.path.join(srcdir, '.'), recipe_outdir),
+                f'cp -af {os.path.join(srcdir, ".")} {recipe_outdir}',
                 shell=True,
             )
             os.environ['PATH'] = ':'.join(
                 [os.environ['PATH'], rd.getVar('PATH') or '']
             )
-            oe.package.strip_execs(
+            oe_package.strip_execs(
                 args.recipename,
                 recipe_outdir,
                 rd.getVar('STRIP'),
@@ -229,34 +227,31 @@ def deploy(args, config, basepath, workspace):
 
         if args.dry_run:
             print(
-                'Files to be deployed for %s on target %s:'
-                % (args.recipename, args.target)
+                f'Files to be deployed for {args.recipename} on target {args.target}:'
             )
             for item, _ in filelist:
-                print('  %s' % item)
+                print(f'  {item}')
             return 0
 
-        extraoptions = ''
+        ssh_opts = {'extraoptions': '', 'scp_sshexec': '', 'ssh_sshexec': 'ssh',
+                    'scp_port': '', 'ssh_port': ''}
         if args.no_host_check:
-            extraoptions += (
+            ssh_opts['extraoptions'] += (
                 '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
             )
         if not args.show_status:
-            extraoptions += ' -q'
+            ssh_opts['extraoptions'] += ' -q'
 
-        scp_sshexec = ''
-        ssh_sshexec = 'ssh'
         if args.ssh_exec:
-            scp_sshexec = '-S %s' % args.ssh_exec
-            ssh_sshexec = args.ssh_exec
-        scp_port = ''
-        ssh_port = ''
+            ssh_opts['scp_sshexec'] = f'-S {args.ssh_exec}'
+            ssh_opts['ssh_sshexec'] = args.ssh_exec
+
         if args.port:
-            scp_port = '-P %s' % args.port
-            ssh_port = '-p %s' % args.port
+            ssh_opts['scp_port'] = f'-P {args.port}'
+            ssh_opts['ssh_port'] = f'-p {args.port}'
 
         if args.key:
-            extraoptions += ' -i %s' % args.key
+            ssh_opts['extraoptions'] += f' -i {args.key}'
 
         # In order to delete previously deployed files and have the manifest file on
         # the target, we write out a shell script and then copy it to the target
@@ -269,40 +264,34 @@ def deploy(args, config, basepath, workspace):
                 os.path.dirname(tmpscript), 'devtool_deploy.list'
             )
             shellscript = _prepare_remote_script(
-                deploy=True,
+                should_deploy=True,
                 verbose=args.show_status,
                 nopreserve=args.no_preserve,
                 nocheckspace=args.no_check_space,
             )
             # Write out the script to a file
             with open(
-                os.path.join(tmpdir, os.path.basename(tmpscript)), 'w'
+                os.path.join(tmpdir, os.path.basename(tmpscript)), 'w', encoding='utf-8'
             ) as f:
                 f.write(shellscript)
             # Write out the file list
             with open(
-                os.path.join(tmpdir, os.path.basename(tmpfilelist)), 'w'
+                os.path.join(tmpdir, os.path.basename(tmpfilelist)), 'w', encoding='utf-8'
             ) as f:
-                f.write('%d\n' % ftotalsize)
+                f.write(f'{ftotalsize}\n')
                 for fpath, fsize in filelist:
-                    f.write('%s %d\n' % (fpath, fsize))
+                    f.write(f'{fpath} {fsize}\n')
             # Copy them to the target
-            ret = subprocess.call(
-                'scp %s %s %s %s/* %s:%s'
-                % (
-                    scp_sshexec,
-                    scp_port,
-                    extraoptions,
-                    tmpdir,
-                    args.target,
-                    os.path.dirname(tmpscript),
-                ),
-                shell=True,
+            cmd = (
+                f'scp {ssh_opts["scp_sshexec"]} {ssh_opts["scp_port"]} '
+                f'{ssh_opts["extraoptions"]} {tmpdir}/* '
+                f'{args.target}:{os.path.dirname(tmpscript)}'
             )
+            ret = subprocess.call(cmd, shell=True)
             if ret != 0:
                 raise DevtoolError(
-                    'Failed to copy script to %s - rerun with -s to '
-                    'get a complete error message' % args.target
+                    f'Failed to copy script to {args.target} - rerun with -s to '
+                    'get a complete error message'
                 )
         finally:
             shutil.rmtree(tmpdir)
@@ -310,17 +299,9 @@ def deploy(args, config, basepath, workspace):
         # Now run the script
         ret = exec_fakeroot(
             rd,
-            "tar cf - . | %s  %s %s %s 'sh %s %s %s %s'"
-            % (
-                ssh_sshexec,
-                ssh_port,
-                extraoptions,
-                args.target,
-                tmpscript,
-                args.recipename,
-                destdir,
-                tmpfilelist,
-            ),
+            f"tar cf - . | {ssh_opts['ssh_sshexec']}  {ssh_opts['ssh_port']} "
+            f"{ssh_opts['extraoptions']} {args.target} "
+            f"'sh {tmpscript} {args.recipename} {destdir} {tmpfilelist}'",
             cwd=recipe_outdir,
             shell=True,
         )
@@ -329,7 +310,7 @@ def deploy(args, config, basepath, workspace):
                 'Deploy failed - rerun with -s to get a complete error message'
             )
 
-        logger.info('Successfully deployed %s' % recipe_outdir)
+        logger.info('Successfully deployed %s', recipe_outdir)
 
         files_list = []
         for root, _, files in os.walk(recipe_outdir):
@@ -344,13 +325,13 @@ def deploy(args, config, basepath, workspace):
     return 0
 
 
-def undeploy(args, config, basepath, workspace):
+def undeploy(args, config, basepath, workspace):  # pylint: disable=unused-argument
     """Entry point for the devtool 'undeploy' subcommand"""
     if args.all and args.recipename:
         raise argparse_oe.ArgumentUsageError(
             'Cannot specify -a/--all with a recipe name', 'undeploy-target'
         )
-    elif not args.recipename and not args.all:
+    if not args.recipename and not args.all:
         raise argparse_oe.ArgumentUsageError(
             "If you don't specify a recipe, you must specify -a/--all",
             'undeploy-target',
@@ -367,13 +348,13 @@ def undeploy(args, config, basepath, workspace):
     scp_sshexec = ''
     ssh_sshexec = 'ssh'
     if args.ssh_exec:
-        scp_sshexec = '-S %s' % args.ssh_exec
+        scp_sshexec = f'-S {args.ssh_exec}'
         ssh_sshexec = args.ssh_exec
     scp_port = ''
     ssh_port = ''
     if args.port:
-        scp_port = '-P %s' % args.port
-        ssh_port = '-p %s' % args.port
+        scp_port = f'-P {args.port}'
+        ssh_port = f'-p {args.port}'
 
     args.target = args.target.split(':')[0]
 
@@ -381,43 +362,28 @@ def undeploy(args, config, basepath, workspace):
     try:
         tmpscript = '/tmp/devtool_undeploy.sh'
         shellscript = _prepare_remote_script(
-            deploy=False, dryrun=args.dry_run, undeployall=args.all
+            should_deploy=False, dryrun=args.dry_run, undeployall=args.all
         )
         # Write out the script to a file
-        with open(os.path.join(tmpdir, os.path.basename(tmpscript)), 'w') as f:
+        with open(os.path.join(tmpdir, os.path.basename(tmpscript)), 'w', encoding='utf-8') as f:
             f.write(shellscript)
         # Copy it to the target
-        ret = subprocess.call(
-            'scp %s %s %s %s/* %s:%s'
-            % (
-                scp_sshexec,
-                scp_port,
-                extraoptions,
-                tmpdir,
-                args.target,
-                os.path.dirname(tmpscript),
-            ),
-            shell=True,
+        cmd = (
+            f'scp {scp_sshexec} {scp_port} {extraoptions} {tmpdir}/* '
+            f'{args.target}:{os.path.dirname(tmpscript)}'
         )
+        ret = subprocess.call(cmd, shell=True)
         if ret != 0:
             raise DevtoolError(
-                'Failed to copy script to %s - rerun with -s to '
-                'get a complete error message' % args.target
+                f'Failed to copy script to {args.target} - rerun with -s to '
+                'get a complete error message'
             )
     finally:
         shutil.rmtree(tmpdir)
 
     # Now run the script
     ret = subprocess.call(
-        "%s %s %s %s 'sh %s %s'"
-        % (
-            ssh_sshexec,
-            ssh_port,
-            extraoptions,
-            args.target,
-            tmpscript,
-            args.recipename,
-        ),
+        f"{ssh_sshexec} {ssh_port} {extraoptions} {args.target} 'sh {tmpscript} {args.recipename}'",
         shell=True,
     )
     if ret != 0:
@@ -426,7 +392,7 @@ def undeploy(args, config, basepath, workspace):
         )
 
     if not args.all and not args.dry_run:
-        logger.info('Successfully undeployed %s' % args.recipename)
+        logger.info('Successfully undeployed %s', args.recipename)
     return 0
 
 

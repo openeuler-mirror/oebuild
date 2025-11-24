@@ -191,17 +191,21 @@ class MugenTest(OebuildCommand):
             #            if args.env == "qemu":
             #                if suite == "embedded_tiny_image_test":
             #                    cmd = (
-            #                        f"bash {mugen_path}/mugen.sh -c --ip {args.ip} --password {args.password} "
-            #                        f"--user {args.user} --port {args.port} --put_all --run_remote"
+            #                        f"bash {mugen_path}/mugen.sh -c --ip {args.ip} "
+            #                        f"--password {args.password} --user {args.user} "
+            #                        f"--port {args.port}"
+            #                        f"--put_all --run_remote"
             #                    )
             #                else:
             #                    if not args.kernal_img_path or not args.initrd_path:
             #                        logger.error(
-            #                            "For this test, --kernal_img_path and --initrd_path are required."
+            #                            "For this test, --kernal_img_path and "
+            #                            "--initrd_path are required."
             #                        )
             #                        return
             #                    qemu_start_cmd = (
-            #                        f"sh qemu_ctl.sh start --put_all --kernal_img_path {args.kernal_img_path} "
+            #                        f"sh qemu_ctl.sh start --put_all "
+            #                        f"--kernal_img_path {args.kernal_img_path} "
             #                        f"--initrd_path {args.initrd_path}"
             #                    )
             #                    if suite in {

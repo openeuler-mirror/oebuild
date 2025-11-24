@@ -11,10 +11,10 @@ See the Mulan PSL v2 for more details.
 """
 
 import argparse
-import sys
 import shutil
-from io import StringIO
+import sys
 import textwrap
+from io import StringIO
 
 
 class OebuildHelpAction(argparse.Action):
@@ -47,7 +47,7 @@ class OebuildArgumentParser(argparse.ArgumentParser):
         # come first as our override of that method relies on it.
         self.oebuild_optionals = []
         self.oebuild_app = kwargs.pop('oebuild_app', None)
-        super(OebuildArgumentParser, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def print_help(self, file=None):
         print(self.format_help(), end='', file=file or sys.stdout)

@@ -214,7 +214,7 @@ please execute the follow commands next
         try:
             compil = oebuild_util.get_compile_yaml_dir()
             shutil.copyfile(
-                compil, os.path.join(updir, oebuild_const.COMPILE_YAML)
+                compil, os.path.join(updir, oebuild_const.COMPILE_YAML_SAMPLE)
             )
         except FileNotFoundError:
             logger.error('mkdir compile.yaml.sample failed')

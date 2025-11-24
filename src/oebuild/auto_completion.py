@@ -11,10 +11,10 @@ See the Mulan PSL v2 for more details.
 """
 
 import hashlib
+import logging
 import re
 import sys
 import textwrap
-import logging
 from os.path import abspath, expanduser, expandvars, join
 
 logger = logging.getLogger()
@@ -58,8 +58,9 @@ class AutoCompletion:
                 rc_content = fh.read()
         except FileNotFoundError:
             rc_content = ''
-        except Exception:
-            raise
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.warning('Failed to read %s: %s', bashrc_path, e)
+            rc_content = ''
 
         pattern_bashrc = (
             r'(?=###!###>>>>>>>>>>>oebuild_complete>>>>>>>>>>>>>>>)[\W\w]+(?<=###!###<<<<<<<<<<<'

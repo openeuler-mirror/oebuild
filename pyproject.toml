@@ -26,3 +26,7 @@ select = [
 ignore = [
     "E402",  # module level import not at top of file
 ]
+
+# need pip install Flake8-pyproject
+[tool.flake8]
+max-line-length = 79
