@@ -14,7 +14,7 @@ See the Mulan PSL v2 for more details.
 CONFIG_YAML = 'config.yaml'
 PLUGINS_YAML = 'plugins.yaml'
 UPGRADE_YAML = 'upgrade.yaml'
-COMPILE_YAML_SAMPLE = 'compile.yaml.sample'
+compile_yaml_sample = 'compile.yaml.sample'  # pylint: disable=invalid-name
 BASH_END_FLAG = '  ###!!!###'
 CONTAINER_USER = 'openeuler'
 CONTAINER_BUILD = '/home/openeuler/build'
@@ -68,7 +68,6 @@ TOOLCHAIN_BASH_BANNER = """
 YOCTO_META_OPENEULER = 'yocto_meta_openeuler'
 YOCTO_POKY = 'yocto-poky'
 CONFIG = 'config'
-COMPILE_YAML_SAMPLE = 'compile.yaml.sample'
 
 # used for parse_templete.py
 PLATFORM = 'platform'

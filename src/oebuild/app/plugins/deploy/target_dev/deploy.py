@@ -16,11 +16,36 @@ import tempfile
 import argparse_oe  # pylint: disable=import-error
 import oe.types  # pylint: disable=import-error
 import oe_package  # pylint: disable=import-error
-from devtool import DevtoolError, exec_fakeroot, setup_tinfoil  # pylint: disable=import-error
+from devtool import (  # pylint: disable=import-error
+    DevtoolError,
+    exec_fakeroot,
+    setup_tinfoil,
+)
 
 logger = logging.getLogger('devtool')
 
 DEPLOYLIST_PATH = '/.devtool'
+
+
+class _DeployTempFiles:  # pylint: disable=too-few-public-methods
+    """Temporary paths used during a deployment."""
+
+    def __init__(self):
+        self.tmpdir = ''
+        self.tmpscript = ''
+        self.tmpfilelist = ''
+
+
+class _DeployContext:  # pylint: disable=too-few-public-methods
+    """Shared deployment state passed between helpers."""
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def __init__(self, args, rd, recipe_outdir, destdir, ssh_opts):
+        self.args = args
+        self.rd = rd
+        self.recipe_outdir = recipe_outdir
+        self.destdir = destdir
+        self.ssh_opts = ssh_opts
+        self.temp = _DeployTempFiles()
 
 
 def _prepare_remote_script(  # pylint: disable=too-many-positional-arguments, too-many-arguments
@@ -148,9 +173,196 @@ def _prepare_remote_script(  # pylint: disable=too-many-positional-arguments, to
     return '\n'.join(lines)
 
 
+def _prepare_recipe_output_dir(rd, recipe_outdir, args):
+    """Prepare recipe output directory, applying strip if requested."""
+    if not args.strip or args.dry_run:
+        return recipe_outdir
+
+    # Fakeroot copy to new destination
+    srcdir = recipe_outdir
+    new_outdir = os.path.join(rd.getVar('WORKDIR'), 'devtool-deploy-target-stripped')
+
+    if os.path.isdir(new_outdir):
+        exec_fakeroot(rd, f'rm -rf {new_outdir}', shell=True)
+
+    exec_fakeroot(
+        rd,
+        f'cp -af {os.path.join(srcdir, ".")} {new_outdir}',
+        shell=True,
+    )
+
+    os.environ['PATH'] = ':'.join(
+        [os.environ['PATH'], rd.getVar('PATH') or '']
+    )
+
+    oe_package.strip_execs(
+        args.recipename,
+        new_outdir,
+        rd.getVar('STRIP'),
+        rd.getVar('libdir'),
+        rd.getVar('base_libdir'),
+        rd,
+    )
+
+    return new_outdir
+
+
+def _build_file_list(recipe_outdir, destdir):
+    """Build list of files to deploy with their sizes."""
+    filelist = []
+    inodes = set()
+    ftotalsize = 0
+
+    for root, _, files in os.walk(recipe_outdir):
+        for fn in files:
+            fstat = os.lstat(os.path.join(root, fn))
+
+            # Get the size in kiB (since we'll be comparing it to the output of du -k)
+            # MUST use lstat() here not stat() or getfilesize() since we don't want to
+            # dereference symlinks
+            if fstat.st_ino in inodes:
+                fsize = 0
+            else:
+                fsize = int(math.ceil(float(fstat.st_size) / 1024))
+
+            inodes.add(fstat.st_ino)
+            ftotalsize += fsize
+
+            # The path as it would appear on the target
+            fpath = os.path.join(destdir, os.path.relpath(root, recipe_outdir), fn)
+            filelist.append((fpath, fsize))
+
+    return filelist, ftotalsize
+
+
+def _prepare_ssh_options(args):
+    """Prepare SSH options based on command arguments."""
+    opts = {
+        'extraoptions': '',
+        'scp_sshexec': '',
+        'ssh_sshexec': 'ssh',
+        'scp_port': '',
+        'ssh_port': ''
+    }
+
+    if args.no_host_check:
+        opts['extraoptions'] += (
+            '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+        )
+
+    if not args.show_status:
+        opts['extraoptions'] += ' -q'
+
+    if args.ssh_exec:
+        opts['scp_sshexec'] = f'-S {args.ssh_exec}'
+        opts['ssh_sshexec'] = args.ssh_exec
+
+    if args.port:
+        opts['scp_port'] = f'-P {args.port}'
+        opts['ssh_port'] = f'-p {args.port}'
+
+    if args.key:
+        opts['extraoptions'] += f' -i {args.key}'
+
+    return opts
+
+
+def _write_deployment_files(context, shellscript, filelist, ftotalsize):
+    """Write deployment script and file list to temporary directory."""
+    tmpscript = context.temp.tmpscript
+    tmpfilelist = context.temp.tmpfilelist
+    tmpdir = context.temp.tmpdir
+
+    script_path = os.path.join(tmpdir, os.path.basename(tmpscript))
+    with open(script_path, 'w', encoding='utf-8') as f:
+        f.write(shellscript)
+
+    list_path = os.path.join(tmpdir, os.path.basename(tmpfilelist))
+    with open(list_path, 'w', encoding='utf-8') as f:
+        f.write(f'{ftotalsize}\n')
+        for fpath, fsize in filelist:
+            f.write(f'{fpath} {fsize}\n')
+
+
+def _copy_files_to_target(context):
+    """Copy deployment files to target system."""
+    cmd = (
+        'scp '
+        f'{context.ssh_opts["scp_sshexec"]} '
+        f'{context.ssh_opts["scp_port"]} '
+        f'{context.ssh_opts["extraoptions"]} '
+        f'{context.temp.tmpdir}/* '
+        f'{context.args.target}:{os.path.dirname(context.temp.tmpscript)}'
+    )
+
+    ret = subprocess.call(cmd, shell=True)
+    if ret != 0:
+        raise DevtoolError(
+            f'Failed to copy script to {context.args.target} - rerun with -s to '
+            'get a complete error message'
+        )
+
+
+def _execute_remote_deployment(context):
+    """Execute the remote deployment script."""
+    remote_cmd = (
+        'tar cf - . | '
+        f"{context.ssh_opts['ssh_sshexec']} "
+        f"{context.ssh_opts['ssh_port']} "
+        f"{context.ssh_opts['extraoptions']} "
+        f"{context.args.target} "
+        f"'sh {context.temp.tmpscript} {context.args.recipename} "
+        f"{context.destdir} {context.temp.tmpfilelist}'"
+    )
+    ret = exec_fakeroot(
+        context.rd,
+        remote_cmd,
+        cwd=context.recipe_outdir,
+        shell=True,
+    )
+
+    if ret != 0:
+        raise DevtoolError(
+            'Deploy failed - rerun with -s to get a complete error message'
+        )
+
+
+def _deploy_files_to_target(context, filelist, ftotalsize):
+    """Deploy files to target system."""
+    # In order to delete previously deployed files and have the manifest file on
+    # the target, we write out a shell script and then copy it to the target
+    # so we can then run it (piping tar output to it).
+    # (We cannot use scp here, because it doesn't preserve symlinks.)
+    context.temp.tmpdir = tempfile.mkdtemp(prefix='devtool')
+
+    try:
+        context.temp.tmpscript = '/tmp/devtool_deploy.sh'
+        context.temp.tmpfilelist = os.path.join(
+            os.path.dirname(context.temp.tmpscript),
+            'devtool_deploy.list',
+        )
+
+        shellscript = _prepare_remote_script(
+            should_deploy=True,
+            verbose=context.args.show_status,
+            nopreserve=context.args.no_preserve,
+            nocheckspace=context.args.no_check_space,
+        )
+
+        _write_deployment_files(context, shellscript, filelist, ftotalsize)
+        _copy_files_to_target(context)
+
+    finally:
+        if context.temp.tmpdir:
+            shutil.rmtree(context.temp.tmpdir)
+
+    _execute_remote_deployment(context)
+    logger.info('Successfully deployed %s', context.recipe_outdir)
+
+
 def deploy(
     args, config, basepath, workspace
-):  # pylint: disable=unused-argument, too-many-statements, too-many-branches
+):  # pylint: disable=unused-argument, too-many-statements, too-many-branches, too-many-locals
     """Entry point for the devtool 'deploy' subcommand"""
     # check_workspace_recipe(workspace, args.recipename, checksrc=False)
 
@@ -160,10 +372,12 @@ def deploy(
         destdir = '/'
     else:
         args.target = host
+
     if not destdir.endswith('/'):
         destdir += '/'
 
     tinfoil = setup_tinfoil(basepath=basepath)
+
     try:
         try:
             rd = tinfoil.parse_recipe(args.recipename)
@@ -171,6 +385,7 @@ def deploy(
             raise DevtoolError(
                 f'Exception parsing recipe {args.recipename}: {e}'
             ) from e
+
         recipe_outdir = rd.getVar('D')
         if not os.path.exists(recipe_outdir) or not os.listdir(recipe_outdir):
             raise DevtoolError(
@@ -179,51 +394,8 @@ def deploy(
                 'any files.'
             )
 
-        if args.strip and not args.dry_run:
-            # Fakeroot copy to new destination
-            srcdir = recipe_outdir
-            recipe_outdir = os.path.join(
-                rd.getVar('WORKDIR'), 'devtool-deploy-target-stripped'
-            )
-            if os.path.isdir(recipe_outdir):
-                exec_fakeroot(rd, f'rm -rf {recipe_outdir}', shell=True)
-            exec_fakeroot(
-                rd,
-                f'cp -af {os.path.join(srcdir, ".")} {recipe_outdir}',
-                shell=True,
-            )
-            os.environ['PATH'] = ':'.join(
-                [os.environ['PATH'], rd.getVar('PATH') or '']
-            )
-            oe_package.strip_execs(
-                args.recipename,
-                recipe_outdir,
-                rd.getVar('STRIP'),
-                rd.getVar('libdir'),
-                rd.getVar('base_libdir'),
-                rd,
-            )
-
-        filelist = []
-        inodes = set({})
-        ftotalsize = 0
-        for root, _, files in os.walk(recipe_outdir):
-            for fn in files:
-                fstat = os.lstat(os.path.join(root, fn))
-                # Get the size in kiB (since we'll be comparing it to the output of du -k)
-                # MUST use lstat() here not stat() or getfilesize() since we don't want to
-                # dereference symlinks
-                if fstat.st_ino in inodes:
-                    fsize = 0
-                else:
-                    fsize = int(math.ceil(float(fstat.st_size) / 1024))
-                inodes.add(fstat.st_ino)
-                ftotalsize += fsize
-                # The path as it would appear on the target
-                fpath = os.path.join(
-                    destdir, os.path.relpath(root, recipe_outdir), fn
-                )
-                filelist.append((fpath, fsize))
+        recipe_outdir = _prepare_recipe_output_dir(rd, recipe_outdir, args)
+        filelist, ftotalsize = _build_file_list(recipe_outdir, destdir)
 
         if args.dry_run:
             print(
@@ -233,84 +405,9 @@ def deploy(
                 print(f'  {item}')
             return 0
 
-        ssh_opts = {'extraoptions': '', 'scp_sshexec': '', 'ssh_sshexec': 'ssh',
-                    'scp_port': '', 'ssh_port': ''}
-        if args.no_host_check:
-            ssh_opts['extraoptions'] += (
-                '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
-            )
-        if not args.show_status:
-            ssh_opts['extraoptions'] += ' -q'
-
-        if args.ssh_exec:
-            ssh_opts['scp_sshexec'] = f'-S {args.ssh_exec}'
-            ssh_opts['ssh_sshexec'] = args.ssh_exec
-
-        if args.port:
-            ssh_opts['scp_port'] = f'-P {args.port}'
-            ssh_opts['ssh_port'] = f'-p {args.port}'
-
-        if args.key:
-            ssh_opts['extraoptions'] += f' -i {args.key}'
-
-        # In order to delete previously deployed files and have the manifest file on
-        # the target, we write out a shell script and then copy it to the target
-        # so we can then run it (piping tar output to it).
-        # (We cannot use scp here, because it doesn't preserve symlinks.)
-        tmpdir = tempfile.mkdtemp(prefix='devtool')
-        try:
-            tmpscript = '/tmp/devtool_deploy.sh'
-            tmpfilelist = os.path.join(
-                os.path.dirname(tmpscript), 'devtool_deploy.list'
-            )
-            shellscript = _prepare_remote_script(
-                should_deploy=True,
-                verbose=args.show_status,
-                nopreserve=args.no_preserve,
-                nocheckspace=args.no_check_space,
-            )
-            # Write out the script to a file
-            with open(
-                os.path.join(tmpdir, os.path.basename(tmpscript)), 'w', encoding='utf-8'
-            ) as f:
-                f.write(shellscript)
-            # Write out the file list
-            with open(
-                os.path.join(tmpdir, os.path.basename(tmpfilelist)), 'w', encoding='utf-8'
-            ) as f:
-                f.write(f'{ftotalsize}\n')
-                for fpath, fsize in filelist:
-                    f.write(f'{fpath} {fsize}\n')
-            # Copy them to the target
-            cmd = (
-                f'scp {ssh_opts["scp_sshexec"]} {ssh_opts["scp_port"]} '
-                f'{ssh_opts["extraoptions"]} {tmpdir}/* '
-                f'{args.target}:{os.path.dirname(tmpscript)}'
-            )
-            ret = subprocess.call(cmd, shell=True)
-            if ret != 0:
-                raise DevtoolError(
-                    f'Failed to copy script to {args.target} - rerun with -s to '
-                    'get a complete error message'
-                )
-        finally:
-            shutil.rmtree(tmpdir)
-
-        # Now run the script
-        ret = exec_fakeroot(
-            rd,
-            f"tar cf - . | {ssh_opts['ssh_sshexec']}  {ssh_opts['ssh_port']} "
-            f"{ssh_opts['extraoptions']} {args.target} "
-            f"'sh {tmpscript} {args.recipename} {destdir} {tmpfilelist}'",
-            cwd=recipe_outdir,
-            shell=True,
-        )
-        if ret != 0:
-            raise DevtoolError(
-                'Deploy failed - rerun with -s to get a complete error message'
-            )
-
-        logger.info('Successfully deployed %s', recipe_outdir)
+        ssh_opts = _prepare_ssh_options(args)
+        context = _DeployContext(args, rd, recipe_outdir, destdir, ssh_opts)
+        _deploy_files_to_target(context, filelist, ftotalsize)
 
         files_list = []
         for root, _, files in os.walk(recipe_outdir):

@@ -10,7 +10,7 @@ plugins:
     path: plugins/generate/generate.py
   - name: neo-generate
     class: NeoGenerate
-    path: plugins/neo-generate/neo_generate.py
+    path: plugins/neo_generate/neo_generate.py
   - name: bitbake
     class: Bitbake
     path: plugins/bitbake/bitbake.py

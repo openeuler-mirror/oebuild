@@ -61,7 +61,125 @@ def approved_variables():
     return approved
 
 
-def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
+def _prepare_variable_regexes(variables, match_overrides):
+    """Prepare regex patterns for variable matching."""
+    var_res = {}
+    override_re = r'(_[a-zA-Z0-9-_$(){}]+)?' if match_overrides else ''
+
+    for var in variables:
+        if var.endswith("()"):
+            var_res[var] = re.compile(
+                fr"^(\{var[:-2].rstrip()}\{override_re})[ \t]*\([ \t]*\)[ \t]*{{"
+            )
+        else:
+            var_res[var] = re.compile(
+                fr'^(\{var}\{override_re})[ \\\\\t]*[?+:.]*=[+.]*[ \\t]*(["\\])'
+            )
+
+    return var_res
+
+
+def _handle_function_formatting(varset_new, newvalue, newop, indent):
+    """Handle formatting for function definitions."""
+    # A function definition
+    if isinstance(indent, int):
+        if indent == -1:
+            indentspc = ' ' * (len(f"{varset_new} {newop}") + 2)
+        else:
+            indentspc = ' ' * indent
+    else:
+        indentspc = indent
+
+    if isinstance(newvalue, list):
+        indented_values = f"\n{indentspc}".join(newvalue)
+        return f"{varset_new} {{\n{indentspc}{indented_values}\n}}\n"
+
+    # Single value
+    if not newvalue.startswith('\n'):
+        newvalue = '\n' + newvalue
+    if not newvalue.endswith('\n'):
+        newvalue = newvalue + '\n'
+    return f"{varset_new} {{{newvalue}}}\n"
+
+
+def _handle_variable_formatting(varset_new, newvalue, minbreak, indent):
+    """Handle formatting for normal variables."""
+    # Normal variable
+    if isinstance(indent, int):
+        if indent == -1:
+            indentspc = ' ' * (len(varset_new) + 2)
+        else:
+            indentspc = ' ' * indent
+    else:
+        indentspc = indent
+
+    if not isinstance(newvalue, list):
+        return f'{varset_new} "{newvalue}"\n'
+
+    # List value
+    if not newvalue:
+        # Empty list -> empty string
+        return f'{varset_new} ""\n'
+
+    if minbreak:
+        # First item on first line
+        if len(newvalue) == 1:
+            return f'{varset_new} "{newvalue[0]}"\n'
+
+        result = [f'{varset_new} "{newvalue[0]} \\\n']
+        for item in newvalue[1:]:
+            result.append(f'{indentspc}{item} \\\n')
+        result.append(f'{indentspc}"\n')
+        return ''.join(result)
+
+    # No item on first line
+    result = [f'{varset_new} " \\\n']
+    for item in newvalue:
+        result.append(f'{indentspc}{item} \\\n')
+    result.append(f'{indentspc}"\n')
+    return ''.join(result)
+
+
+def _handle_var_end(state, varfunc):
+    """Handle the end of a variable/function block."""
+    in_var = state['in_var']
+    full_value = state['full_value']
+    varset_start = state['varset_start']
+    varlines = state['varlines']
+    newlines = state['newlines']
+
+    prerun_newlines = newlines[:]
+    op = varset_start[len(in_var):].strip()
+    newvalue, newop, indent, minbreak = varfunc(in_var, full_value, op, newlines)
+    changed = prerun_newlines != newlines
+
+    if newvalue is None:
+        # Drop the value
+        return True, changed
+
+    if newvalue == full_value and newop in [None, op]:
+        # Put the old lines back where they were
+        newlines.extend(varlines)
+        return False, changed
+
+    # Variable value or operator changed
+    varset_new = f"{in_var} {newop}" if newop not in [None, op] else varset_start
+
+    if in_var.endswith('()'):
+        newlines.append(_handle_function_formatting(
+            varset_new, newvalue, newop, indent
+        ))
+    else:
+        newlines.append(_handle_variable_formatting(
+            varset_new, newvalue, minbreak, indent
+        ))
+
+    return True, changed
+
+
+def edit_metadata(
+    meta_lines, variables, varfunc, match_overrides=False
+):  # pylint: disable=too-many-statements
     """Edit lines from a recipe or config file and modify one or more
     specified variable values set in the file using a specified callback
     function. Lines are expected to have trailing newlines.
@@ -108,159 +226,92 @@ def edit_metadata(meta_lines, variables, varfunc, match_overrides=False):
         newlines:
             Lines after processing
     """
+    var_res = _prepare_variable_regexes(variables, match_overrides)
+    state = {
+        'varset_start': '',
+        'varlines': [],
+        'newlines': [],
+        'in_var': None,
+        'full_value': '',
+        'var_end': '',
+        'checkspc': False,
+        'updated': False
+    }
 
-    var_res = {}
-    if match_overrides:
-        override_re = r'(_[a-zA-Z0-9-_$(){}]+)?'
-    else:
-        override_re = ''
-    for var in variables:
-        if var.endswith("()"):
-            var_res[var] = re.compile(
-                fr"^(\{var[:-2].rstrip()}\{override_re})[ \\t]*\\([ \\t]*\\)[ \\t]*{{"
-            )
+    def _process_line(line):
+        if not state['in_var']:
+            _process_non_variable_line(line)
         else:
-            var_res[var] = re.compile(
-                fr'^(\{var}\{override_re})[ \\\\\t]*[?+:.]*=[+.]*[ \\t]*(["\\])'
-            )
-    varset_start = ''
-    varlines = []
-    newlines = []
-    in_var = None
-    full_value = ''
-    var_end = ''
+            _process_variable_continuation(line)
 
-    def handle_var_end():
-        prerun_newlines = newlines[:]
-        op = varset_start[len(in_var):].strip()
-        (newvalue, newop, indent, minbreak) = varfunc(
-            in_var, full_value, op, newlines
-        )
-        changed = prerun_newlines != newlines
+    def _process_non_variable_line(line):
+        skip = False
+        for varname, var_re in var_res.items():
+            res = var_re.match(line)
+            if res:
+                _start_variable_processing(line, varname, res)
+                skip = True
+                break
+        if not skip:
+            _append_regular_line(line)
 
-        if newvalue is None:
-            # Drop the value
-            return True
+    def _start_variable_processing(line, varname, res):
+        isfunc = varname.endswith('()')
+        if isfunc:
+            splitvalue = line.split('{', 1)
+            state['var_end'] = '}'
+        else:
+            state['var_end'] = res.groups()[-1]
+            splitvalue = line.split(state['var_end'], 1)
+        state['varset_start'] = splitvalue[0].rstrip()
+        value = splitvalue[1].rstrip()
+        if not isfunc and value.endswith('\\'):
+            value = value[:-1]
+        state['full_value'] = value
+        state['varlines'] = [line]
+        state['in_var'] = res.group(1)
+        if isfunc:
+            state['in_var'] += '()'
+        if value.endswith(state['var_end']):
+            state['full_value'] = state['full_value'][:-1]
+            if _handle_var_end(state, varfunc)[0]:
+                state['updated'] = True
+                state['checkspc'] = True
+            state['in_var'] = None
 
-        if newvalue != full_value or (newop not in [None, op]):
-            if newop not in [None, op]:
-                # Callback changed the operator
-                varset_new = f"{in_var} {newop}"
-            else:
-                varset_new = varset_start
+    def _append_regular_line(line):
+        if state['checkspc']:
+            state['checkspc'] = False
+            if state['newlines'] and state['newlines'][-1] == '\n' and line == '\n':
+                # Squash blank line if there are two consecutive blanks after a removal
+                return
+        state['newlines'].append(line)
 
-            if isinstance(indent, int):
-                if indent == -1:
-                    indentspc = ' ' * (len(varset_new) + 2)
-                else:
-                    indentspc = ' ' * indent
-            else:
-                indentspc = indent
-            if in_var.endswith('()'):
-                # A function definition
-                if isinstance(newvalue, list):
-                    indented_values = f"\n{indentspc}".join(newvalue)
-                    newlines.append(
-                        f"{varset_new} {{\n{indentspc}{indented_values}\n}}\n"
-                    )
-                else:
-                    if not newvalue.startswith('\n'):
-                        newvalue = '\n' + newvalue
-                    if not newvalue.endswith('\n'):
-                        newvalue = newvalue + '\n'
-                    newlines.append(f"{varset_new} {{{newvalue}}}\n")
-            else:
-                # Normal variable
-                if isinstance(newvalue, list):
-                    if not newvalue:
-                        # Empty list -> empty string
-                        newlines.append(f'{varset_new} ""\n')
-                    elif minbreak:
-                        # First item on first line
-                        if len(newvalue) == 1:
-                            newlines.append(
-                                f'{varset_new} "{newvalue[0]}"\n'
-                            )
-                        else:
-                            newlines.append(
-                                f'{varset_new} "{newvalue[0]} \\\n'
-                            )
-                            for item in newvalue[1:]:
-                                newlines.append(
-                                    f'{indentspc}{item} \\\n'
-                                )
-                            newlines.append(f'{indentspc}"\n')
-                    else:
-                        # No item on first line
-                        newlines.append(f'{varset_new} " \\\n')
-                        for item in newvalue:
-                            newlines.append(f'{indentspc}{item} \\\n')
-                        newlines.append(f'{indentspc}"\n')
-                else:
-                    newlines.append(f'{varset_new} "{newvalue}"\n')
-            return True
+    def _process_variable_continuation(line):
+        value = line.rstrip()
+        state['varlines'].append(line)
+        if state['in_var'].endswith('()'):
+            state['full_value'] += '\n' + value
+        else:
+            state['full_value'] += value[:-1]
+        if not value.endswith(state['var_end']):
+            return
 
-        # Put the old lines back where they were
-        newlines.extend(varlines)
-        # If newlines was touched by the function, we'll need to return True
-        return changed
+        # End of variable value
+        if state['in_var'].endswith('()'):
+            if state['full_value'].count('{') - state['full_value'].count('}') >= 0:
+                return
+            state['full_value'] = state['full_value'][:-1]
 
-    checkspc = False
+        if _handle_var_end(state, varfunc)[0]:
+            state['updated'] = True
+            state['checkspc'] = True
+        state['in_var'] = None
 
     for line in meta_lines:
-        if in_var:
-            value = line.rstrip()
-            varlines.append(line)
-            if in_var.endswith('()'):
-                full_value += '\n' + value
-            else:
-                full_value += value[:-1]
-            if value.endswith(var_end):
-                if in_var.endswith('()'):
-                    if full_value.count('{') - full_value.count('}') >= 0:
-                        continue
-                    full_value = full_value[:-1]
-                if handle_var_end():
-                    updated = True
-                    checkspc = True
-                in_var = None
-        else:
-            skip = False
-            for varname, var_re in var_res.items():
-                res = var_re.match(line)
-                if res:
-                    isfunc = varname.endswith('()')
-                    if isfunc:
-                        splitvalue = line.split('{', 1)
-                        var_end = '}'
-                    else:
-                        var_end = res.groups()[-1]
-                        splitvalue = line.split(var_end, 1)
-                    varset_start = splitvalue[0].rstrip()
-                    value = splitvalue[1].rstrip()
-                    if not isfunc and value.endswith('\\'):
-                        value = value[:-1]
-                    full_value = value
-                    varlines = [line]
-                    in_var = res.group(1)
-                    if isfunc:
-                        in_var += '()'
-                    if value.endswith(var_end):
-                        full_value = full_value[:-1]
-                        if handle_var_end():
-                            updated = True
-                            checkspc = True
-                        in_var = None
-                    skip = True
-                    break
-            if not skip:
-                if checkspc:
-                    checkspc = False
-                    if newlines and newlines[-1] == '\n' and line == '\n':
-                        # Squash blank line if there are two consecutive blanks after a removal
-                        continue
-                newlines.append(line)
-    return (updated, newlines)
+        _process_line(line)
+
+    return (state['updated'], state['newlines'])
 
 
 def _remove_trailing_sep(pth):
@@ -287,7 +338,76 @@ def _layerlist_param(value):
     return [_remove_trailing_sep(value)]
 
 
-def edit_bblayers_conf(bblayers_conf, add, remove, edit_cb=None):
+def _process_layer_removals(bblayers, removelayers, approved, removed):
+    """Process layer removals from BBLAYERS list."""
+    updated = False
+    if not removelayers:
+        return updated
+
+    for removelayer in removelayers:
+        for i, layer in enumerate(bblayers):
+            if fnmatch.fnmatch(
+                _canonicalise_path(layer, approved),
+                _canonicalise_path(removelayer, approved),
+            ):
+                updated = True
+                del bblayers[i]
+                removed.append(removelayer)
+                break
+    return updated
+
+
+def _process_layer_additions(bblayers, addlayers, plusequals):
+    """Process layer additions to BBLAYERS list."""
+    updated = False
+    if not addlayers or plusequals:
+        return updated
+
+    for addlayer in addlayers:
+        if addlayer not in bblayers:
+            updated = True
+            bblayers.append(addlayer)
+    addlayers.clear()
+    return updated
+
+
+def _process_layer_edits(bblayers, edit_cb, approved):
+    """Process layer edits using callback function."""
+    updated = False
+    if not edit_cb:
+        return updated, bblayers
+
+    newlist = []
+    for layer in bblayers:
+        res = edit_cb(layer, _canonicalise_path(layer, approved))
+        if res != layer:
+            newlist.append(res)
+            updated = True
+        else:
+            newlist.append(layer)
+    return updated, newlist
+
+
+def _calculate_not_added_layers(addlayers, orig_bblayers, removelayers, approved):
+    """Calculate layers that were not added."""
+    removelayers_canon = [_canonicalise_path(layer, approved) for layer in removelayers]
+    notadded = []
+
+    for layer in addlayers:
+        layer_canon = _canonicalise_path(layer, approved)
+        if layer_canon in orig_bblayers and layer_canon not in removelayers_canon:
+            notadded.append(layer)
+
+    notadded_canon = [_canonicalise_path(layer, approved) for layer in notadded]
+    addlayers[:] = [
+        layer for layer in addlayers
+        if _canonicalise_path(layer, approved) not in notadded_canon
+    ]
+
+    return notadded
+
+
+def edit_bblayers_conf(bblayers_conf, add, remove, edit_cb=None):  # pylint: disable=too-many-locals
     """Edit bblayers.conf, adding and/or removing layers
     Parameters:
         bblayers_conf: path to bblayers.conf file to edit
@@ -323,36 +443,14 @@ def edit_bblayers_conf(bblayers_conf, add, remove, edit_cb=None):
 
     def handle_bblayers(_varname, origvalue, op, _newlines):
         """Second pass handler to modify BBLAYERS values."""
-        updated = False
         bblayers = [_remove_trailing_sep(x) for x in origvalue.split()]
-        if removelayers:
-            for removelayer in removelayers:
-                for i, layer in enumerate(bblayers):
-                    if fnmatch.fnmatch(
-                        _canonicalise_path(layer, approved),
-                        _canonicalise_path(removelayer, approved),
-                    ):
-                        updated = True
-                        del bblayers[i]
-                        removed.append(removelayer)
-                        break
-        if addlayers and not plusequals:
-            for addlayer in addlayers:
-                if addlayer not in bblayers:
-                    updated = True
-                    bblayers.append(addlayer)
-            del addlayers[:]
+        updated = False
 
-        if edit_cb:
-            newlist = []
-            for layer in bblayers:
-                res = edit_cb(layer, _canonicalise_path(layer, approved))
-                if res != layer:
-                    newlist.append(res)
-                    updated = True
-                else:
-                    newlist.append(layer)
-            bblayers = newlist
+        updated = _process_layer_removals(bblayers, removelayers, approved, removed) or updated
+        updated = _process_layer_additions(bblayers, addlayers, plusequals) or updated
+
+        edit_updated, bblayers = _process_layer_edits(bblayers, edit_cb, approved)
+        updated = updated or edit_updated
 
         if updated:
             if op == '+=' and not bblayers:
@@ -374,25 +472,12 @@ def edit_bblayers_conf(bblayers_conf, add, remove, edit_cb=None):
     if bblayercalls.count('+=') > 1:
         plusequals = True
 
-    removelayers_canon = [_canonicalise_path(layer, approved) for layer in removelayers]
-    notadded = []
-    for layer in addlayers:
-        layer_canon = _canonicalise_path(layer, approved)
-        if (
-            layer_canon in orig_bblayers
-            and layer_canon not in removelayers_canon
-        ):
-            notadded.append(layer)
-    notadded_canon = [_canonicalise_path(layer, approved) for layer in notadded]
-    addlayers[:] = [
-        layer
-        for layer in addlayers
-        if _canonicalise_path(layer, approved) not in notadded_canon
-    ]
+    notadded = _calculate_not_added_layers(addlayers, orig_bblayers, removelayers, approved)
 
     (updated, newlines) = edit_metadata(
         newlines, ['BBLAYERS'], handle_bblayers
     )
+
     if addlayers:
         # Still need to add these
         for addlayer in addlayers:

@@ -10,28 +10,28 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 """
 
-import pathlib
-import os
-import time
-import random
 import getpass
-import sys
+import os
+import pathlib
+import random
 import re
 import subprocess
+import sys
+import time
 from contextlib import contextmanager
 
-from ruamel.yaml import YAML
 from docker.errors import DockerException
 from docker.models.containers import Container
+from ruamel.yaml import YAML
 
+import oebuild.const as oebuild_const
 from oebuild.docker_proxy import DockerProxy
 from oebuild.m_log import logger
-from oebuild.version import __version__
-import oebuild.const as oebuild_const
 from oebuild.ogit import OGit
-from oebuild.struct import RepoParam, DockerParam
-from oebuild.parse_param import ParseRepoParam
 from oebuild.parse_env import EnvContainer, ParseEnv
+from oebuild.parse_param import ParseRepoParam
+from oebuild.struct import DockerParam, RepoParam
+from oebuild.version import __version__
 
 
 def get_nativesdk_environment(
@@ -163,7 +163,7 @@ def get_compile_yaml_dir():
     return compile.yaml.sample yaml dir
     """
     return os.path.join(
-        get_base_oebuild(), 'app/conf', oebuild_const.COMPILE_YAML_SAMPLE
+        get_base_oebuild(), 'app/conf', oebuild_const.compile_yaml_sample
     )
 
 

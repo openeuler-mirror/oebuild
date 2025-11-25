@@ -11,17 +11,17 @@ See the Mulan PSL v2 for more details.
 """
 
 import argparse
-import shutil
 import os
-import textwrap
-import sys
 import pathlib
+import shutil
+import sys
+import textwrap
 
-from oebuild.command import OebuildCommand
-import oebuild.util as oebuild_util
-from oebuild.configure import Configure, ConfigBasicRepo, Config
-from oebuild.m_log import logger
 import oebuild.const as oebuild_const
+import oebuild.util as oebuild_util
+from oebuild.command import OebuildCommand
+from oebuild.configure import Config, ConfigBasicRepo, Configure
+from oebuild.m_log import logger
 
 
 class Init(OebuildCommand):
@@ -214,7 +214,7 @@ please execute the follow commands next
         try:
             compil = oebuild_util.get_compile_yaml_dir()
             shutil.copyfile(
-                compil, os.path.join(updir, oebuild_const.COMPILE_YAML_SAMPLE)
+                compil, os.path.join(updir, oebuild_const.compile_yaml_sample)
             )
         except FileNotFoundError:
             logger.error('mkdir compile.yaml.sample failed')
