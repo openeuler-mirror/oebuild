@@ -419,20 +419,61 @@ class NeoGenerate(OebuildCommand):
         logger.info(
             '\n================= Available Features =================='
         )
+
         terminal_width = self._get_terminal_width()
+
         table = self._build_table(
             ['Feature Name', 'Supported Arch'],
             terminal_width,
             title='Available Features',
         )
-        for feature in self.feature_registry.list_features():
+
+        def display_feature(feature, depth=0):
+            indent = '  ' * depth
+
+            if depth == 0:
+                display_name = feature.full_id
+            else:
+                display_name = f"{indent}- {feature.full_id}"
+
             support = (
                 'all'
                 if not feature.machines
                 else ', '.join(feature.machines)
             )
-            table.add_row([feature.full_id, support])
-        table.sortby = 'Feature Name'
+
+            table.add_row([display_name, support])
+
+        features_by_category = {}
+        for feature in self.feature_registry.list_features():
+            category = feature.category
+            if category not in features_by_category:
+                features_by_category[category] = []
+            features_by_category[category].append(feature)
+
+        # For each category, display features in hierarchical order
+        for category in sorted(features_by_category.keys()):
+            category_features = features_by_category[category]
+
+            root_feature = None
+            other_features = []
+
+            for feature in category_features:
+                if feature.category == feature.leaf_id and not feature.parent_full_id:
+                    root_feature = feature
+                else:
+                    other_features.append(feature)
+
+            if root_feature:
+                display_feature(root_feature, depth=0)
+
+                for feature in sorted(other_features, key=lambda f: f.full_id):
+                    display_feature(feature, depth=1)
+            else:
+                table.add_row([category, ''])
+                for feature in sorted(other_features, key=lambda f: f.full_id):
+                    display_feature(feature, depth=1)
+
         print(table)
         logger.info(
             """* 'Supported Arch' defaults to 'all' if not specified in the feature's .yaml file."""

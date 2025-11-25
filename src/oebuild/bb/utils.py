@@ -64,16 +64,16 @@ def approved_variables():
 def _prepare_variable_regexes(variables, match_overrides):
     """Prepare regex patterns for variable matching."""
     var_res = {}
-    override_re = r'(_[a-zA-Z0-9-_$(){}]+)?' if match_overrides else ''
+    override_re = r'(_[a-zA-Z0-9_$(){}-]+)?' if match_overrides else ''
 
     for var in variables:
         if var.endswith("()"):
             var_res[var] = re.compile(
-                fr"^(\{var[:-2].rstrip()}\{override_re})[ \t]*\([ \t]*\)[ \t]*{{"
+                fr"^(\{var[:-2].rstrip()}{override_re})[ \t]*\([ \t]*\)[ \t]*{{"
             )
         else:
             var_res[var] = re.compile(
-                fr'^(\{var}\{override_re})[ \\\\\t]*[?+:.]*=[+.]*[ \\t]*(["\\])'
+                fr'^({var}{override_re})[ \\\\\t]*[?+:.]*=[+.]*[ \\t]*(["\\])'
             )
 
     return var_res

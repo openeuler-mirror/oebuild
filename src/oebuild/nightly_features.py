@@ -185,7 +185,12 @@ class NightlyFeatureRegistry:
             raise NeoFeatureError(
                 f'{origin}: sub-feature "id" may not be "self"'
             )
-        full_id = f'{parent.full_id}/{sub_id}'
+        # Apply syntax sugar for sub-features: if parent is a category root feature,
+        # sub-feature full_id should be parent.category/sub_id instead of parent.full_id/sub_id
+        if parent.category == parent.leaf_id:
+            full_id = f'{parent.category}/{sub_id}'
+        else:
+            full_id = f'{parent.full_id}/{sub_id}'
         config = self._parse_config(data.get('config'))
         machines, machine_set = self._parse_machines(data.get('machines'))
         feature = Feature(
@@ -315,6 +320,10 @@ class NightlyFeatureRegistry:
             self.features_with_one_of.append(feature)
 
     def _make_full_id(self, category: str, leaf_id: str) -> str:
+        # Apply syntax sugar rule: when category equals leaf_id,
+        # the feature becomes the category root feature with full_id = category
+        if category == leaf_id:
+            return category
         return f'{category}/{leaf_id}'
 
     def _normalize_leaf(self, value) -> str:
