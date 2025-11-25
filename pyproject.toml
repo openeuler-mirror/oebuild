@@ -1,6 +1,6 @@
 [project]
 name = "oebuild"
-version = "0.1.0"
+version = "0.1.0.7"
 description = "openEuler Embedded workspace generator"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -9,7 +9,7 @@ requires-python = ">=3.8"
 oebuild = "oebuild.app.main:main"
 
 [tool.ruff]
-line-length = 79
+line-length = 80
 
 [tool.ruff.format]
 quote-style = "single"
@@ -29,4 +29,62 @@ ignore = [
 
 # need pip install Flake8-pyproject
 [tool.flake8]
-max-line-length = 79
+max-line-length = 80
+
+# Sync with openEuler Embedded CI .gitlint:
+# Commitizen configuration for conventional commits
+# This enforces commit message format matching gitlint rules
+#
+# `cz commit` or `cz c` : create a standardlized commit
+# `cz commit -- --signoff` of `cz c -- -s` to sign off
+# `cz bump` to bump project infos 
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_files = [
+    "pyproject.toml:version",
+]
+
+# Customize commit message format to match gitlint regex
+[tool.commitizen.customize]
+message_template = "{{change_type}}: {{message}}"
+
+# Define conventional commit types
+[[tool.commitizen.types]]
+type = "feat"
+hidden = false
+
+[[tool.commitizen.types]]
+type = "fix"
+hidden = false
+
+[[tool.commitizen.types]]
+type = "docs"
+hidden = false
+
+[[tool.commitizen.types]]
+type = "style"
+hidden = false
+
+[[tool.commitizen.types]]
+type = "refactor"
+hidden = false
+
+[[tool.commitizen.types]]
+type = "perf"
+hidden = false
+
+[[tool.commitizen.types]]
+type = "test"
+hidden = false
+
+[[tool.commitizen.types]]
+type = "build"
+hidden = false
+
+[[tool.commitizen.types]]
+type = "ci"
+hidden = false
+
+[[tool.commitizen.types]]
+type = "chore"
+hidden = false
