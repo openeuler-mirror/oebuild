@@ -64,6 +64,8 @@ class Config:
 
     basic_repo: dict
 
+    feat_root_dir: str = 'nightly-features'
+
 
 class Configure:
     """
@@ -219,7 +221,18 @@ class Configure:
                 branch=repo['branch'],
             )
 
-        config = Config(docker=docker_config, basic_repo=basic_config)
+        raw_feat_root = config.get('feat_root_dir')
+        # nightly-features is the fallback
+        feat_root_dir = (
+            raw_feat_root.strip()
+            if isinstance(raw_feat_root, str) and raw_feat_root.strip()
+            else 'nightly-features'
+        )
+        config = Config(
+            docker=docker_config,
+            basic_repo=basic_config,
+            feat_root_dir=feat_root_dir,
+        )
 
         return config
 
@@ -247,6 +260,7 @@ class Configure:
                 'remote_url': repo.remote_url,
                 'branch': repo.branch,
             }
+        data['feat_root_dir'] = config.feat_root_dir
 
         try:
             oebuild_util.write_yaml(

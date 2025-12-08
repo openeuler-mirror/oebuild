@@ -20,19 +20,19 @@ class NeoFeatureError(Exception):
     """Base error for nightly feature parsing and resolution."""  # noqa: D401
 
 
-class FeatureResolutionError(NeoFeatureError):
+class ResolutionError(NeoFeatureError):
     """Raised when the resolver cannot satisfy a requested feature merge."""  # noqa: D401
 
 
-class FeatureConflictError(FeatureResolutionError):
+class ConflictError(ResolutionError):
     """Raised when conflicting features are enabled simultaneously."""
 
 
-class FeatureNotFoundError(FeatureResolutionError):
+class NotFountError(ResolutionError):
     """Raised when a requested feature identifier cannot be resolved."""
 
 
-class AmbiguousFeatureError(FeatureResolutionError):
+class AmbiguourError(ResolutionError):
     """Raised when a feature identifier matches multiple candidates."""
 
 
@@ -74,8 +74,8 @@ class ResolutionResult:
     features: List[Feature]
 
 
-class NightlyFeatureRegistry:
-    """Indexes features defined under .oebuild/nightly-features."""
+class FeatureRegistry:
+    """Indexes features defined under .oebuild/<feat_root_dir>."""
 
     def __init__(self, nightly_dir: pathlib.Path):
         self.features_dir = pathlib.Path(nightly_dir)
@@ -367,7 +367,7 @@ class NightlyFeatureRegistry:
             return entry
         try:
             resolved = self.resolve_identifier(entry)
-        except FeatureResolutionError as err:
+        except ResolutionError as err:
             raise NeoFeatureError(
                 f'{feature.full_id} references unknown feature {entry}'
             ) from err
@@ -435,7 +435,7 @@ class NightlyFeatureRegistry:
         if len(top_level) == 1:
             return top_level[0]
         if top_level:
-            raise AmbiguousFeatureError(
+            raise AmbiguourError(
                 f"Ambiguous feature ID: '{identifier}'. Candidates: "
                 + ', '.join(f.full_id for f in top_level)
             )
@@ -445,7 +445,7 @@ class NightlyFeatureRegistry:
         if len(sub_candidates) == 1:
             return sub_candidates[0]
         if sub_candidates:
-            raise AmbiguousFeatureError(
+            raise AmbiguourError(
                 f"Ambiguous feature ID: '{identifier}'. Candidates: "
                 + ', '.join(f.full_id for f in sub_candidates)
             )
@@ -485,7 +485,7 @@ class NightlyFeatureRegistry:
             if alias_feature and not has_context and (
                 alias_feature.full_id != leaf_match.full_id
             ):
-                raise AmbiguousFeatureError(
+                raise AmbiguourError(
                     f"Ambiguous feature ID: '{identifier}'. Candidates: "
                     f"{alias_feature.full_id}, {leaf_match.full_id}"
                 )
@@ -494,7 +494,7 @@ class NightlyFeatureRegistry:
         if alias_feature:
             return alias_feature
 
-        raise FeatureNotFoundError(
+        raise NotFountError(
             f"Unknown feature '{identifier}'. Use --list to see available features."
         )
 
@@ -507,7 +507,7 @@ class NightlyFeatureRegistry:
 class FeatureResolver:
     """Resolves machine-aware dependency trees for nightly features."""
 
-    def __init__(self, registry: NightlyFeatureRegistry, machine: str):
+    def __init__(self, registry: FeatureRegistry, machine: str):
         self.registry = registry
         self.machine = machine.strip()
         self.enabled: Dict[str, Feature] = {}
@@ -592,7 +592,7 @@ class FeatureResolver:
             *trace_lines,
             f'  - Constraint: {feature.leaf_id} requires machine {machines}',
         ]
-        raise FeatureResolutionError('\n'.join(lines))
+        raise ResolutionError('\n'.join(lines))
 
     def _resolve_one_of_groups(self) -> None:
         for feature in self.registry.features_with_one_of:
@@ -638,7 +638,7 @@ class FeatureResolver:
             if leaf_names
             else ''
         )
-        raise FeatureConflictError(
+        raise ConflictError(
             f"[Error] Conflict in feature '{feature.full_id}':\n"
             f"{detail} cannot be enabled together (one_of)."
         )

@@ -10,3 +10,4 @@ basic_repo:
         path: yocto-meta-openeuler
         remote_url: https://gitee.com/openeuler/yocto-meta-openeuler.git
         branch: master
+feat_root_dir: nightly-features

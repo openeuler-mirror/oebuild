@@ -28,10 +28,10 @@ from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
 from oebuild.m_log import logger
 from oebuild.nightly_features import (
-    FeatureResolutionError,
+    ResolutionError,
     FeatureResolver,
     NeoFeatureError,
-    NightlyFeatureRegistry,
+    FeatureRegistry,
 )
 from oebuild.parse_template import (
     BaseParseTemplate,
@@ -81,6 +81,7 @@ class NeoGenerate(OebuildCommand):
         if self.pre_parse_help(args, unknown):
             sys.exit(0)
 
+        unknown = unknown or []
         parsed_args = args.parse_args(unknown)
 
         self._validate_environment()
@@ -89,8 +90,14 @@ class NeoGenerate(OebuildCommand):
             self.list_info()
             return
 
-        if parsed_args.menuconfig:
+        interactive_invocation = parsed_args.menuconfig and not unknown
+        if interactive_invocation:
             menu_selection = self._run_menuconfig(parsed_args)
+            if menu_selection is None:
+                logger.info(
+                    'Menuconfig exited without saving a configuration; nothing generated.'
+                )
+                return
             parsed_args.platform = menu_selection.platform
             parsed_args.features = menu_selection.features
 
@@ -98,9 +105,21 @@ class NeoGenerate(OebuildCommand):
             resolution = self._resolve_features(
                 parsed_args.platform, parsed_args.features or []
             )
-        except FeatureResolutionError as err:
+        except ResolutionError as err:
             logger.error(str(err))
             sys.exit(1)
+
+        try:
+            parser_template = self._prepare_parser_template(
+                args=parsed_args,
+                resolved_features=resolution.features,
+            )
+        except BaseParseTemplate as b_t:
+            logger.error(str(b_t))
+            sys.exit(-1)
+        except ValueError as v_e:
+            logger.error(str(v_e))
+            sys.exit(-1)
 
         build_dir = self._init_build_dir(parsed_args)
         if build_dir is None:
@@ -112,7 +131,7 @@ class NeoGenerate(OebuildCommand):
         self._generate_compile_conf(
             args=parsed_args,
             build_dir=build_dir,
-            resolved_features=resolution.features,
+            parser_template=parser_template,
         )
 
     def _validate_environment(self):
@@ -120,6 +139,7 @@ class NeoGenerate(OebuildCommand):
             logger.error('Your current directory had not finished init')
             sys.exit(-1)
 
+        oebuild_config = self.configure.parse_oebuild_config()
         yocto_dir = self.configure.source_yocto_dir()
         self.yocto_dir = yocto_dir
         if not self.check_support_oebuild(yocto_dir):
@@ -130,14 +150,29 @@ class NeoGenerate(OebuildCommand):
             sys.exit(-1)
 
         try:
-            nightly_dir = pathlib.Path(yocto_dir, '.oebuild', 'nightly-features')
-            self.feature_registry = NightlyFeatureRegistry(nightly_dir)
+            feat_root_dir = (
+                oebuild_config.feat_root_dir.strip()
+                if isinstance(oebuild_config.feat_root_dir, str)
+                else ''
+            )
+            if not feat_root_dir:
+                feat_root_dir = 'nightly-features'
+            nightly_dir = pathlib.Path(
+                yocto_dir, '.oebuild', feat_root_dir
+            )
+            self.feature_registry = FeatureRegistry(nightly_dir)
         except NeoFeatureError as err:
             logger.error(str(err))
             sys.exit(-1)
 
     def _run_menuconfig(self, args):
         platform_dir = pathlib.Path(self.yocto_dir, '.oebuild', 'platform')
+        config_path = pathlib.Path(os.getcwd(), '.config')
+        if config_path.exists():
+            try:
+                config_path.unlink()
+            except OSError:
+                pass
         try:
             generator = NeoMenuconfigGenerator(
                 registry=self.feature_registry,
@@ -192,32 +227,26 @@ class NeoGenerate(OebuildCommand):
         """)
         logger.info(summary)
 
+    def _prepare_parser_template(self, args, resolved_features):
+        parser_template = ParseTemplate(yocto_dir=self.yocto_dir)
+        yocto_oebuild_dir = pathlib.Path(self.yocto_dir, '.oebuild')
+        self._add_platform_template(
+            args=args,
+            yocto_oebuild_dir=yocto_oebuild_dir,
+            parser_template=parser_template,
+        )
+        self._add_nightly_features_template(
+            parser_template, resolved_features
+        )
+        return parser_template
+
     def _resolve_features(self, platform, requested):
         resolver = FeatureResolver(self.feature_registry, platform)
         return resolver.resolve(requested)
 
     def _generate_compile_conf(
-        self, args, build_dir, resolved_features
+        self, args, build_dir, parser_template
     ):
-        parser_template = ParseTemplate(yocto_dir=self.yocto_dir)
-        yocto_oebuild_dir = pathlib.Path(self.yocto_dir, '.oebuild')
-        try:
-            self._add_platform_template(
-                args=args,
-                yocto_oebuild_dir=yocto_oebuild_dir,
-                parser_template=parser_template,
-            )
-        except BaseParseTemplate as b_t:
-            logger.error(str(b_t))
-            sys.exit(-1)
-        except ValueError as v_e:
-            logger.error(str(v_e))
-            sys.exit(-1)
-
-        self._add_nightly_features_template(
-            parser_template, resolved_features
-        )
-
         compile_yaml_path = pathlib.Path(build_dir, 'compile.yaml')
         if compile_yaml_path.exists():
             compile_yaml_path.unlink()
