@@ -8,9 +8,10 @@ import os
 import re
 import tempfile
 from collections import OrderedDict
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Generator, List, Optional
 
 from kconfiglib import Kconfig
 from menuconfig import menuconfig
@@ -67,23 +68,54 @@ class NeoMenuconfigGenerator:
             kconf = Kconfig(str(kconfig_path))
             previous_style = os.environ.get('MENUCONFIG_STYLE')
             os.environ['MENUCONFIG_STYLE'] = 'aquatic selection=fg:white,bg:blue'
-            try:
-                with oebuild_util.suppress_print():
-                    menuconfig(kconf)
-            finally:
-                if previous_style is None:
-                    os.environ.pop('MENUCONFIG_STYLE', None)
-                else:
-                    os.environ['MENUCONFIG_STYLE'] = previous_style
-            config_path = Path(os.getcwd(), '.config')
-            if not config_path.exists():
-                return None
-            selection = self._collect_selections(kconf)
-            try:
-                config_path.unlink()
-            except OSError:
-                pass
-            return selection
+
+            with self._hook_write_config() as saved_filename:
+                try:
+                    with oebuild_util.suppress_print():
+                        menuconfig(kconf)
+                finally:
+                    if previous_style is None:
+                        os.environ.pop('MENUCONFIG_STYLE', None)
+                    else:
+                        os.environ['MENUCONFIG_STYLE'] = previous_style
+
+                if saved_filename[0] is None:
+                    return None
+
+                selection = self._collect_selections(kconf)
+
+                try:
+                    Path(saved_filename[0]).unlink()
+                except OSError:
+                    pass
+
+                return selection
+
+    @staticmethod
+    @contextmanager
+    def _hook_write_config() -> Generator[list[str | None], None, None]:
+        """
+        Context manager that hooks Kconfig.write_config to capture saved filename.
+        User may save .config as another name, we have to fetch the filename and check the file existance
+        If there is no a saved config file, it is considered that user did not wanna create build directory
+        """
+        import kconfiglib
+
+        saved_filename: list[str | None] = [None]
+        original_write_config = kconfiglib.Kconfig.write_config
+
+        def hooked_write_config(self, filename=None, *args, **kwargs):
+            result = original_write_config(self, filename, *args, **kwargs)
+            if result and 'saved to' in result:
+                saved_filename[0] = result.split('saved to ')[-1].strip()
+            return result
+
+        kconfiglib.Kconfig.write_config = hooked_write_config
+
+        try:
+            yield saved_filename
+        finally:
+            kconfiglib.Kconfig.write_config = original_write_config
 
     def build_kconfig_text(self) -> str:
         """Return the textual Kconfig representation without launching menuconfig."""

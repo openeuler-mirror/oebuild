@@ -95,7 +95,7 @@ class NeoGenerate(OebuildCommand):
             menu_selection = self._run_menuconfig(parsed_args)
             if menu_selection is None:
                 logger.info(
-                    'Menuconfig exited without saving a configuration; nothing generated.'
+                    'Menuconfig was exited without applying any configuration; nothing generated.'
                 )
                 return
             parsed_args.platform = menu_selection.platform
