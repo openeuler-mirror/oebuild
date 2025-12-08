@@ -38,9 +38,12 @@ class AmbiguourError(ResolutionError):
 
 @dataclass
 class FeatureConfig:
+    # frequently used fields
     repos: List[str] = field(default_factory=list)
     layers: List[str] = field(default_factory=list)
     local_conf: List[str] = field(default_factory=list)
+    # Store any additional config fields
+    other_fields: Dict[str, any] = field(default_factory=dict)
 
 
 @dataclass
@@ -226,14 +229,31 @@ class FeatureRegistry:
         parent.child_full_ids.append(feature.full_id)
 
     def _parse_config(self, config_block: Optional[dict]) -> FeatureConfig:
+        """
+        _parse_config() will normalize three most frequently used fields:
+        * repos
+        * layers 
+        * local_conf
+
+        Fourtunetly, for other fields, which are all defined as a simple k:v map, hence just load them directly
+        """
         if not isinstance(config_block, dict):
             config_block = {}
+
+        repos = self._normalize_sequence(config_block.get('repos'))
+        layers = self._normalize_sequence(config_block.get('layers'))
+        local_conf = self._normalize_local_conf(config_block.get('local_conf'))
+
+        other_fields = {}
+        for key, value in config_block.items():
+            if key not in ('repos', 'layers', 'local_conf'):
+                other_fields[key] = value
+
         return FeatureConfig(
-            repos=self._normalize_sequence(config_block.get('repos')),
-            layers=self._normalize_sequence(config_block.get('layers')),
-            local_conf=self._normalize_local_conf(
-                config_block.get('local_conf')
-            ),
+            repos=repos,
+            layers=layers,
+            local_conf=local_conf,
+            other_fields=other_fields,
         )
 
     def _parse_machines(

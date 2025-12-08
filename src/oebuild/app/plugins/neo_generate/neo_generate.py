@@ -235,7 +235,7 @@ class NeoGenerate(OebuildCommand):
             yocto_oebuild_dir=yocto_oebuild_dir,
             parser_template=parser_template,
         )
-        self._add_nightly_features_template(
+        self._add_feat_template(
             parser_template, resolved_features
         )
         return parser_template
@@ -298,7 +298,7 @@ class NeoGenerate(OebuildCommand):
             sys.exit(-1)
 
 
-    def _add_nightly_features_template(
+    def _add_feat_template(
         self, parser_template: ParseTemplate, resolved_features
     ):
         for feature in resolved_features:
@@ -320,6 +320,9 @@ class NeoGenerate(OebuildCommand):
                     if local_conf is None
                     else LiteralScalarString(local_conf),
                     support=feature.machines or [],
+                    other_configs=feature.config.other_fields
+                    if feature.config.other_fields
+                    else None,
                 )
             )
 
