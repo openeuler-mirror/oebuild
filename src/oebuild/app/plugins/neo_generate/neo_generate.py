@@ -17,7 +17,7 @@ import sys
 import textwrap
 from shutil import rmtree
 
-from menuconfig_generator import NeoMenuconfigGenerator
+from menuconfig_generator import MenuconfigSelection, NeoMenuconfigGenerator
 from prettytable import HRuleStyle, PrettyTable, TableStyle, VRuleStyle
 from ruamel.yaml.scalarstring import LiteralScalarString
 
@@ -98,8 +98,7 @@ class NeoGenerate(OebuildCommand):
                     'Menuconfig was exited without applying any configuration; nothing generated.'
                 )
                 return
-            parsed_args.platform = menu_selection.platform
-            parsed_args.features = menu_selection.features
+            self._apply_menu_selection(parsed_args, menu_selection)
 
         try:
             resolution = self._resolve_features(
@@ -189,6 +188,24 @@ class NeoGenerate(OebuildCommand):
         except Exception as exc:
             logger.error('Menuconfig failed: %s', exc)
             sys.exit(-1)
+
+    def _apply_menu_selection(
+        self, parsed_args: argparse.Namespace, selection: MenuconfigSelection
+    ):
+        parsed_args.platform = selection.platform
+        parsed_args.features = selection.features
+        parsed_args.build_in = selection.build_in
+        parsed_args.no_fetch = selection.no_fetch
+        parsed_args.no_layer = selection.no_layer
+        parsed_args.sstate_mirrors = selection.sstate_mirrors
+        parsed_args.sstate_dir = selection.sstate_dir
+        parsed_args.tmp_dir = selection.tmp_dir
+        parsed_args.toolchain_dir = selection.toolchain_dir
+        parsed_args.llvm_toolchain_dir = selection.llvm_toolchain_dir
+        parsed_args.nativesdk_dir = selection.nativesdk_dir
+        parsed_args.datetime = selection.datetime
+        parsed_args.cache_src_dir = selection.cache_src_dir
+        parsed_args.directory = selection.directory
 
     def _collect_params(self, args, build_dir):
         return {
