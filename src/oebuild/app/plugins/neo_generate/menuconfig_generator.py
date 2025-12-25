@@ -7,7 +7,6 @@ from __future__ import annotations
 import os
 import re
 import tempfile
-import textwrap
 import warnings
 from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
@@ -20,6 +19,7 @@ from menuconfig import menuconfig
 
 import oebuild.const as oebuild_const
 import oebuild.util as oebuild_util
+from oebuild.app.plugins.neo_generate.kconfig_writer import KconfigWriter
 from oebuild.nightly_features import Feature, FeatureRegistry
 
 
@@ -181,7 +181,9 @@ class NeoMenuconfigGenerator:
                 try:
                     Path(saved_filename[0]).unlink()
                 except OSError as e:
-                    warnings.warn(f"Failed to delete temporary config file {saved_filename[0]}: {e}")
+                    warnings.warn(
+                        f'Failed to delete temporary config file {saved_filename[0]}: {e}'
+                    )
 
                 return selection
 
@@ -213,17 +215,20 @@ class NeoMenuconfigGenerator:
 
     def build_kconfig_text(self) -> str:
         """Return the textual Kconfig representation without launching menuconfig."""
-        lines: List[str] = [
-            '# Auto-generated nightly-feature menuconfig',
-            '# Updating this file manually is not supported.',
-            '',
-        ]
-        lines += self._platform_choice_block()
-        lines.append('')
-        lines += self._features_block()
-        lines.append('\n')
-        lines += self._common_options_block()
-        return '\n'.join(lines)
+        writer = KconfigWriter()
+        writer.line('# Auto-generated nightly-feature menuconfig')
+        writer.line('# Updating this file manually is not supported.')
+        writer.blank()
+        self._write_platform_choice(writer)
+        writer.blank()
+        self._write_features(writer)
+        writer.blank()
+        self._write_common_options(writer)
+        if not writer.validate():
+            raise RuntimeError(
+                f'Kconfig writer validation failed: {writer.errors()}'
+            )
+        return writer.text()
 
     def _list_platforms(self) -> List[str]:
         result = []
@@ -235,89 +240,125 @@ class NeoMenuconfigGenerator:
             result.append(entry.stem)
         return result
 
-    def _platform_choice_block(self) -> List[str]:
-        block = ['choice']
-        block.append('    prompt "Select target platform"')
+    def _write_platform_choice(self, writer: KconfigWriter) -> None:
         default_symbol = self._symbol_for_platform(self.default_platform)
-        block.append(f'    default {default_symbol}')
+        writer.choice(prompt='Select target platform', default=default_symbol)
         for machine in self.platforms:
             symbol = self._symbol_for_platform(machine)
-            block.append(f'    config {symbol}')
-            block.append(f'        bool "{machine}"')
+            writer.config(symbol, prompt=machine)
             self.platform_symbol_map[symbol] = machine
-        block.append('endchoice')
-        return block
+        writer.end_choice()
 
-    def _common_options_block(self) -> List[str]:
-        block = textwrap.dedent("""
-        choice
-            prompt "Select build environment"
-            default BUILD_IN-DOCKER
-            config BUILD_IN-DOCKER
-                bool "docker"
-            config BUILD_IN-HOST
-                bool "host"
-        endchoice
+    def _write_common_options(self, writer: KconfigWriter) -> None:
+        writer.choice(
+            prompt='Select build environment', default='BUILD_IN-DOCKER'
+        )
+        writer.config('BUILD_IN-DOCKER', prompt='docker')
+        writer.config('BUILD_IN-HOST', prompt='host')
+        writer.end_choice()
+        writer.blank()
 
-        config COMMON_NO-FETCH
-            bool "no_fetch (disable source fetching)"
-            default n
+        writer.config(
+            'COMMON_NO-FETCH',
+            prompt='no_fetch (disable source fetching)',
+            default='n',
+        )
+        writer.blank()
 
-        config COMMON_NO-LAYER
-            bool "no_layer (skip layer repo update on env setup)"
-            default n
+        writer.config(
+            'COMMON_NO-LAYER',
+            prompt='no_layer (skip layer repo update on env setup)',
+            default='n',
+        )
+        writer.blank()
 
-        config COMMON_SSTATE-MIRRORS
-            string "SSTATE_MIRRORS value"
-            default ""
+        writer.config(
+            'COMMON_SSTATE-MIRRORS',
+            prompt='SSTATE_MIRRORS value',
+            type_='string',
+            default='""',
+        )
+        writer.blank()
 
-        config COMMON_SSTATE-DIR
-            string "SSTATE_DIR path"
-            default ""
+        writer.config(
+            'COMMON_SSTATE-DIR',
+            prompt='SSTATE_DIR path',
+            type_='string',
+            default='""',
+        )
+        writer.blank()
 
-        config COMMON_TMP-DIR
-            string "TMPDIR path"
-            default ""
-            depends on BUILD_IN-HOST
+        writer.config(
+            'COMMON_TMP-DIR',
+            prompt='TMPDIR path',
+            type_='string',
+            default='""',
+            depends_on='BUILD_IN-HOST',
+        )
+        writer.blank()
 
-        config COMMON_TOOLCHAIN-DIR
-            string "toolchain_dir (External GCC toolchain directory [your own toolchain])"
-            default ""
+        writer.config(
+            'COMMON_TOOLCHAIN-DIR',
+            prompt='toolchain_dir (External GCC toolchain directory [your own toolchain])',
+            type_='string',
+            default='""',
+        )
+        writer.blank()
 
-        config COMMON_LLVM-TOOLCHAIN-DIR
-            string "llvm_toolchain_dir (External LLVM toolchain directory [your own toolchain])"
-            default ""
+        writer.config(
+            'COMMON_LLVM-TOOLCHAIN-DIR',
+            prompt='llvm_toolchain_dir (External LLVM toolchain directory [your own toolchain])',
+            type_='string',
+            default='""',
+        )
+        writer.blank()
 
-        config COMMON_NATIVESDK-DIR
-            string "nativesdk_dir (External nativesdk directory [used when building on host])"
-            default ""
-            depends on BUILD_IN-HOST
+        writer.config(
+            'COMMON_NATIVESDK-DIR',
+            prompt='nativesdk_dir (External nativesdk directory [used when building on host])',
+            type_='string',
+            default='""',
+            depends_on='BUILD_IN-HOST',
+        )
+        writer.blank()
 
-        config COMMON_DATETIME
-            string "datetime"
-            default ""
+        writer.config(
+            'COMMON_DATETIME',
+            prompt='datetime',
+            type_='string',
+            default='""',
+        )
+        writer.blank()
 
-        config COMMON_CACHE_SRC_DIR
-            string "cache_src_dir (src directory)"
-            default ""
+        writer.config(
+            'COMMON_CACHE_SRC_DIR',
+            prompt='cache_src_dir (src directory)',
+            type_='string',
+            default='""',
+        )
+        writer.blank()
 
-        config COMMON_DIRECTORY
-            string "directory (build directory name)"
-            default ""
-        """)
-        return [line for line in block.strip().splitlines()]
+        writer.config(
+            'COMMON_DIRECTORY',
+            prompt='directory (build directory name)',
+            type_='string',
+            default='""',
+        )
 
-    def _features_block(self) -> List[str]:
-        lines: List[str] = ['menu "Select Features"']
+    def _write_features(self, writer: KconfigWriter) -> None:
+        writer.menu('Select Features', indent_body=False)
         emitted_features: set[str] = set()
         for category, features in self._root_features_by_category():
-            lines.append(f'menu "{self._format_category_label(category)}"')
+            writer.menu(
+                self._format_category_label(category), indent_body=False
+            )
+            writer.indent()
             for feature in features:
-                lines += self._emit_feature_block(feature, 1, emitted_features)
-            lines.append('endmenu')
-            lines.append('')
-        lines.append('endmenu')
-        return lines
+                self._emit_feature_block(writer, feature, 1, emitted_features)
+            writer.dedent()
+            writer.end_menu()
+            writer.blank()
+        writer.end_menu()
 
     def _root_features_by_category(self):
         grouped: Dict[str, List[Feature]] = {}
@@ -367,81 +408,46 @@ class NeoMenuconfigGenerator:
 
     def _emit_feature_block(
         self,
+        writer: KconfigWriter,
         feature: Feature,
-        indent: int,
+        depth: int,
         emitted_features: set[str],
-    ) -> List[str]:
-        if indent > self.MAX_RECURSION_DEPTH:
+    ) -> None:
+        if depth > self.MAX_RECURSION_DEPTH:
             raise RuntimeError(
-                f"Recursion depth exceeded for feature {feature.full_id}. "
-                f"Maximum allowed depth is {self.MAX_RECURSION_DEPTH}."
+                f'Recursion depth exceeded for feature {feature.full_id}. '
+                f'Maximum allowed depth is {self.MAX_RECURSION_DEPTH}.'
             )
         if feature.full_id in emitted_features:
-            return []
+            return
         emitted_features.add(feature.full_id)
-        lines: List[str] = []
-        prefix = '    ' * indent
         symbol = self._symbol_for_feature(feature.full_id)
         self.feature_symbol_map[symbol] = feature.full_id
-        lines.append(f'{prefix}config {symbol}')
-        lines.append(f'{prefix}    bool "{self._escape(feature.name)}"')
         help_lines = self._build_help(feature)
-        if help_lines:
-            lines.append(f'{prefix}    help')
-            # Add extra indentation (2 spaces) for help content
-            # This is required by kconfiglib to properly parse the help block
-            lines += [f'{prefix}      {line}' for line in help_lines]
         depends_expr = self._build_dependency_expression(feature)
-        if depends_expr:
-            lines.append(f'{prefix}    depends on {depends_expr}')
-        # selects are generated as select statements (reverse dependency)
-        selects = self._sorted_selects(feature.full_id)
-        for selects_id in selects:
-            lines.append(
-                f'{prefix}    select {self._symbol_for_feature(selects_id)}'
-            )
-        lines.append('')
-        lines += self._emit_subfeature_sections(feature, indent, emitted_features)
-        return lines
+        selects = [
+            self._symbol_for_feature(selects_id)
+            for selects_id in self._sorted_selects(feature.full_id)
+        ]
+        writer.config(
+            symbol,
+            prompt=feature.name,
+            depends_on=depends_expr,
+            select=selects,
+            help_lines=help_lines,
+        )
+        writer.blank()
+        self._emit_subfeature_sections(writer, feature, depth, emitted_features)
 
     def _emit_subfeature_sections(
-        self, feature: Feature, indent: int, emitted_features: set[str]
-    ) -> List[str]:
-        child_lines: List[str] = []
-        child_prefix = '    ' * (indent + 1)
+        self,
+        writer: KconfigWriter,
+        feature: Feature,
+        depth: int,
+        emitted_features: set[str],
+    ) -> None:
         one_of_children = self._sorted_one_of(feature.full_id)
-        if one_of_children:
-            child_lines.append(f'{child_prefix}choice')
-            child_lines.append(
-                f'{child_prefix}    prompt "Select mode for {feature.name}"'
-            )
-            child_lines.append(
-                f'{child_prefix}    depends on {self._symbol_for_feature(feature.full_id)}'
-            )
-            if feature.default_one_of:
-                child_lines.append(
-                    f'{child_prefix}    default {self._symbol_for_feature(feature.default_one_of)}'
-                )
-            child_lines.append('')
-            for child_id in one_of_children:
-                child = self.registry.features_by_full_id.get(child_id)
-                if child is None:
-                    continue
-                child_lines += self._emit_feature_block(child, indent + 1, emitted_features)
-            child_lines.append(f'{child_prefix}endchoice')
-            child_lines.append('')
         choice_children = self._sorted_choice(feature.full_id)
-        if choice_children:
-            child_lines.append(
-                f'{child_prefix}menu "Optional {feature.name} add-ons"'
-            )
-            for child_id in choice_children:
-                child = self.registry.features_by_full_id.get(child_id)
-                if child is None:
-                    continue
-                child_lines += self._emit_feature_block(child, indent + 1, emitted_features)
-            child_lines.append(f'{child_prefix}endmenu')
-            child_lines.append('')
         sorted_child_ids = self._sorted_child_ids(feature.full_id)
         remaining_children = [
             child_id
@@ -449,23 +455,51 @@ class NeoMenuconfigGenerator:
             if child_id not in one_of_children
             and child_id not in choice_children
         ]
+        # Note: We do NOT include _dependency_children here to avoid circular dependencies.
+        # Features that depend on this feature should be emitted as independent features
+        # with their own 'depends on' statements, not wrapped in this feature's 'if' block.
+        if not (one_of_children or choice_children or remaining_children):
+            return
+        parent_symbol = self._symbol_for_feature(feature.full_id)
+        writer.if_(parent_symbol)
+        if one_of_children:
+            writer.choice(
+                prompt=f'Select mode for {feature.name}',
+                depends_on=parent_symbol,
+                default=(
+                    self._symbol_for_feature(feature.default_one_of)
+                    if feature.default_one_of
+                    else None
+                ),
+            )
+            writer.blank()
+            for child_id in one_of_children:
+                child = self.registry.features_by_full_id.get(child_id)
+                if child is None:
+                    continue
+                self._emit_feature_block(
+                    writer, child, depth + 1, emitted_features
+                )
+            writer.end_choice()
+            writer.blank()
+        if choice_children:
+            writer.menu(f'Optional {feature.name} add-ons')
+            for child_id in choice_children:
+                child = self.registry.features_by_full_id.get(child_id)
+                if child is None:
+                    continue
+                self._emit_feature_block(
+                    writer, child, depth + 1, emitted_features
+                )
+            writer.end_menu()
+            writer.blank()
         for child_id in remaining_children:
             child = self.registry.features_by_full_id.get(child_id)
             if child is None:
                 continue
-            child_lines += self._emit_feature_block(child, indent + 1, emitted_features)
-        # Note: We do NOT include _dependency_children here to avoid circular dependencies.
-        # Features that depend on this feature should be emitted as independent features
-        # with their own 'depends on' statements, not wrapped in this feature's 'if' block.
-        if not child_lines:
-            return []
-        prefix = '    ' * indent
-        return [
-            f'{prefix}if {self._symbol_for_feature(feature.full_id)}',
-            *child_lines,
-            f'{prefix}endif',
-            '',
-        ]
+            self._emit_feature_block(writer, child, depth + 1, emitted_features)
+        writer.end_if()
+        writer.blank()
 
     def _build_help(self, feature: Feature) -> List[str]:
         help_lines: List[str] = []
@@ -475,7 +509,8 @@ class NeoMenuconfigGenerator:
             help_lines.append(f'Supports: {", ".join(feature.machines)}')
         if feature.dependencies:
             help_lines.append(
-                'Depends on: ' + ', '.join(self._sorted_dependencies(feature.full_id))
+                'Depends on: '
+                + ', '.join(self._sorted_dependencies(feature.full_id))
             )
         return help_lines
 
@@ -587,9 +622,6 @@ class NeoMenuconfigGenerator:
             symbol = f'{self.PLATFORM_PREFIX}{normalized}'
             self._platform_to_symbol_map[machine] = symbol
         return symbol
-
-    def _escape(self, value: str) -> str:
-        return value.replace('"', '\\"')
 
     def _format_category_label(self, category: str) -> str:
         return category.replace('_', ' ').title()
