@@ -324,8 +324,9 @@ class NeoMenuconfigGenerator:
         for feature in self.registry.features_by_full_id.values():
             if feature.is_subfeature:
                 continue
-            if feature.full_id in self._dependency_child_ids:
-                continue
+            # Note: We no longer skip _dependency_child_ids here.
+            # Features that depend on other root features should still be emitted
+            # as root features, not skipped. This prevents circular dependencies.
             grouped.setdefault(feature.category, []).append(feature)
         sorted_groups = []
         for category in sorted(grouped):
@@ -387,15 +388,13 @@ class NeoMenuconfigGenerator:
         help_lines = self._build_help(feature)
         if help_lines:
             lines.append(f'{prefix}    help')
-            lines += [f'{prefix}    {line}' for line in help_lines]
+            # Add extra indentation (2 spaces) for help content
+            # This is required by kconfiglib to properly parse the help block
+            lines += [f'{prefix}      {line}' for line in help_lines]
         depends_expr = self._build_dependency_expression(feature)
         if depends_expr:
             lines.append(f'{prefix}    depends on {depends_expr}')
-        dependencies = self._sorted_dependencies(feature.full_id)
-        for dependency_id in dependencies:
-            lines.append(
-                f'{prefix}    select {self._symbol_for_feature(dependency_id)}'
-            )
+        # selects are generated as select statements (reverse dependency)
         selects = self._sorted_selects(feature.full_id)
         for selects_id in selects:
             lines.append(
@@ -455,8 +454,9 @@ class NeoMenuconfigGenerator:
             if child is None:
                 continue
             child_lines += self._emit_feature_block(child, indent + 1, emitted_features)
-        for child in self._dependency_children.get(feature.full_id, []):
-            child_lines += self._emit_feature_block(child, indent + 1, emitted_features)
+        # Note: We do NOT include _dependency_children here to avoid circular dependencies.
+        # Features that depend on this feature should be emitted as independent features
+        # with their own 'depends on' statements, not wrapped in this feature's 'if' block.
         if not child_lines:
             return []
         prefix = '    ' * indent
@@ -483,6 +483,12 @@ class NeoMenuconfigGenerator:
         terms: List[str] = []
         if feature.parent_full_id:
             terms.append(self._symbol_for_feature(feature.parent_full_id))
+        # Add non-parent, non-child dependencies from feature.dependencies
+        # Note: We exclude parent_full_id and child_full_ids to avoid circular dependencies
+        child_ids = set(feature.child_full_ids)
+        for dep_id in feature.dependencies:
+            if dep_id != feature.parent_full_id and dep_id not in child_ids:
+                terms.append(self._symbol_for_feature(dep_id))
         machine_expr = self._build_machine_expression(feature)
         if machine_expr:
             if terms:
