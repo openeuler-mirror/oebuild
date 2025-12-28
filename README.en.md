@@ -72,9 +72,9 @@ There are three main points in the update work:
 
 Pull related running container images
 
-Download the yocto-meta-openeuler repository code from gitee 
+Download the yocto-meta-openeuler repository code from atomgit
 
-Download the basic layer from Gitee 
+Download the basic layer from Atomgit 
 
 ##### Create a compilation profile
 
@@ -108,7 +108,7 @@ oebuild init [directory] [-u yocto_remote_url] [-b branch]
 
 directory: Indicates the name of the directory to be initialized (note: we cannot  perform the initialization operation again in the directory that has  already been initialized) 
 
-yocto_remote_url: The remote link of yocto-meta-openeuler, which is  https://gitee.com/openeuler/yocto-meta-openeuler.git by default
+yocto_remote_url: The remote link of yocto-meta-openeuler, which is  https://atomgit.com/openeuler/yocto-meta-openeuler.git by default
 
 branch: a branch of yocto-meta-openeuler, which is the master by default 
 
@@ -166,7 +166,7 @@ docker:
 basic_repo:
   yocto_meta_openeuler:
     path: yocto-meta-openeuler
-    remote_url: https://gitee.com/openeuler/yocto-meta-openeuler.git
+    remote_url: https://atomgit.com/openeuler/yocto-meta-openeuler.git
     branch: master
 ```
 
@@ -384,7 +384,7 @@ docker:
 basic_repo:
   yocto_meta_openeuler:
     path: yocto-meta-openeuler
-    remote_url: https://gitee.com/openeuler/yocto-meta-openeuler.git
+    remote_url: https://atomgit.com/openeuler/yocto-meta-openeuler.git
     branch: master
 ```
 
@@ -441,17 +441,17 @@ sdk_dir:
 toolchain_dir:
 repos:
   yocto-poky:
-    url: https://gitee.com/openeuler/yocto-poky.git
+    url: https://atomgit.com/openeuler/yocto-poky.git
     path: yocto-poky
     refspec: openEuler-22.09
 
   yocto-meta-openembedded:
-    url: https://gitee.com/openeuler/yocto-meta-openembedded.git
+    url: https://atomgit.com/openeuler/yocto-meta-openembedded.git
     path: yocto-meta-openembedded
     refspec: dev_hardknott
 
   yocto-meta-ros:
-    url: https://gitee.com/openeuler/yocto-meta-ros.git
+    url: https://atomgit.com/openeuler/yocto-meta-ros.git
     path: yocto-meta-ros
     refspec: dev_hardknott
 local_conf: |
