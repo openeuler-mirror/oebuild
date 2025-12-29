@@ -8,6 +8,6 @@ docker:
 basic_repo:
     yocto_meta_openeuler: 
         path: yocto-meta-openeuler
-        remote_url: https://gitee.com/openeuler/yocto-meta-openeuler.git
+        remote_url: https://atomgit.com/openeuler/yocto-meta-openeuler.git
         branch: master
 feat_root_dir: nightly-features

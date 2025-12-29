@@ -7,7 +7,7 @@ def downloadOebuildWithPr(String workspace, String namespace, String repo, Integ
     sh """
         python3 main.py clone_repo \
         -w ${workspace} \
-        -r https://gitee.com/${namespace}/${repo} \
+        -r https://atomgit.com/${namespace}/${repo} \
         -p ${repo} \
         -pr ${prnum} \
         -dp ${deepth} \
