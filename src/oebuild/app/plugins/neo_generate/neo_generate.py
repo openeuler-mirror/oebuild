@@ -13,16 +13,18 @@ See the Mulan PSL v2 for more details.
 import argparse
 import os
 import pathlib
+import subprocess
 import sys
 import textwrap
 from shutil import rmtree
 
+import oebuild.const as oebuild_const
+import oebuild.util as oebuild_util
 from menuconfig_generator import MenuconfigSelection, NeoMenuconfigGenerator
 from prettytable import HRuleStyle, PrettyTable, TableStyle, VRuleStyle
 from ruamel.yaml.scalarstring import LiteralScalarString
 
-import oebuild.util as oebuild_util
-from oebuild.app.plugins.generate.generate import get_docker_image
+from oebuild.app.plugins.generate.generate import get_docker_image, get_sdk_docker_image
 from oebuild.app.plugins.generate.parses import parsers
 from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
@@ -37,6 +39,8 @@ from oebuild.parse_template import (
     BaseParseTemplate,
     FeatureTemplate,
     ParseTemplate,
+    get_docker_param_dict,
+    parse_repos_layers_local_obj,
 )
 
 
@@ -102,6 +106,44 @@ class NeoGenerate(OebuildCommand):
             self.list_info()
             return
 
+        # Handle special build modes (nativesdk, gcc, llvm) like generate.py does
+        auto_build = bool(parsed_args.auto_build)
+
+        if parsed_args.nativesdk:
+            # default dir for nativesdk
+            if parsed_args.directory is None or parsed_args.directory == '':
+                parsed_args.directory = 'nativesdk'
+            build_dir = self._init_build_dir(parsed_args)
+            if build_dir is None:
+                sys.exit(0)
+            self.build_nativesdk(parsed_args.build_in, build_dir, auto_build)
+            self._print_nativesdk(build_dir=build_dir)
+            sys.exit(0)
+
+        if parsed_args.gcc:
+            # default dir for toolchain
+            if parsed_args.directory is None or parsed_args.directory == '':
+                parsed_args.directory = 'toolchain'
+            toolchain_name_list = parsed_args.gcc_name if parsed_args.gcc_name else []
+            build_dir = self._init_build_dir(parsed_args)
+            if build_dir is None:
+                sys.exit(0)
+            self.build_gcc(build_dir, toolchain_name_list, auto_build)
+            self._print_toolchain(build_dir=build_dir)
+            sys.exit(0)
+
+        if parsed_args.llvm:
+            # default dir for toolchain
+            if parsed_args.directory is None or parsed_args.directory == '':
+                parsed_args.directory = 'toolchain'
+            llvm_lib = parsed_args.llvm_lib
+            build_dir = self._init_build_dir(parsed_args)
+            if build_dir is None:
+                sys.exit(0)
+            self.build_llvm(build_dir, llvm_lib, auto_build)
+            self._print_toolchain(build_dir=build_dir)
+            sys.exit(0)
+
         interactive_invocation = parsed_args.menuconfig and not unknown
         if interactive_invocation:
             menu_selection = self._run_menuconfig(parsed_args)
@@ -137,7 +179,6 @@ class NeoGenerate(OebuildCommand):
             sys.exit(1)
 
         self.params = self._collect_params(parsed_args, build_dir)
-        self.params['resolved_features'] = resolution.features
         self._log_summary(build_dir, parsed_args)
         self._generate_compile_conf(
             args=parsed_args,
@@ -220,7 +261,7 @@ class NeoGenerate(OebuildCommand):
         parsed_args.directory = selection.directory
 
     def _collect_params(self, args, build_dir):
-        return {
+        params = {
             'platform': args.platform,
             'build_dir': build_dir,
             'build_in': args.build_in,
@@ -231,18 +272,14 @@ class NeoGenerate(OebuildCommand):
             'sstate_mirrors': args.sstate_mirrors,
             'sstate_dir': args.sstate_dir,
             'tmp_dir': args.tmp_dir,
-            'cache_src_dir': args.cache_src_dir,
             'datetime': args.datetime,
             'no_fetch': args.no_fetch,
             'no_layer': args.no_layer,
-            'auto_build': args.auto_build,
-            'nativesdk': args.nativesdk,
-            'gcc': args.gcc,
-            'gcc_name': args.gcc_name or [],
-            'llvm': args.llvm,
-            'llvm_lib': args.llvm_lib,
-            'resolved_features': [],
         }
+        # Align with generate.py: only include cache_src_dir if not None and not empty
+        if args.cache_src_dir is not None and args.cache_src_dir != '':
+            params['cache_src_dir'] = args.cache_src_dir
+        return params
 
     def _log_summary(self, build_dir, args):
         summary = textwrap.dedent(f"""
@@ -250,7 +287,6 @@ class NeoGenerate(OebuildCommand):
             Build directory: {build_dir}
             Platform: {args.platform}
             Build mode: {args.build_in}
-            Auto build: {'enabled' if args.auto_build else 'disabled'}
 
             Feature selection will follow nightly-features state resolution next.
         """)
@@ -553,6 +589,224 @@ oebuild bitbake
 =============================================
 """
         logger.info(format_dir)
+
+    def _print_nativesdk(self, build_dir):
+        format_dir = f"""
+generate compile.yaml successful
+
+Run commands below:
+=============================================
+
+cd {build_dir}
+oebuild bitbake or oebuild bitbake buildtools-extended-tarball
+
+=============================================
+"""
+        logger.info(format_dir)
+
+    def _print_toolchain(self, build_dir):
+        format_dir = f"""
+generate toolchain.yaml successful
+
+Run commands below:
+=============================================
+
+cd {build_dir}
+oebuild toolchain
+
+=============================================
+"""
+        logger.info(format_dir)
+
+    def build_nativesdk(self, build_in, build_dir, auto_build):
+        """
+        Build nativesdk (SDK buildtools).
+
+        Args:
+            build_in: host or docker
+            build_dir: build directory
+            auto_build: auto_build flag
+        """
+        compile_dir = os.path.join(self.configure.build_dir(), build_dir)
+        compile_yaml_path = f'{compile_dir}/compile.yaml'
+        common_yaml_path = os.path.join(
+            self.configure.source_yocto_dir(), '.oebuild/common.yaml'
+        )
+        repos, layers, local_conf = parse_repos_layers_local_obj(
+            common_yaml_path
+        )
+        info = {'repos': repos, 'layers': layers, 'local_conf': local_conf}
+        if build_in == 'host':
+            info['build_in'] = 'host'
+        else:
+            docker_image = get_docker_image(
+                yocto_dir=self.configure.source_yocto_dir(),
+                docker_tag='latest',
+                configure=self.configure,
+            )
+            info['docker_param'] = get_docker_param_dict(
+                docker_image=docker_image,
+                dir_list={
+                    'src_dir': self.configure.source_dir(),
+                    'compile_dir': compile_dir,
+                    'toolchain_dir': None,
+                    'llvm_toolchain_dir': None,
+                    'sstate_mirrors': None,
+                },
+            )
+        # add nativesdk conf
+        nativesdk_yaml_path = os.path.join(
+            self.configure.source_yocto_dir(), '.oebuild/nativesdk/local.conf'
+        )
+        with open(nativesdk_yaml_path, 'r', encoding='utf-8') as f:
+            local_conf += f.read() + '\n'
+            info['local_conf'] = LiteralScalarString(local_conf)
+        oebuild_util.write_yaml(compile_yaml_path, info)
+        if auto_build:
+            os.chdir(compile_dir)
+            subprocess.run(
+                'oebuild bitbake buildtools-extended-tarball',
+                shell=True,
+                check=False,
+            )
+
+    def build_gcc(self, build_dir, gcc_name_list, auto_build):
+        """
+        Build GCC toolchain.
+
+        Args:
+            build_dir: build directory
+            gcc_name_list: list of gcc toolchain config names
+            auto_build: auto_build flag
+        """
+        source_cross_dir = pathlib.Path(
+            self.configure.source_yocto_dir(), '.oebuild/cross-tools'
+        )
+        if not source_cross_dir.exists():
+            logger.error(
+                'Build dependency not downloaded, not supported for build. Please '
+                'download the latest yocto meta openeuler repository'
+            )
+            sys.exit(-1)
+        # add toolchain.yaml to compile
+        docker_param = get_docker_param_dict(
+            docker_image=get_sdk_docker_image(
+                yocto_dir=self.configure.source_yocto_dir()
+            ),
+            dir_list={
+                'src_dir': self.configure.source_dir(),
+                'compile_dir': build_dir,
+                'toolchain_dir': None,
+                'llvm_toolchain_dir': None,
+                'sstate_mirrors': None,
+            },
+        )
+        config_list = []
+        for gcc_name in gcc_name_list:
+            if gcc_name.startswith('config_'):
+                config_list.append(gcc_name)
+                continue
+            config_list.append('config_' + gcc_name)
+        oebuild_util.write_yaml(
+            yaml_path=pathlib.Path(build_dir, 'toolchain.yaml'),
+            data={
+                'kind': oebuild_const.GCC_TOOLCHAIN,
+                'gcc_configs': config_list,
+                'docker_param': docker_param,
+            },
+        )
+        if auto_build:
+            with subprocess.Popen(
+                'oebuild toolchain auto',
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=build_dir,
+                encoding='utf-8',
+                text=True,
+            ) as s_p:
+                if s_p.returncode is not None and s_p.returncode != 0:
+                    err_msg = ''
+                    if s_p.stderr is not None:
+                        for line in s_p.stderr:
+                            err_msg.join(line)
+                        raise ValueError(err_msg)
+                res = None
+                while res is None:
+                    res = s_p.poll()
+                    if s_p.stdout is not None:
+                        for line in s_p.stdout:
+                            logger.info(line.strip('\n'))
+                    if s_p.stderr is not None:
+                        for line in s_p.stderr:
+                            logger.error(line.strip('\n'))
+                sys.exit(res)
+
+    def build_llvm(self, build_dir, llvm_lib, auto_build):
+        """
+        Build LLVM toolchain.
+
+        Args:
+            build_dir: build directory
+            llvm_lib: llvm aarch64 lib config
+            auto_build: auto_build flag
+        """
+        source_llvm_dir = pathlib.Path(
+            self.configure.source_yocto_dir(), '.oebuild/llvm-toolchain'
+        )
+        if not source_llvm_dir.exists():
+            logger.error(
+                'Build dependency not downloaded, not supported for build. Please '
+                'download the latest yocto meta openeuler repository'
+            )
+            sys.exit(-1)
+        # add toolchain.yaml to compile
+        docker_param = get_docker_param_dict(
+            docker_image=get_sdk_docker_image(
+                yocto_dir=self.configure.source_yocto_dir()
+            ),
+            dir_list={
+                'src_dir': self.configure.source_dir(),
+                'compile_dir': build_dir,
+                'toolchain_dir': None,
+                'llvm_toolchain_dir': None,
+                'sstate_mirrors': None,
+            },
+        )
+        oebuild_util.write_yaml(
+            yaml_path=pathlib.Path(build_dir, 'toolchain.yaml'),
+            data={
+                'kind': oebuild_const.LLVM_TOOLCHAIN,
+                'llvm_lib': llvm_lib,
+                'docker_param': docker_param,
+            },
+        )
+        if auto_build:
+            with subprocess.Popen(
+                'oebuild toolchain auto',
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=build_dir,
+                encoding='utf-8',
+                text=True,
+            ) as s_p:
+                if s_p.returncode is not None and s_p.returncode != 0:
+                    err_msg = ''
+                    if s_p.stderr is not None:
+                        for line in s_p.stderr:
+                            err_msg.join(line)
+                        raise ValueError(err_msg)
+                res = None
+                while res is None:
+                    res = s_p.poll()
+                    if s_p.stdout is not None:
+                        for line in s_p.stdout:
+                            logger.info(line.strip('\n'))
+                    if s_p.stderr is not None:
+                        for line in s_p.stderr:
+                            logger.error(line.strip('\n'))
+                sys.exit(res)
 
     def check_support_oebuild(self, yocto_dir):
         return pathlib.Path(yocto_dir, '.oebuild').exists()
