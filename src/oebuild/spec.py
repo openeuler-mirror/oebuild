@@ -12,8 +12,8 @@ See the Mulan PSL v2 for more details.
 
 import importlib.util
 import os
-from dataclasses import dataclass
 import sys
+from dataclasses import dataclass
 
 
 class CommandError(RuntimeError):
@@ -82,10 +82,12 @@ class OebuildExtCommandSpec:
 
     help: str
 
+    alias: str = None
+
     # This returns a OebuildCommand instance when called.
     # It may do some additional steps (like importing the definition of
     # the command) before constructing it, however.
-    factory: _CmdFactory
+    factory: _CmdFactory = None
 
 
 @dataclass
@@ -99,6 +101,8 @@ class _ExtCommand:
     class_name: str
 
     path: str
+
+    alias: str = None
 
 
 def get_spec(pre_dir, command_ext: _ExtCommand):
@@ -119,6 +123,7 @@ def get_spec(pre_dir, command_ext: _ExtCommand):
         name=command_ext.name,
         description=factory().description,
         help=factory().help_msg,
+        alias=command_ext.alias,
         factory=factory,
     )
 

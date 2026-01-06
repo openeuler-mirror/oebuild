@@ -43,10 +43,22 @@ from oebuild.parse_template import (
 class NeoGenerate(OebuildCommand):
     """Neo-generate handles the refreshed feature workflow starting point."""
 
-    help_msg = 'neo generate command'
+    help_msg = 'Generate build configuration with feature selection'
     description = textwrap.dedent("""
-            Neo-generate manages build preparation with nightly-features state
-            while keeping other generate options stable.
+            Generate compile.yaml by selecting platform and features.
+
+            Features are organized YAML configs with automatic dependency
+            resolution. Use --menuconfig for interactive selection or
+            --list to browse available features.
+
+            Examples:
+              oebuild neo-generate -p qemu-aarch64                    # menuconfig
+              oebuild neo-generate -p qemu-aarch64 -f mcs             # select feature
+              oebuild neo-generate --list                             # list features
+
+            Equivalents (auto-resolved dependencies):
+              oebuild neo-generate -p qemu-aarch64 -f mcs/xen
+                ≈ oebuild generate -p qemu-aarch64 -f mcs -f xen
             """)
 
     def __init__(self):

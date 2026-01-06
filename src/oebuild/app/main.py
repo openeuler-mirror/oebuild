@@ -11,22 +11,22 @@ See the Mulan PSL v2 for more details.
 """
 
 import os
-import sys
 import pathlib
-from collections import OrderedDict
 import pwd
+import sys
+from collections import OrderedDict
 from shutil import rmtree
 
-import oebuild.util as oebuild_util
 import oebuild.const as oebuild_const
-from oebuild.m_log import logger
-from oebuild.parse_param import ParseCompileParam
-from oebuild.configure import Configure
-from oebuild.version import __version__
-from oebuild.spec import get_spec, _ExtCommand
+import oebuild.util as oebuild_util
 from oebuild.command import OebuildCommand
+from oebuild.configure import Configure
+from oebuild.m_log import logger
 from oebuild.oebuild_parser import OebuildArgumentParser, OebuildHelpAction
+from oebuild.parse_param import ParseCompileParam
 from oebuild.parse_template import get_docker_volumns
+from oebuild.spec import _ExtCommand, get_spec
+from oebuild.version import __version__
 
 APP = 'app'
 
@@ -75,9 +75,20 @@ class OebuildApp:
             command_ext = OrderedDict()
         for app in plugins:
             if 'status' not in app or app['status'] == 'enable':
+                alias = app.get('alias', None)
                 command_ext[app['name']] = _ExtCommand(
-                    name=app['name'], class_name=app['class'], path=app['path']
+                    name=app['name'],
+                    class_name=app['class'],
+                    path=app['path'],
+                    alias=alias,
                 )
+                if alias:
+                    command_ext[alias] = _ExtCommand(
+                        name=alias,
+                        class_name=app['class'],
+                        path=app['path'],
+                        alias=None,
+                    )
         return command_ext
 
     def _load_extension_specs(
@@ -263,9 +274,9 @@ class QuickBuild:
         if 'compile.yaml' in os.listdir():
             self.build_dir = os.path.basename(os.getcwd())
         else:
-            build_name = self.build_yaml_path.name.replace(
-                '.yaml', ''
-            ).replace('.yml', '')
+            build_name = self.build_yaml_path.name.replace('.yaml', '').replace(
+                '.yml', ''
+            )
             self.build_dir = os.path.basename(build_name)
 
         self.generate()

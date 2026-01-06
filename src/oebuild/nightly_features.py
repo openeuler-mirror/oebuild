@@ -182,7 +182,7 @@ class FeatureRegistry:
         sub_id = self._normalize_leaf(data.get('id'))
         if not sub_id:
             raise NeoFeatureError(
-                f'{origin}: sub-feature is missing "id"'
+                f'{origin}: sub-features may not define nested "sub_feats"'
             )
         if sub_id == 'self':
             raise NeoFeatureError(

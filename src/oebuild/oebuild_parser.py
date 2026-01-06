@@ -86,8 +86,14 @@ class OebuildArgumentParser(argparse.ArgumentParser):
 
             if self.oebuild_app is not None:
                 append('')
+                # Collect all alias names to skip them when displaying commands
+                alias_names = set()
+                for cmd in self.oebuild_app.command_spec.values():
+                    if cmd.alias:
+                        alias_names.add(cmd.alias)
                 for _, command in self.oebuild_app.command_spec.items():
-                    self._format_command(append, command, width)
+                    if command.name not in alias_names:
+                        self._format_command(append, command, width)
 
             if self.epilog:
                 append(self.epilog)
@@ -111,6 +117,8 @@ class OebuildArgumentParser(argparse.ArgumentParser):
 
     def _format_command(self, append, command, width):
         thing = f'  {command.name}'
+        if command.alias:
+            thing += f' (or: {command.alias})'
         self._format_thing_and_help(append, thing, command.help, width)
 
     def _format_thing_and_help(self, append, thing, help_msg: str, width):
@@ -154,9 +162,7 @@ class OebuildArgumentParser(argparse.ArgumentParser):
         # module calls kwargs.pop(), so can't call super first without
         # losing data.
         optional = {'options': [], 'metavar': kwargs.get('metavar', None)}
-        need_metavar = optional['metavar'] is None and kwargs.get(
-            'action'
-        ) in (
+        need_metavar = optional['metavar'] is None and kwargs.get('action') in (
             None,
             'store',
         )

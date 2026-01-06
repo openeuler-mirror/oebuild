@@ -217,6 +217,11 @@ oebuild generate -p aarch64-std -f systemd -f openeuler-qt
 
 最终会在编译目录下（在执行完`oebuild generate`后按提示给出的路径即为编译目录）生成构建配置文件`compile.yaml`,关于该配置文件的详细介绍请参考配置文件介绍中的`compile.yaml`。在下一步的构建流程会解析该配置文件，在此之前，用户可以根据自身特定场景环境来修改配置文件，因为按该`oebuild generate`指令生成的配置文件仅算作一个参考模板，目的是给用户一个最基本的模板参考用，减少用户学习的成本，使用户能够快速上手。
 
+##### oebuild neo-generate / oebuild new
+
+neo-generate 是全新的 oebuild generate 实现。
+`oebuild neo-generate`（可简写为 `oebuild new`）是基于 nightly-features 的动态特性生成命令，功能上兼容 `oebuild generate` 的参数，同时通过特性声明、基本的依赖展开以及自动选择逻辑生成 `compile.yaml`。可用 `-p` 指定平台、`-f` 逐个声明特性，`-l` 列出支持的项目，`--menuconfig` 或者 不加任何新参数 触发交互式界面，行为上基本保持和 oebuild generate 一致。
+
 ##### oebuild bitbake
 
 构建指令，该指令会解析`compile.yaml`(通过`oebuild generate`指令生成的)，然后完成构建环境的初始化工作。该命令参数如下：

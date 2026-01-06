@@ -11,37 +11,37 @@ See the Mulan PSL v2 for more details.
 """
 
 import argparse
+import os
+import pathlib
 import re
 import subprocess
-import textwrap
-import os
 import sys
-import pathlib
+import textwrap
 from shutil import rmtree
 
-from prettytable import PrettyTable, TableStyle, HRuleStyle, VRuleStyle
+from prettytable import HRuleStyle, PrettyTable, TableStyle, VRuleStyle
 from ruamel.yaml.scalarstring import LiteralScalarString
 
-from oebuild.command import OebuildCommand
+import oebuild.const as oebuild_const
 import oebuild.util as oebuild_util
+from oebuild.app.plugins.generate.kconfig_generator import KconfigGenerator
+from oebuild.app.plugins.generate.parses import parse_feature_files, parsers
+from oebuild.check_docker_tag import CheckDockerTag
+from oebuild.command import OebuildCommand
 from oebuild.configure import Configure
+from oebuild.m_log import logger
 from oebuild.parse_template import (
     BaseParseTemplate,
     ParseTemplate,
     get_docker_param_dict,
     parse_repos_layers_local_obj,
 )
-from oebuild.m_log import logger
-from oebuild.check_docker_tag import CheckDockerTag
-import oebuild.const as oebuild_const
-from oebuild.app.plugins.generate.parses import parsers, parse_feature_files
-from oebuild.app.plugins.generate.kconfig_generator import KconfigGenerator
 
 
 class Generate(OebuildCommand):
     """Generate compile.yaml (and toolchain.yaml) from CLI options."""
 
-    help_msg = 'Create build dir and generate compile.yaml'
+    help_msg = 'Create build dir and generate compile.yaml [deprecated: migrate to oebuild new]'
     description = textwrap.dedent("""\
             Customize build parameters and output compile.yaml; optionally
             emit toolchain.yaml for GCC/LLVM builds.
@@ -79,6 +79,9 @@ class Generate(OebuildCommand):
     # pylint:disable=[R0914,R0911,R0912,R0915,W1203,R0913]
     def do_run(self, args: argparse.Namespace, unknown=None):
         """The main entry point for the command."""
+        logger.warning(
+            "'oebuild generate' is deprecated. Please migrate to 'oebuild new'."
+        )
         if self.pre_parse_help(args, unknown):
             sys.exit(0)
         if not self.configure.is_oebuild_dir():
@@ -389,9 +392,7 @@ oebuild toolchain
         self._list_feature()
 
     def _list_platform(self):
-        logger.info(
-            '\n================= Available Platforms ================='
-        )
+        logger.info('\n================= Available Platforms =================')
         yocto_dir = self.configure.source_yocto_dir()
         yocto_oebuild_dir = pathlib.Path(yocto_dir, '.oebuild')
         platform_path = pathlib.Path(yocto_oebuild_dir, 'platform')
@@ -407,9 +408,7 @@ oebuild toolchain
         print(table)
 
     def _list_feature(self):
-        logger.info(
-            '\n================= Available Features =================='
-        )
+        logger.info('\n================= Available Features ==================')
         yocto_dir = self.configure.source_yocto_dir()
         yocto_oebuild_dir = pathlib.Path(yocto_dir, '.oebuild')
         feature_triples = parse_feature_files(yocto_oebuild_dir)
@@ -437,9 +436,7 @@ oebuild toolchain
         for header in headers:
             table.max_width[header] = col_width
 
-        is_narrow = (
-            terminal_width < narrow_charnum or col_width < narrow_colnum
-        )
+        is_narrow = terminal_width < narrow_charnum or col_width < narrow_colnum
         if is_narrow:
             table.set_style(TableStyle.PLAIN_COLUMNS)
             table.hrules = HRuleStyle.NONE
@@ -730,9 +727,7 @@ def get_docker_image(yocto_dir, docker_tag, configure: Configure):
     """
     Resolve docker image from env, config defaults, or user selection, ordered by priority
     """
-    docker_image = oebuild_util.get_docker_image_from_yocto(
-        yocto_dir=yocto_dir
-    )
+    docker_image = oebuild_util.get_docker_image_from_yocto(yocto_dir=yocto_dir)
     if docker_image is None:
         check_docker_tag = CheckDockerTag(docker_tag, configure)
         oebuild_config = configure.parse_oebuild_config()
