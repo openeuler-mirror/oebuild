@@ -13,7 +13,7 @@ See the Mulan PSL v2 for more details.
 import logging
 import sys
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any, Dict
 import pathlib
 import os
 
@@ -56,6 +56,8 @@ class FeatureTemplate(Template):
     feature_name: LiteralScalarString
 
     support: list
+
+    other_configs: Optional[Dict[str, str]] = None
 
 
 class BaseParseTemplate(ValueError):
@@ -279,6 +281,7 @@ class ParseTemplate:
         compile_conf = self._deal_non_essential_compile_conf_param(
             param, compile_conf
         )
+        self._apply_feat_configs(compile_conf)
         compile_conf['no_layer'] = param['no_layer']
         compile_conf['repos'] = repos
         compile_conf['local_conf'] = local_conf
@@ -316,6 +319,14 @@ class ParseTemplate:
         if param['tmp_dir'] is not None:
             compile_conf['tmp_dir'] = param['tmp_dir']
         return compile_conf
+
+    def _apply_feat_configs(self, compile_conf):
+        for feature in self.feature_template:
+            extra = getattr(feature, 'other_configs', None)
+            if not extra:
+                continue
+            for key, value in extra.items():
+                compile_conf[key] = value
 
     @staticmethod
     def parse_repos_list(repos):

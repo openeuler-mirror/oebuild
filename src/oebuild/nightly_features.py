@@ -38,9 +38,12 @@ class AmbiguourError(ResolutionError):
 
 @dataclass
 class FeatureConfig:
+    # frequently used fields
     repos: List[str] = field(default_factory=list)
     layers: List[str] = field(default_factory=list)
     local_conf: List[str] = field(default_factory=list)
+    # Store any additional config fields
+    other_fields: Dict[str, any] = field(default_factory=dict)
 
 
 @dataclass
@@ -87,10 +90,12 @@ class FeatureRegistry:
         self.leaf_index: Dict[str, List[Feature]] = defaultdict(list)
         self.features_with_one_of: List[Feature] = []
         self.category_roots: Dict[str, Feature] = {}
+        self.long_alias_index: Dict[str, Feature] = {}
         self._load_features()
-        self._validate_references()
-        self._apply_machine_constraints()
         self._compute_category_roots()
+        self._build_long_alias_index()
+        self._validate_refs()
+        self._apply_machine_constraints()
 
     # a demo logic,
     # we need more effective approach to load features
@@ -121,13 +126,9 @@ class FeatureRegistry:
     ) -> None:
         leaf_id = self._normalize_leaf(data.get('id'))
         if not leaf_id:
-            raise NeoFeatureError(
-                f'{origin}: missing feature "id" field'
-            )
+            raise NeoFeatureError(f'{origin}: missing feature "id" field')
         if leaf_id == 'self':
-            raise NeoFeatureError(
-                f'{origin}: feature "id" may not be "self"'
-            )
+            raise NeoFeatureError(f'{origin}: feature "id" may not be "self"')
         full_id = self._make_full_id(category, leaf_id)
         config = self._parse_config(data.get('config'))
         machines, machine_set = self._parse_machines(data.get('machines'))
@@ -139,23 +140,17 @@ class FeatureRegistry:
             prompt=data.get('prompt'),
             machines=machines,
             machine_set=machine_set,
-            dependencies=self._normalize_reference_list(
+            dependencies=self._normalize_ref_list(
                 data.get('dependencies'), full_id
             ),
-            selects=self._normalize_reference_list(
-                data.get('selects'), full_id
-            ),
-            one_of=self._normalize_reference_list(
-                data.get('one_of'), full_id
-            ),
-            default_one_of=self._normalize_reference(
+            selects=self._normalize_ref_list(data.get('selects'), full_id),
+            one_of=self._normalize_ref_list(data.get('one_of'), full_id),
+            default_one_of=self._normalize_ref(
                 data.get('default_one_of'), full_id
             )
             if data.get('default_one_of')
             else None,
-            choice=self._normalize_reference_list(
-                data.get('choice'), full_id
-            ),
+            choice=self._normalize_ref_list(data.get('choice'), full_id),
             config=config,
             parent_full_id=None,
             is_subfeature=False,
@@ -163,9 +158,7 @@ class FeatureRegistry:
         self._register_feature(feature)
         sub_feats = data.get('sub_feats') or []
         if not isinstance(sub_feats, list):
-            raise NeoFeatureError(
-                f'{origin}: "sub_feats" must be a sequence'
-            )
+            raise NeoFeatureError(f'{origin}: "sub_feats" must be a sequence')
         for sub in sub_feats:
             if not isinstance(sub, dict):
                 raise NeoFeatureError(
@@ -176,11 +169,13 @@ class FeatureRegistry:
     def _parse_sub_feature(
         self, parent: Feature, data: dict, origin: pathlib.Path
     ) -> None:
+        if 'sub_feats' in data:
+            raise NeoFeatureError(
+                f'{origin}: sub-features may not define nested "sub_feats"'
+            )
         sub_id = self._normalize_leaf(data.get('id'))
         if not sub_id:
-            raise NeoFeatureError(
-                f'{origin}: sub-feature is missing "id"'
-            )
+            raise NeoFeatureError(f'{origin}: sub-feature is missing "id"')
         if sub_id == 'self':
             raise NeoFeatureError(
                 f'{origin}: sub-feature "id" may not be "self"'
@@ -201,23 +196,17 @@ class FeatureRegistry:
             prompt=data.get('prompt'),
             machines=machines,
             machine_set=machine_set,
-            dependencies=self._normalize_reference_list(
+            dependencies=self._normalize_ref_list(
                 data.get('dependencies'), full_id
             ),
-            selects=self._normalize_reference_list(
-                data.get('selects'), full_id
-            ),
-            one_of=self._normalize_reference_list(
-                data.get('one_of'), full_id
-            ),
-            default_one_of=self._normalize_reference(
+            selects=self._normalize_ref_list(data.get('selects'), full_id),
+            one_of=self._normalize_ref_list(data.get('one_of'), full_id),
+            default_one_of=self._normalize_ref(
                 data.get('default_one_of'), full_id
             )
             if data.get('default_one_of')
             else None,
-            choice=self._normalize_reference_list(
-                data.get('choice'), full_id
-            ),
+            choice=self._normalize_ref_list(data.get('choice'), full_id),
             config=config,
             parent_full_id=parent.full_id,
             is_subfeature=True,
@@ -226,14 +215,33 @@ class FeatureRegistry:
         parent.child_full_ids.append(feature.full_id)
 
     def _parse_config(self, config_block: Optional[dict]) -> FeatureConfig:
+        """
+        _parse_config() will normalize three most frequently used fields:
+        * repos
+        * layers
+        * local_conf
+
+        Fourtunetly, for other fields, which are all defined as a simple k:v map, hence just load them directly
+        """
         if not isinstance(config_block, dict):
             config_block = {}
+
+        repos = self._normalize_sequence(
+            config_block.get('repos', config_block.get('repo'))
+        )
+        layers = self._normalize_sequence(config_block.get('layers'))
+        local_conf = self._normalize_local_conf(config_block.get('local_conf'))
+
+        other_fields = {}
+        for key, value in config_block.items():
+            if key not in ('repos', 'layers', 'local_conf'):
+                other_fields[key] = value
+
         return FeatureConfig(
-            repos=self._normalize_sequence(config_block.get('repos')),
-            layers=self._normalize_sequence(config_block.get('layers')),
-            local_conf=self._normalize_local_conf(
-                config_block.get('local_conf')
-            ),
+            repos=repos,
+            layers=layers,
+            local_conf=local_conf,
+            other_fields=other_fields,
         )
 
     def _parse_machines(
@@ -272,9 +280,7 @@ class FeatureRegistry:
             return [str(item) for item in value if item is not None]
         return [str(value)]
 
-    def _normalize_reference_list(
-        self, entries, parent_full_id: str
-    ) -> List[str]:
+    def _normalize_ref_list(self, entries, parent_full_id: str) -> List[str]:
         if entries is None:
             return []
         if isinstance(entries, str):
@@ -285,19 +291,13 @@ class FeatureRegistry:
         for entry in entries:
             if entry is None:
                 continue
-            normalized.append(
-                self._normalize_reference(entry, parent_full_id)
-            )
+            normalized.append(self._normalize_ref(entry, parent_full_id))
         return normalized
 
-    def _normalize_reference(
-        self, entry, parent_full_id: str
-    ) -> str:
+    def _normalize_ref(self, entry, parent_full_id: str) -> str:
         value = str(entry).strip()
         if not value:
-            raise NeoFeatureError(
-                f'Empty reference found in {parent_full_id}'
-            )
+            raise NeoFeatureError(f'Empty reference found in {parent_full_id}')
         if value == 'self':
             return parent_full_id
         if value.startswith('self/'):
@@ -334,7 +334,28 @@ class FeatureRegistry:
     def _normalize_identifier(self, value: str) -> str:
         return value.strip().lower()
 
-    def _validate_references(self) -> None:
+    def _build_long_alias_index(self) -> None:
+        for root in self.category_roots.values():
+            long_root = f'{root.category}/{root.leaf_id}'
+            self._register_alias(self.long_alias_index, long_root, root)
+            for child_id in root.child_full_ids:
+                child = self.features_by_full_id.get(child_id)
+                if child is None:
+                    continue
+                long_child = f'{root.category}/{root.leaf_id}/{child.leaf_id}'
+                self._register_alias(self.long_alias_index, long_child, child)
+
+    def _register_alias(
+        self, alias_map: Dict[str, Feature], key: str, feature: Feature
+    ) -> None:
+        if key in alias_map and alias_map[key].full_id != feature.full_id:
+            raise NeoFeatureError(
+                f'Ambiguous alias "{key}" for '
+                f'{alias_map[key].full_id} and {feature.full_id}'
+            )
+        alias_map[key] = feature
+
+    def _validate_refs(self) -> None:
         for feature in self.features_by_full_id.values():
             feature.dependencies = self._canonicalize_reference_list(
                 feature, feature.dependencies
@@ -349,24 +370,20 @@ class FeatureRegistry:
                 feature, feature.choice
             )
             if feature.default_one_of:
-                feature.default_one_of = self._canonicalize_reference(
+                feature.default_one_of = self._canonicalize_ref(
                     feature, feature.default_one_of
                 )
 
     def _canonicalize_reference_list(
         self, feature: Feature, entries: List[str]
     ) -> List[str]:
-        return [
-            self._canonicalize_reference(feature, entry) for entry in entries
-        ]
+        return [self._canonicalize_ref(feature, entry) for entry in entries]
 
-    def _canonicalize_reference(
-        self, feature: Feature, entry: str
-    ) -> str:
+    def _canonicalize_ref(self, feature: Feature, entry: str) -> str:
         if entry in self.features_by_full_id:
             return entry
         try:
-            resolved = self.resolve_identifier(entry)
+            resolved = self.resolve_id(entry)
         except ResolutionError as err:
             raise NeoFeatureError(
                 f'{feature.full_id} references unknown feature {entry}'
@@ -383,7 +400,9 @@ class FeatureRegistry:
             if feature.machine_set is not None:
                 candidate_sets.append(set(feature.machine_set))
             if feature.parent_full_id:
-                parent_feature = self.features_by_full_id[feature.parent_full_id]
+                parent_feature = self.features_by_full_id[
+                    feature.parent_full_id
+                ]
                 candidate_sets.append(compute(parent_feature))
             for dep_id in feature.dependencies:
                 dep_feature = self.features_by_full_id[dep_id]
@@ -392,7 +411,9 @@ class FeatureRegistry:
             cache[feature.full_id] = result
             feature.machine_set = result
             if result is None:
-                feature.machines = feature.machines if feature.machines else None
+                feature.machines = (
+                    feature.machines if feature.machines else None
+                )
             else:
                 feature.machines = sorted(result)
             return result
@@ -419,8 +440,26 @@ class FeatureRegistry:
 
     def _compute_category_roots(self) -> None:
         for feature in self.features_by_full_id.values():
-            if not feature.is_subfeature and feature.category == feature.leaf_id:
+            if (
+                not feature.is_subfeature
+                and feature.category == feature.leaf_id
+            ):
                 self.category_roots[feature.category] = feature
+
+    def _raise_ambiguity(
+        self, identifier: str, candidates: List[Feature]
+    ) -> None:
+        lines = [
+            f"[Error] Ambiguous feature ID: '{identifier}'",
+            'Candidates:',
+        ]
+        for candidate in candidates:
+            lines.append(f'  - {candidate.full_id}')
+        if candidates:
+            lines.append(
+                f'Please use the Full ID (e.g., -f {candidates[0].full_id}).'
+            )
+        raise AmbiguourError('\n'.join(lines))
 
     def _match_leaf_candidates(
         self, identifier: str, leaf_candidates: List[Feature]
@@ -429,70 +468,46 @@ class FeatureRegistry:
             return None
         if len(leaf_candidates) == 1:
             return leaf_candidates[0]
-        top_level = [
-            feat for feat in leaf_candidates if not feat.is_subfeature
-        ]
+        top_level = [feat for feat in leaf_candidates if not feat.is_subfeature]
         if len(top_level) == 1:
             return top_level[0]
         if top_level:
-            raise AmbiguourError(
-                f"Ambiguous feature ID: '{identifier}'. Candidates: "
-                + ', '.join(f.full_id for f in top_level)
-            )
+            self._raise_ambiguity(identifier, top_level)
         sub_candidates = [
             feat for feat in leaf_candidates if feat.is_subfeature
         ]
         if len(sub_candidates) == 1:
             return sub_candidates[0]
         if sub_candidates:
-            raise AmbiguourError(
-                f"Ambiguous feature ID: '{identifier}'. Candidates: "
-                + ', '.join(f.full_id for f in sub_candidates)
-            )
+            self._raise_ambiguity(identifier, sub_candidates)
         return None
 
-    def _resolve_category_alias(self, normalized: str) -> Optional[Feature]:
-        if not normalized:
-            return None
-        segments = normalized.split('/')
-        if not segments:
-            return None
-        root_id = segments[0]
-        root_feature = self.category_roots.get(root_id)
-        if not root_feature:
-            return None
-        if len(segments) == 1:
-            return root_feature
-        alias_full_id = '/'.join([root_id, root_id, *segments[1:]])
-        return self.features_by_full_id.get(alias_full_id)
-
-    def resolve_identifier(self, identifier: str) -> Feature:
+    def resolve_id(self, identifier: str) -> Feature:
         normalized = self._normalize_identifier(identifier)
 
-        if normalized in self.features_by_full_id:
-            return self.features_by_full_id[normalized]
+        full_match = self.features_by_full_id.get(normalized)
+        if full_match:
+            if (
+                full_match.category == full_match.leaf_id
+                and '/' not in normalized
+            ):
+                leaf_candidates = self.leaf_index.get(normalized, [])
+                leaf_match = self._match_leaf_candidates(
+                    identifier, leaf_candidates
+                )
+                if leaf_match and leaf_match.full_id != full_match.full_id:
+                    self._raise_ambiguity(identifier, [full_match, leaf_match])
+            return full_match
 
-        alias_feature = self._resolve_category_alias(normalized)
-        has_context = '/' in normalized
-
-        if alias_feature and has_context:
-            return alias_feature
+        alias_match = self.long_alias_index.get(normalized)
+        if alias_match:
+            return alias_match
 
         leaf_key = normalized.split('/')[-1]
         leaf_candidates = self.leaf_index.get(leaf_key, [])
         leaf_match = self._match_leaf_candidates(identifier, leaf_candidates)
         if leaf_match:
-            if alias_feature and not has_context and (
-                alias_feature.full_id != leaf_match.full_id
-            ):
-                raise AmbiguourError(
-                    f"Ambiguous feature ID: '{identifier}'. Candidates: "
-                    f"{alias_feature.full_id}, {leaf_match.full_id}"
-                )
             return leaf_match
-
-        if alias_feature:
-            return alias_feature
 
         raise NotFountError(
             f"Unknown feature '{identifier}'. Use --list to see available features."
@@ -513,11 +528,12 @@ class FeatureResolver:
         self.enabled: Dict[str, Feature] = {}
         self.enabled_order: List[str] = []
         self.explicit_features: Set[str] = set()
+        self._visiting: Set[str] = set()
         self._context_stack: List[tuple[Feature, str]] = []
 
     def resolve(self, requested: Iterable[str]) -> ResolutionResult:
         for identifier in requested or []:
-            feature = self.registry.resolve_identifier(identifier)
+            feature = self.registry.resolve_id(identifier)
             self._enable_feature(feature, source='user')
         self._resolve_one_of_groups()
         return ResolutionResult(
@@ -527,6 +543,9 @@ class FeatureResolver:
     def _enable_feature(self, feature: Feature, source: str) -> None:
         if feature.full_id in self.enabled:
             return
+        if feature.full_id in self._visiting:
+            self._raise_cycle_error(feature)
+        self._visiting.add(feature.full_id)
         frame = (feature, source)
         self._context_stack.append(frame)
         try:
@@ -548,11 +567,23 @@ class FeatureResolver:
                 self._enable_feature(parent_feature, source='parent')
         finally:
             self._context_stack.pop()
+            self._visiting.discard(feature.full_id)
+
+    def _raise_cycle_error(self, feature: Feature) -> None:
+        chain = [
+            frame_feature.full_id for frame_feature, _ in self._context_stack
+        ]
+        chain.append(feature.full_id)
+        detail = ' -> '.join(chain)
+        raise ResolutionError(f'[Error] Circular dependency detected: {detail}')
 
     def _ensure_machine_support(self, feature: Feature) -> None:
         current = feature
         while current:
-            if current.machine_set and self.machine.lower() not in current.machine_set:
+            if (
+                current.machine_set
+                and self.machine.lower() not in current.machine_set
+            ):
                 self._raise_machine_error(current)
             if not current.parent_full_id:
                 break
@@ -577,13 +608,9 @@ class FeatureResolver:
         for frame_feature, source in self._context_stack:
             label = reason_labels.get(source, 'Activated')
             detail = detail_labels.get(source, '')
-            trace_lines.append(
-                f'  - {label}: {frame_feature.full_id}{detail}'
-            )
+            trace_lines.append(f'  - {label}: {frame_feature.full_id}{detail}')
         machines = (
-            f'[{", ".join(feature.machines)}]'
-            if feature.machines
-            else '[]'
+            f'[{", ".join(feature.machines)}]' if feature.machines else '[]'
         )
         lines = [
             f"[Error] Feature '{feature.full_id}' is not supported on machine "
@@ -595,31 +622,29 @@ class FeatureResolver:
         raise ResolutionError('\n'.join(lines))
 
     def _resolve_one_of_groups(self) -> None:
-        for feature in self.registry.features_with_one_of:
-            if feature.full_id not in self.enabled:
-                continue
-            if not feature.one_of:
-                continue
-            selected = [
-                option for option in feature.one_of if option in self.enabled
-            ]
-            if len(selected) > 1:
-                self._raise_one_of_conflict(feature, selected)
-            if not selected and feature.default_one_of:
-                default_id = feature.default_one_of
-                if default_id not in self.enabled:
-                    default_feature = self.registry.features_by_full_id[
-                        default_id
-                    ]
-                    self._enable_feature(default_feature, source='default')
-        for feature in self.registry.features_with_one_of:
-            if feature.full_id not in self.enabled:
-                continue
-            selected = [
-                option for option in feature.one_of if option in self.enabled
-            ]
-            if len(selected) > 1:
-                self._raise_one_of_conflict(feature, selected)
+        changed = True
+        while changed:
+            changed = False
+            for feature in self.registry.features_with_one_of:
+                if feature.full_id not in self.enabled:
+                    continue
+                if not feature.one_of:
+                    continue
+                selected = [
+                    option
+                    for option in feature.one_of
+                    if option in self.enabled
+                ]
+                if len(selected) > 1:
+                    self._raise_one_of_conflict(feature, selected)
+                if not selected and feature.default_one_of:
+                    default_id = feature.default_one_of
+                    if default_id not in self.enabled:
+                        default_feature = self.registry.features_by_full_id[
+                            default_id
+                        ]
+                        self._enable_feature(default_feature, source='default')
+                        changed = True
 
     def _raise_one_of_conflict(
         self, feature: Feature, selected: List[str]
@@ -633,11 +658,7 @@ class FeatureResolver:
             detail = 'You requested both '
         else:
             detail = 'These options '
-        detail += (
-            "'" + "' and '".join(leaf_names) + "'"
-            if leaf_names
-            else ''
-        )
+        detail += "'" + "' and '".join(leaf_names) + "'" if leaf_names else ''
         raise ConflictError(
             f"[Error] Conflict in feature '{feature.full_id}':\n"
             f"{detail} cannot be enabled together (one_of)."
