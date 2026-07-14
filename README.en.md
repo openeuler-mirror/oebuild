@@ -178,45 +178,43 @@ Therefore, if we want to specify a source code repository, we can directly modif
 
 ##### oebuild generate
 
-The Create Profile directive, which is used to generate the profile. 
+Creates `compile.yaml` based on the features system, with feature declarations, dependency expansion, and automatic selection.
 
 ```
 oebuild generate [-p platform] [-f features] [-t toolchain_dir] [-d build_directory] [-l list] [-b_in build_in]
 ```
 
--p: the name of `platform` the board, the full name, a parameter required to generate a configuration file, which is qemu-aarch64 by default
+Running `oebuild generate` with no extra arguments opens menuconfig. Use `--menuconfig` to force it, or `--no-menuconfig` to rely only on CLI feature IDs.
 
--f: Attribute parameter, full name, `feature` an optional parameter for generating a configuration file, without a default value
+-p: platform / board name; required for generation; default is qemu-aarch64
 
--t: The external compilation chain parameter, full name `toolchain_dir` , is an optional parameter in the generation configuration file,  without a default value, which means that we can select this parameter  if we do not need the cross-compilation chain provided by the system and choose our own.
+-f: feature ID(s); optional; supports nested IDs such as `mcs/xen` with automatic dependency resolution
 
--n: external nativesdk parameter, full name, an optional parameter for  generating configuration files, without a default value, which means  that if we do not need the nativesdk provided by the system and choose  the nativesdk we specify `nativesdk_dir` , we can select this parameter.
+-t: external GCC toolchain directory (`toolchain_dir`); optional
 
--s: sstate_mirrors value, full name `sstate_cache` , an optional parameter for the build configuration file, without a  default value, which means that if we want to apply the host-side  sstate-cache to the build, we can use that parameter to specify.
+-n: external nativesdk directory (`nativesdk_dir`); optional; useful for host builds
 
--s_dir: the address of the generated sstate-cache, the full name `sstate_dir` , an optional parameter of the generation configuration file, there is  no default value, this value can specify where the sstate-cache is  stored at the time of construction
+-s: SSTATE_MIRRORS path (`sstate_mirrors`); optional
 
--m: the address of the generated tmp, the full name `tmp_dir` , an optional parameter of the generation configuration file, there is  no default value, this value can specify where the tmp is stored at the  time of construction.
+-s_dir: SSTATE_DIR path (`sstate_dir`); optional
 
--tag: based on the container tag enabled when the container is built `--docker_tag` , the full name is an optional parameter of the generation  configuration file, there is no default value, usually enabling the  build container will automatically match the build container image, but  the user can also specify which container tag to use
+-m: tmp directory path (`tmp_dir`); optional
 
--dt: timestamp, full name, there is no default value, usually the DATETIME  variable will be used when building yocto, if the variable is not set,  the current timestamp is used by default, it can also be set `--datetime` , this parameter is the set timestamp parameter
+-dt: DATETIME stamp (`--datetime`); optional
 
--df: whether to disable the openeuler_fetch function `disable_fetch` , the full name is enable, which is consistent with the default value  in yocto, and the function of this value is to prohibit the execution of the openeuler_fetch, and openeuler_fetch is the upstream software  package download function implemented by openEuler, and its execution  can be disabled through this parameter
+-nf: disable openeuler_fetch (`no_fetch`); optional
 
--d: the initialized compilation directory, if this parameter is not set,  the initialized compilation directory is the same as the -p parameter 
+-d: build directory name; defaults to the platform name when omitted
 
--l: list parameter, full name, which lists both the supported boards and features `--list` , and indicates the boards it supports
+-l: list supported platforms and features (`--list`)
 
-OEbuild relies on the compile.yaml build configuration file to complete the  preparation of the build environment when building, and the command to  create the configuration file is already part of the build instruction  content, which will check whether OEBUILD is adapted, and the rule to  check whether it is adapted is `yocto-meta-openeuler` whether a `.oebuild` hidden directory is created in the `yocto-meta-openeuler` root directory, and `-p` it will be parsed `.oebuild/platform` The corresponding platform configuration file will be parsed, `-f` and the parameter can be `.oebuild/feature` passed in with multiple values, such as the following example:
+oebuild checks that `yocto-meta-openeuler` contains a `.oebuild` directory. `-p` loads the matching file under `.oebuild/platform`; `-f` resolves features from features. Example:
 
 ```
-oebuild generate -p aarch64-std -f systemd -f openeuler-qt
+oebuild generate -p qemu-aarch64 -f mcs -f xen --no-menuconfig
 ```
 
-The resulting build profile will cover `systemd openeuler-qt` the characteristics of both
-
-Finally, the build configuration file will be generated in the compilation directory (the path given by `oebuild generate` the prompts is the compilation directory after the execution is completed `compile.yaml` ), please refer to the configuration file introduction for a detailed introduction `compile.yaml` to the configuration file. In the next step of the build process, the  configuration file will be parsed, before that, the user can modify the  configuration file according to their specific scene environment,  because the configuration file generated according to the `oebuild generate` instruction is only counted as a reference template, the purpose is to  give the user a basic template reference, reduce the cost of user  learning, and enable the user to get started quickly.
+The generated profile includes the selected features and their expanded dependencies. The build directory path printed after a successful run contains `compile.yaml`, which you can further edit before `oebuild bitbake`.
 
 ##### oebuild bitbake
 

@@ -176,16 +176,17 @@ basic_repo:
 
 ##### oebuild generate
 
-创建配置文件指令，而该命令就是用来产生配置文件的。
+创建配置文件指令，用来生成 `compile.yaml`。该命令基于 features 的动态特性体系，支持特性声明、依赖展开以及自动选择逻辑。
 
 ```
 oebuild generate [-p platform] [-f features] [-t toolchain_dir] [-d build_directory] [-l list] [-b_in build_in]
 ```
-当命令行只输入oebuild generate不带其他参数时，会进入菜单选择模式，通过菜单选择来进行下面介绍参数的填充，选择完成且进行保存之后，就会生成对应的compile.yaml文件。
+
+当命令行只输入 `oebuild generate` 不带其他参数时，会进入 menuconfig 交互界面；也可使用 `--menuconfig` 显式触发，或使用 `--no-menuconfig` 跳过交互、仅依赖命令行传入的特性 ID。
 
 -p：单板名称，全称`platform`，生成配置文件需要的一个参数，默认为qemu-aarch64
 
--f：特性参数，全称`feature`，生成配置文件可选的一个参数，没有默认值
+-f：特性参数，全称`feature`，生成配置文件可选的一个参数，没有默认值；支持层级特性 ID（如 `mcs/xen`），会自动解析依赖
 
 -t：外部编译链参数，全称`toolchain_dir`，生成配置文件可选的一个参数，没有默认值，该值表示如果我们不需要系统提供的交叉编译链而选择自己的交叉编译链，则可以选择该参数。
 
@@ -197,30 +198,23 @@ oebuild generate [-p platform] [-f features] [-t toolchain_dir] [-d build_direct
 
 -m：生成的tmp存放地址，全称`tmp_dir`，生成配置文件可选的一个参数，没有默认值，该值可以指定在构建时的tmp存放在哪里。
 
--tag：基于容器构建时启用的容器tag，全称`--docker_tag`，生成配置文件可选的一个参数，没有默认值，通常启用构建容器会自动匹配构建容器镜像，但是用户也可以指定使用哪个容器tag
-
 -dt：时间戳，全称`--datetime`，没有默认值，通常在yocto构建时会使用DATETIME变量，该变量如果不设置则默认采用当前时间戳，也可以进行设置，该参数即为设置时间戳参数
 
--df：是否禁用openeuler_fetch功能，全称`disable_fetch`，默认为enable，即和yocto中的默认值保持一致，该值的作用为禁止openeuler_fetch的执行，openeuler_fetch为openEuler自我实现的上游软件包下载功能，通过该参数可以禁止其执行
+-nf：是否禁用openeuler_fetch功能，全称`no_fetch`，默认为enable，即和yocto中的默认值保持一致，该值的作用为禁止openeuler_fetch的执行，openeuler_fetch为openEuler自我实现的上游软件包下载功能，通过该参数可以禁止其执行
 
 -d：初始化的编译目录，如果不设置该参数，则初始化的编译目录和-p参数保持一致
 
 -l: list参数，全称`--list`，会同时列出当下支持的单板列表以及特性列表，特性列表会标明其支持的单板
 
-oebuild在构建时依赖compile.yaml构建配置文件来完成构建环境准备工作，创建配置文件指令已经属于构建指令内容，该操作将会检查`yocto-meta-openeuler`是否适配了oebuild，检查是否适配的规则便是是否在`yocto-meta-openeuler`根目录创建了`.oebuild`隐藏目录，而`-p`则会解析`.oebuild/platform`下相应的平台配置文件，`-f`参数则会解析`.oebuild/feature`下相应的配置文件，该参数是可以多值传入的，例如如下范例：
+oebuild在构建时依赖compile.yaml构建配置文件来完成构建环境准备工作，创建配置文件指令已经属于构建指令内容，该操作将会检查`yocto-meta-openeuler`是否适配了oebuild，检查是否适配的规则便是是否在`yocto-meta-openeuler`根目录创建了`.oebuild`隐藏目录，而`-p`则会解析`.oebuild/platform`下相应的平台配置文件，`-f`参数则会解析 features 下相应的特性配置，该参数是可以多值传入的，例如如下范例：
 
 ```
-oebuild generate -p aarch64-std -f systemd -f openeuler-qt
+oebuild generate -p qemu-aarch64 -f mcs -f xen --no-menuconfig
 ```
 
-则生成的构建配置文件会涵盖`systemd openeuler-qt`两者的特性
+则生成的构建配置文件会涵盖所选特性及其依赖展开结果
 
 最终会在编译目录下（在执行完`oebuild generate`后按提示给出的路径即为编译目录）生成构建配置文件`compile.yaml`,关于该配置文件的详细介绍请参考配置文件介绍中的`compile.yaml`。在下一步的构建流程会解析该配置文件，在此之前，用户可以根据自身特定场景环境来修改配置文件，因为按该`oebuild generate`指令生成的配置文件仅算作一个参考模板，目的是给用户一个最基本的模板参考用，减少用户学习的成本，使用户能够快速上手。
-
-##### oebuild neo-generate / oebuild new
-
-neo-generate 是全新的 oebuild generate 实现。
-`oebuild neo-generate`（可简写为 `oebuild new`）是基于 nightly-features 的动态特性生成命令，功能上兼容 `oebuild generate` 的参数，同时通过特性声明、基本的依赖展开以及自动选择逻辑生成 `compile.yaml`。可用 `-p` 指定平台、`-f` 逐个声明特性，`-l` 列出支持的项目，`--menuconfig` 或者 不加任何新参数 触发交互式界面，行为上基本保持和 oebuild generate 一致。
 
 ##### oebuild bitbake
 
