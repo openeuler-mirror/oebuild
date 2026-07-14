@@ -6,10 +6,10 @@ import unittest
 from pathlib import Path
 
 from kconfiglib import Kconfig
-from oebuild.nightly_features import FeatureRegistry
+from oebuild.feature_resolver import FeatureRegistry
 
 sys.path.insert(0, os.path.dirname(__file__))
-from menuconfig_generator import NeoMenuconfigGenerator  # noqa: E402
+from menuconfig_generator import MenuconfigGenerator  # noqa: E402
 
 
 class MenuconfigGeneratorTest(unittest.TestCase):
@@ -18,10 +18,10 @@ class MenuconfigGeneratorTest(unittest.TestCase):
     def setUp(self):
         self.workspace = tempfile.TemporaryDirectory()
         base = Path(self.workspace.name)
-        self.nightly_dir = base / 'nightly-features'
+        self.features_dir = base / 'features'
         self.platform_dir = base / 'platform'
-        (self.nightly_dir / 'system').mkdir(parents=True)
-        (self.nightly_dir / 'containers').mkdir(parents=True)
+        (self.features_dir / 'system').mkdir(parents=True)
+        (self.features_dir / 'containers').mkdir(parents=True)
         self.platform_dir.mkdir(parents=True)
         (self.platform_dir / 'qemu-aarch64.yaml').write_text('')
         self._write_feature(
@@ -88,12 +88,12 @@ class MenuconfigGeneratorTest(unittest.TestCase):
             self._workspace_to_cleanup.cleanup()
 
     def _write_feature(self, category: str, file_name: str, content: str) -> None:
-        target = self.nightly_dir / category / f'{file_name}.yaml'
+        target = self.features_dir / category / f'{file_name}.yaml'
         target.write_text(content)
 
     def _build_kconfig(self) -> str:
-        registry = FeatureRegistry(self.nightly_dir)
-        generator = NeoMenuconfigGenerator(
+        registry = FeatureRegistry(self.features_dir)
+        generator = MenuconfigGenerator(
             registry=registry,
             platform_dir=self.platform_dir,
             default_platform='qemu-aarch64',
@@ -114,7 +114,7 @@ class MenuconfigGeneratorTest(unittest.TestCase):
         # Create workspace and setup directories
         workspace = tempfile.TemporaryDirectory()
         base = Path(workspace.name)
-        nightly_dir = base / 'nightly-features'
+        features_dir = base / 'features'
         platform_dir = base / 'platform'
         platform_dir.mkdir(parents=True)
         (platform_dir / 'qemu-aarch64.yaml').write_text('')
@@ -122,13 +122,13 @@ class MenuconfigGeneratorTest(unittest.TestCase):
         # Write feature files
         for category, files in features.items():
             for filename, content in files:
-                (nightly_dir / category).mkdir(parents=True, exist_ok=True)
-                target = nightly_dir / category / f'{filename}.yaml'
+                (features_dir / category).mkdir(parents=True, exist_ok=True)
+                target = features_dir / category / f'{filename}.yaml'
                 target.write_text(content)
 
         # Build Kconfig text
-        registry = FeatureRegistry(nightly_dir)
-        generator = NeoMenuconfigGenerator(
+        registry = FeatureRegistry(features_dir)
+        generator = MenuconfigGenerator(
             registry=registry,
             platform_dir=platform_dir,
             default_platform='qemu-aarch64',
@@ -198,7 +198,7 @@ class SelectSemanticTest(unittest.TestCase):
         # Create workspace and setup directories
         workspace = tempfile.TemporaryDirectory()
         base = Path(workspace.name)
-        nightly_dir = base / 'nightly-features'
+        features_dir = base / 'features'
         platform_dir = base / 'platform'
         platform_dir.mkdir(parents=True)
         (platform_dir / 'qemu-aarch64.yaml').write_text('')
@@ -206,13 +206,13 @@ class SelectSemanticTest(unittest.TestCase):
         # Write feature files
         for category, files in features.items():
             for filename, content in files:
-                (nightly_dir / category).mkdir(parents=True, exist_ok=True)
-                target = nightly_dir / category / f'{filename}.yaml'
+                (features_dir / category).mkdir(parents=True, exist_ok=True)
+                target = features_dir / category / f'{filename}.yaml'
                 target.write_text(content)
 
         # Build Kconfig text
-        registry = FeatureRegistry(nightly_dir)
-        generator = NeoMenuconfigGenerator(
+        registry = FeatureRegistry(features_dir)
+        generator = MenuconfigGenerator(
             registry=registry,
             platform_dir=platform_dir,
             default_platform='qemu-aarch64',

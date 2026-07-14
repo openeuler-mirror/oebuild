@@ -1,5 +1,5 @@
 """
-Menuconfig generator for neo-generate nightly features.
+Menuconfig generator for generate features.
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ from menuconfig import menuconfig
 
 import oebuild.const as oebuild_const
 import oebuild.util as oebuild_util
-from oebuild.app.plugins.neo_generate.kconfig_writer import KconfigWriter
-from oebuild.nightly_features import Feature, FeatureRegistry
+from oebuild.app.plugins.generate.kconfig_writer import KconfigWriter
+from oebuild.feature_resolver import Feature, FeatureRegistry
 
 
 @dataclass(frozen=True)
@@ -70,8 +70,8 @@ class MenuconfigSelection:
     """Optional build directory name override."""
 
 
-class NeoMenuconfigGenerator:
-    """Builds a nightly-feature menuconfig that mirrors the catalog hierarchy."""
+class MenuconfigGenerator:
+    """Builds a feature menuconfig that mirrors the catalog hierarchy."""
 
     PLATFORM_PREFIX = 'PLATFORM_'
     FEATURE_PREFIX = 'FEATURE_'
@@ -216,7 +216,7 @@ class NeoMenuconfigGenerator:
     def build_kconfig_text(self) -> str:
         """Return the textual Kconfig representation without launching menuconfig."""
         writer = KconfigWriter()
-        writer.line('# Auto-generated nightly-feature menuconfig')
+        writer.line('# Auto-generated feature menuconfig')
         writer.line('# Updating this file manually is not supported.')
         writer.blank()
         self._write_platform_choice(writer)
