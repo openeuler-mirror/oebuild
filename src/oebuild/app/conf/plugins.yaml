@@ -8,10 +8,6 @@ plugins:
   - name: generate
     class: Generate
     path: plugins/generate/generate.py
-  - name: neo-generate
-    class: NeoGenerate
-    path: plugins/neo_generate/neo_generate.py
-    alias: new
   - name: bitbake
     class: Bitbake
     path: plugins/bitbake/bitbake.py

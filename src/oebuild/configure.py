@@ -64,7 +64,7 @@ class Config:
 
     basic_repo: dict
 
-    feat_root_dir: str = 'nightly-features'
+    feat_root_dir: str = 'features'
 
 
 class Configure:
@@ -222,11 +222,11 @@ class Configure:
             )
 
         raw_feat_root = config.get('feat_root_dir')
-        # nightly-features is the fallback
+        # features is the fallback
         feat_root_dir = (
             raw_feat_root.strip()
             if isinstance(raw_feat_root, str) and raw_feat_root.strip()
-            else 'nightly-features'
+            else 'features'
         )
         config = Config(
             docker=docker_config,

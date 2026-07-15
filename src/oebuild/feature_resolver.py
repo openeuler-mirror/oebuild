@@ -1,5 +1,5 @@
 """
-Helper classes for loading and resolving nightly-feature YAML declarations.
+Helper classes for loading and resolving feature YAML declarations.
 
 The loader builds a global registry keyed by full IDs (<category>/<leaf>[/<sub>]),
 and the resolver walks the dependency graph, enforces visibility rules, and
@@ -16,11 +16,11 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 import oebuild.util as oebuild_util
 
 
-class NeoFeatureError(Exception):
-    """Base error for nightly feature parsing and resolution."""  # noqa: D401
+class FeatureError(Exception):
+    """Base error for feature parsing and resolution."""  # noqa: D401
 
 
-class ResolutionError(NeoFeatureError):
+class ResolutionError(FeatureError):
     """Raised when the resolver cannot satisfy a requested feature merge."""  # noqa: D401
 
 
@@ -28,11 +28,11 @@ class ConflictError(ResolutionError):
     """Raised when conflicting features are enabled simultaneously."""
 
 
-class NotFountError(ResolutionError):
+class FeatureNotFoundError(ResolutionError):
     """Raised when a requested feature identifier cannot be resolved."""
 
 
-class AmbiguourError(ResolutionError):
+class FeatureAmbiguousError(ResolutionError):
     """Raised when a feature identifier matches multiple candidates."""
 
 
@@ -64,6 +64,7 @@ class Feature:
     parent_full_id: Optional[str]
     child_full_ids: List[str] = field(default_factory=list)
     is_subfeature: bool = False
+    aliases: List[str] = field(default_factory=list)
 
     def supports_machine(self, machine: str) -> bool:
         normalized = machine.strip().lower()
@@ -80,11 +81,11 @@ class ResolutionResult:
 class FeatureRegistry:
     """Indexes features defined under .oebuild/<feat_root_dir>."""
 
-    def __init__(self, nightly_dir: pathlib.Path):
-        self.features_dir = pathlib.Path(nightly_dir)
+    def __init__(self, features_dir_path: pathlib.Path):
+        self.features_dir = pathlib.Path(features_dir_path)
         if not self.features_dir.exists():
-            raise NeoFeatureError(
-                f'Nightly feature directory not found: {self.features_dir}'
+            raise FeatureError(
+                f'Feature directory not found: {self.features_dir}'
             )
         self.features_by_full_id: Dict[str, Feature] = {}
         self.leaf_index: Dict[str, List[Feature]] = defaultdict(list)
@@ -113,7 +114,7 @@ class FeatureRegistry:
                     continue
                 data = oebuild_util.read_yaml(feature_file)
                 if not isinstance(data, dict):
-                    raise NeoFeatureError(
+                    raise FeatureError(
                         f'{feature_file} must contain at least one YAML mapping'
                     )
                 self._parse_feature_file(category, data, feature_file)
@@ -126,9 +127,9 @@ class FeatureRegistry:
     ) -> None:
         leaf_id = self._normalize_leaf(data.get('id'))
         if not leaf_id:
-            raise NeoFeatureError(f'{origin}: missing feature "id" field')
+            raise FeatureError(f'{origin}: missing feature "id" field')
         if leaf_id == 'self':
-            raise NeoFeatureError(f'{origin}: feature "id" may not be "self"')
+            raise FeatureError(f'{origin}: feature "id" may not be "self"')
         full_id = self._make_full_id(category, leaf_id)
         config = self._parse_config(data.get('config'))
         machines, machine_set = self._parse_machines(data.get('machines'))
@@ -154,14 +155,15 @@ class FeatureRegistry:
             config=config,
             parent_full_id=None,
             is_subfeature=False,
+            aliases=self._parse_aliases(data.get('aliases'), origin),
         )
         self._register_feature(feature)
         sub_feats = data.get('sub_feats') or []
         if not isinstance(sub_feats, list):
-            raise NeoFeatureError(f'{origin}: "sub_feats" must be a sequence')
+            raise FeatureError(f'{origin}: "sub_feats" must be a sequence')
         for sub in sub_feats:
             if not isinstance(sub, dict):
-                raise NeoFeatureError(
+                raise FeatureError(
                     f'{origin}: each entry of "sub_feats" must be a mapping'
                 )
             self._parse_sub_feature(feature, sub, origin)
@@ -170,14 +172,14 @@ class FeatureRegistry:
         self, parent: Feature, data: dict, origin: pathlib.Path
     ) -> None:
         if 'sub_feats' in data:
-            raise NeoFeatureError(
+            raise FeatureError(
                 f'{origin}: sub-features may not define nested "sub_feats"'
             )
         sub_id = self._normalize_leaf(data.get('id'))
         if not sub_id:
-            raise NeoFeatureError(f'{origin}: sub-feature is missing "id"')
+            raise FeatureError(f'{origin}: sub-feature is missing "id"')
         if sub_id == 'self':
-            raise NeoFeatureError(
+            raise FeatureError(
                 f'{origin}: sub-feature "id" may not be "self"'
             )
         # Apply syntax sugar for sub-features: if parent is a category root feature,
@@ -210,6 +212,7 @@ class FeatureRegistry:
             config=config,
             parent_full_id=parent.full_id,
             is_subfeature=True,
+            aliases=self._parse_aliases(data.get('aliases'), origin),
         )
         self._register_feature(feature)
         parent.child_full_ids.append(feature.full_id)
@@ -262,6 +265,36 @@ class FeatureRegistry:
             return None, None
         return normalized, {m.lower() for m in normalized}
 
+    def _parse_aliases(
+        self, value, origin: pathlib.Path
+    ) -> List[str]:
+        """Parse the optional top-level ``aliases`` field into normalized ids.
+
+        Aliases are plain alternative identifiers (e.g. legacy flat feature
+        names), not feature references, so they are only lowercased/stripped
+        like ``_normalize_identifier`` instead of going through ref resolution.
+        """
+        if value is None:
+            return []
+        if isinstance(value, str):
+            raw = [value]
+        elif isinstance(value, Iterable):
+            raw = list(value)
+        else:
+            raise FeatureError(
+                f'{origin}: "aliases" must be a string or a sequence of strings'
+            )
+        aliases: List[str] = []
+        for item in raw:
+            if item is None:
+                continue
+            normalized = self._normalize_identifier(str(item))
+            if not normalized:
+                continue
+            if normalized not in aliases:
+                aliases.append(normalized)
+        return aliases
+
     def _normalize_sequence(self, value) -> List[str]:
         if value is None:
             return []
@@ -297,13 +330,13 @@ class FeatureRegistry:
     def _normalize_ref(self, entry, parent_full_id: str) -> str:
         value = str(entry).strip()
         if not value:
-            raise NeoFeatureError(f'Empty reference found in {parent_full_id}')
+            raise FeatureError(f'Empty reference found in {parent_full_id}')
         if value == 'self':
             return parent_full_id
         if value.startswith('self/'):
             remainder = value[5:].strip()
             if not remainder:
-                raise NeoFeatureError(
+                raise FeatureError(
                     f'Invalid self reference "{value}" in {parent_full_id}'
                 )
             value = f'{parent_full_id}/{remainder}'
@@ -311,7 +344,7 @@ class FeatureRegistry:
 
     def _register_feature(self, feature: Feature) -> None:
         if feature.full_id in self.features_by_full_id:
-            raise NeoFeatureError(
+            raise FeatureError(
                 f'Duplicate feature id detected: {feature.full_id}'
             )
         self.features_by_full_id[feature.full_id] = feature
@@ -344,12 +377,21 @@ class FeatureRegistry:
                     continue
                 long_child = f'{root.category}/{root.leaf_id}/{child.leaf_id}'
                 self._register_alias(self.long_alias_index, long_child, child)
+        # User-declared aliases (e.g. legacy flat feature names) are registered
+        # after the path-derived aliases so that a data author can map an old
+        # identifier to a renamed feature. _register_alias keeps the first
+        # winner, so path aliases take precedence over aliases declared later.
+        for feature in self.features_by_full_id.values():
+            for alias in feature.aliases:
+                self._register_alias(
+                    self.long_alias_index, alias, feature
+                )
 
     def _register_alias(
         self, alias_map: Dict[str, Feature], key: str, feature: Feature
     ) -> None:
         if key in alias_map and alias_map[key].full_id != feature.full_id:
-            raise NeoFeatureError(
+            raise FeatureError(
                 f'Ambiguous alias "{key}" for '
                 f'{alias_map[key].full_id} and {feature.full_id}'
             )
@@ -385,7 +427,7 @@ class FeatureRegistry:
         try:
             resolved = self.resolve_id(entry)
         except ResolutionError as err:
-            raise NeoFeatureError(
+            raise FeatureError(
                 f'{feature.full_id} references unknown feature {entry}'
             ) from err
         return resolved.full_id
@@ -459,7 +501,7 @@ class FeatureRegistry:
             lines.append(
                 f'Please use the Full ID (e.g., -f {candidates[0].full_id}).'
             )
-        raise AmbiguourError('\n'.join(lines))
+        raise FeatureAmbiguousError('\n'.join(lines))
 
     def _match_leaf_candidates(
         self, identifier: str, leaf_candidates: List[Feature]
@@ -509,7 +551,7 @@ class FeatureRegistry:
         if leaf_match:
             return leaf_match
 
-        raise NotFountError(
+        raise FeatureNotFoundError(
             f"Unknown feature '{identifier}'. Use --list to see available features."
         )
 
@@ -520,7 +562,7 @@ class FeatureRegistry:
 
 
 class FeatureResolver:
-    """Resolves machine-aware dependency trees for nightly features."""
+    """Resolves machine-aware dependency trees for features."""
 
     def __init__(self, registry: FeatureRegistry, machine: str):
         self.registry = registry
@@ -633,7 +675,7 @@ class FeatureResolver:
                 selected = [
                     option
                     for option in feature.one_of
-                    if option in self.enabled
+                    if self._is_one_of_option_satisfied(option)
                 ]
                 if len(selected) > 1:
                     self._raise_one_of_conflict(feature, selected)
@@ -645,6 +687,41 @@ class FeatureResolver:
                         ]
                         self._enable_feature(default_feature, source='default')
                         changed = True
+
+    def _is_one_of_option_satisfied(self, option_full_id: str) -> bool:
+        """Whether a one_of option counts as already chosen.
+
+        An option is satisfied when it is enabled directly, OR when something
+        the user explicitly requested is part of the option's ``selects``
+        closure. The second case matters for backward compatibility: a legacy
+        ``-f xen`` resolves to ``hypervisor/xen`` (a top-level feature) while
+        the parent ``mcs`` one_of option is ``mcs/xen`` (a subfeature that
+        ``selects`` ``hypervisor/xen``). Without this check the resolver would
+        see no one_of option selected and wrongly fall back to the baremetal
+        default, which then strips ``xen`` from MCS_FEATURES.
+        """
+        if option_full_id in self.enabled:
+            return True
+        option = self.registry.features_by_full_id.get(option_full_id)
+        if option is None:
+            return False
+        return bool(
+            self._selects_closure(option) & self.explicit_features
+        )
+
+    def _selects_closure(self, feature: Feature) -> Set[str]:
+        """Transitive set of full ids reachable via ``selects`` edges."""
+        seen: Set[str] = set()
+        stack = list(feature.selects)
+        while stack:
+            current_id = stack.pop()
+            if current_id in seen:
+                continue
+            seen.add(current_id)
+            current = self.registry.features_by_full_id.get(current_id)
+            if current is not None:
+                stack.extend(current.selects)
+        return seen
 
     def _raise_one_of_conflict(
         self, feature: Feature, selected: List[str]

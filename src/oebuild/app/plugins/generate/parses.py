@@ -10,14 +10,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 """
 
-import pathlib
-import sys
-
-from ruamel.yaml.error import MarkedYAMLError, YAMLError
-
 import oebuild.const as oebuild_const
-import oebuild.util as oebuild_util
-from oebuild.m_log import logger
 
 
 def parsers(parser, include_features=True):
@@ -235,63 +228,3 @@ def parsers(parser, include_features=True):
     )
 
     return parser
-
-
-@staticmethod
-def parse_feature_files(oebuild_dir):
-    """
-    both yaml and yml are supported, but yaml is preferred
-    """
-
-    feature_dir = pathlib.Path(oebuild_dir, 'features')
-    if not feature_dir.exists():
-        logger.error('Features directory not found under .oebuild.')
-        sys.exit(-1)
-    # Group files by base name to handle priority
-    file_groups = {}
-    for ft_path in feature_dir.iterdir():
-        if ft_path.is_file():
-            if ft_path.suffix == '.yaml':
-                feature_name = ft_path.stem
-                if feature_name not in file_groups:
-                    file_groups[feature_name] = {'yaml': None, 'yml': None}
-                file_groups[feature_name]['yaml'] = ft_path
-            elif ft_path.suffix == '.yml':
-                feature_name = ft_path.stem
-                if feature_name not in file_groups:
-                    file_groups[feature_name] = {'yaml': None, 'yml': None}
-                file_groups[feature_name]['yml'] = ft_path
-    features = []
-    for feature_name, extensions in file_groups.items():
-        # Prefer .yaml over .yml
-        selected_file = extensions['yaml'] or extensions['yml']
-        if selected_file:
-            try:
-                feature_data = oebuild_util.read_yaml(selected_file)
-                if not isinstance(feature_data, dict):
-                    logger.warning(
-                        "Invalid YAML mapping in feature '%s'", feature_name
-                    )
-                    continue
-                features.append((feature_name, selected_file, feature_data))
-            except MarkedYAMLError as e:
-                fname = selected_file.name
-                logger.warning(
-                    """Failed to parse feature file '%s':
-                       Error: %s
-                       At: Line %d, Column %d,
-                    """,
-                    fname,
-                    e.problem,
-                    e.problem_mark.line + 1,
-                    e.problem_mark.column + 1,
-                )
-                continue
-            except YAMLError as e:
-                fname = selected_file.name
-                logger.warning(
-                    "Failed to parse feature file '%s': %s", fname, e
-                )
-                continue
-    features.sort(key=lambda x: x[0])
-    return features
