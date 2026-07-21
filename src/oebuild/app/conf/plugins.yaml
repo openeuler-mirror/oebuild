@@ -11,6 +11,12 @@ plugins:
   - name: bitbake
     class: Bitbake
     path: plugins/bitbake/bitbake.py
+  - name: bitbake-getvar
+    class: BitbakeGetvar
+    path: plugins/bitbake_getvar/bitbake_getvar.py
+  - name: oe-pkgdata-util
+    class: OePkgdataUtil
+    path: plugins/oe_pkgdata_util/oe_pkgdata_util.py
   - name: manifest
     class: Manifest
     path: plugins/manifest/manifest.py
