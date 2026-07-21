@@ -246,6 +246,8 @@ class Generate(OebuildCommand):
             if legacy_registry.features_by_full_id:
                 return legacy_registry
         return registry
+
+    def _run_menuconfig(self, args):
         platform_dir = pathlib.Path(self.yocto_dir, '.oebuild', 'platform')
         config_path = pathlib.Path(os.getcwd(), '.config')
         if config_path.exists():
