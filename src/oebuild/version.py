@@ -18,4 +18,4 @@ See the Mulan PSL v2 for more details.
 # environment. However, since all repository information related to the build is now
 # managed by manifest.yaml, the processing of the repos field will be done in list
 # form rather than as a dictionary.
-__version__ = '0.1.0.7'
+__version__ = '0.2.0.0'
